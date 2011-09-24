@@ -1,0 +1,14 @@
+Name:                vty-ui-builder
+Version:             0.1
+Synopsis:            A user interface code generator for vty-ui
+License:             BSD3
+License-file:        LICENSE
+Author:              Jonathan Daugherty <drcygnus@gmail.com>
+Maintainer:          Jonathan Daugherty <drcygnus@gmail.com>
+Category:            Graphics
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+Library
+  -- Exposed-modules:
+  -- Other-modules:
