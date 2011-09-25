@@ -15,35 +15,31 @@ import Text.PrettyPrint.HughesPJ
 usage :: String
 usage = "builder-test <XML filename>"
 
-data GenState = GenState { nameCounter :: Int
-                         , genDoc :: Doc
-                         }
-                deriving (Show)
+data GenState a = GenState { nameCounter :: Int
+                           , genDoc :: Doc
+                           , handlers :: [(String, ElementHandler a)]
+                           }
 
-type GenM a = State GenState a
+type GenM a b = State (GenState a) b
 
-append :: Doc -> GenM ()
+type ElementHandler a = Element a -> String -> GenM a ()
+
+append :: Doc -> GenM a ()
 append d = do
   st <- get
   put $ st { genDoc = (genDoc st) $$ d }
 
-newEntry :: GenM String
+newEntry :: GenM a String
 newEntry = do
   st <- get
   put $ st { nameCounter = (nameCounter st) + 1
            }
   return $ "val" ++ show (nameCounter st)
 
-handlers :: [(String, Element a -> String -> GenM ())]
-handlers = [ ("fText", genFormattedText)
-           , ("vBox", genVBox)
-           , ("hBox", genHBox)
-           , ("interface", genInterface)
-           ]
-
-gen :: Element a -> String -> GenM ()
+gen :: ElementHandler a
 gen e@(Elem (N n) _ _) nam = do
-  case lookup n handlers of
+  hs <- gets handlers
+  case lookup n hs of
     Nothing -> error $ "No handler for element type " ++ (show n)
     Just h -> h e nam
 gen _ _ = error "Got unsupported element structure"
@@ -59,12 +55,12 @@ getString :: Content i -> String
 getString (CString _ s _) = s
 getString _ = error "Cannot get string from non-CString content"
 
-genInterface :: Element a -> String -> GenM ()
+genInterface :: ElementHandler a
 genInterface e nam = do
   let [c1] = elemChildren e
   gen c1 nam
 
-genVBox :: Element a -> String -> GenM ()
+genVBox :: ElementHandler a
 genVBox e nam = do
   let [c1, c2] = elemChildren e
 
@@ -76,7 +72,7 @@ genVBox e nam = do
 
   append $ text $ nam ++ " <- vBox " ++ c1name ++ " " ++ c2name
 
-genHBox :: Element a -> String -> GenM ()
+genHBox :: ElementHandler a
 genHBox e nam = do
   let [c1, c2] = elemChildren e
 
@@ -88,14 +84,22 @@ genHBox e nam = do
 
   append $ text $ nam ++ " <- hBox " ++ c1name ++ " " ++ c2name
 
-genFormattedText :: Element a -> String -> GenM ()
+genFormattedText :: ElementHandler a
 genFormattedText _ nam = do
   append $ text $ nam ++ " <- plainText \"\""
   append $ text $ "setText " ++ nam ++ " \"\""
 
-generateMasterDTD :: [String] -> IO String
-generateMasterDTD dtdFragments = do
-  let attLists = map mkAttList dtdFragments
+elementHandlers :: [(String, ElementHandler a)]
+elementHandlers = [ ("fText", genFormattedText)
+                  , ("vBox", genVBox)
+                  , ("hBox", genHBox)
+                  , ("interface", genInterface)
+                  ]
+
+generateMasterDTD :: [(String, ElementHandler a)] -> IO String
+generateMasterDTD hs = do
+  let names = map fst hs
+      attLists = map mkAttList names
       mkAttList nam = concat [ "<!ATTLIST "
                              , nam
                              , " normalFg (%fgcolor;) #IMPLIED"
@@ -109,9 +113,9 @@ generateMasterDTD dtdFragments = do
                                 , "%load" ++ n ++ ";\n"
                                 ]
       dtdStr = concat ([ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                       , "<!ENTITY % all \"" ++ (intercalate "|" dtdFragments) ++ "\">\n"
+                       , "<!ENTITY % all \"" ++ (intercalate "|" names) ++ "\">\n"
                        ]
-                       ++ map mkLoadFragment dtdFragments
+                       ++ map mkLoadFragment names
                        ++ attLists
                       )
 
@@ -123,9 +127,8 @@ main = do
   when (length args /= 1) $ error usage
 
   let [xmlFilename] = args
-      dtdFragments = ["interface", "vBox", "hBox", "fText"]
 
-  masterDTD <- generateMasterDTD dtdFragments
+  masterDTD <- generateMasterDTD elementHandlers
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"
@@ -138,6 +141,6 @@ main = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let (_, st') = runState (gen e "root") (GenState 0 empty)
+             let (_, st') = runState (gen e "root") (GenState 0 empty elementHandlers)
              putStrLn $ render $ genDoc st'
            es -> mapM_ putStrLn es
