@@ -14,10 +14,14 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 
 elementHandlers :: [(String, ElementHandler a)]
-elementHandlers = [ ("fText", genFormattedText)
+elementHandlers = [ ("interface", genInterface)
+                  -- Since the 'interface' DTD specifies some global
+                  -- entities for the other DTDs, it MUST come first
+                  -- since those entities are *parsed* entities.  See
+                  -- also http://www.w3.org/TR/xml/#dt-parsedent
+                  , ("fText", genFormattedText)
                   , ("vBox", genVBox)
                   , ("hBox", genHBox)
-                  , ("interface", genInterface)
                   ]
 
 genInterface :: ElementHandler a
