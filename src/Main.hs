@@ -34,61 +34,64 @@ newEntry = do
            }
   return $ "val" ++ show (nameCounter st)
 
-handlers :: [(String, Element a -> GenM String)]
+handlers :: [(String, Element a -> String -> GenM ())]
 handlers = [ ("fText", genFormattedText)
            , ("vBox", genVBox)
            , ("hBox", genHBox)
            , ("interface", genInterface)
            ]
 
-gen :: Element a -> GenM String
-gen e@(Elem (N n) _ _) = do
+gen :: Element a -> String -> GenM ()
+gen e@(Elem (N n) _ _) nam = do
   case lookup n handlers of
     Nothing -> error $ "No handler for element type " ++ (show n)
-    Just h -> h e
-gen _ = error "Got unsupported element structure"
+    Just h -> h e nam
+gen _ _ = error "Got unsupported element structure"
+
+elemChildren :: Element a -> [Element a]
+elemChildren (Elem _ _ cs) = map getElem contents
+    where
+      getElem (CElem e _) = e
+      getElem _ = error "BUG: getElem got a non-element!"
+      contents = concat $ map elm cs
 
 getString :: Content i -> String
 getString (CString _ s _) = s
 getString _ = error "Cannot get string from non-CString content"
 
-genInterface :: Element a -> GenM String
-genInterface (Elem _ _ contents) = do
-  let [CElem c1 _] = concat $ map elm contents
-  gen c1
+genInterface :: Element a -> String -> GenM ()
+genInterface e nam = do
+  let [c1] = elemChildren e
+  gen c1 nam
 
-genVBox :: Element a -> GenM String
-genVBox (Elem _ _ contents) = do
-  nam <- newEntry
+genVBox :: Element a -> String -> GenM ()
+genVBox e nam = do
+  let [c1, c2] = elemChildren e
 
-  let [CElem c1 _, CElem c2 _] = concat $ map elm contents
+  c1name <- newEntry
+  c2name <- newEntry
 
-  c1name <- gen c1
-  c2name <- gen c2
+  gen c1 c1name
+  gen c2 c2name
 
   append $ text $ nam ++ " <- vBox " ++ c1name ++ " " ++ c2name
-  return nam
 
-genHBox :: Element a -> GenM String
-genHBox (Elem _ _ contents) = do
-  nam <- newEntry
+genHBox :: Element a -> String -> GenM ()
+genHBox e nam = do
+  let [c1, c2] = elemChildren e
 
-  let [CElem c1 _, CElem c2 _] = concat $ map elm contents
+  c1name <- newEntry
+  c2name <- newEntry
 
-  c1name <- gen c1
-  c2name <- gen c2
+  gen c1 c1name
+  gen c2 c2name
 
   append $ text $ nam ++ " <- hBox " ++ c1name ++ " " ++ c2name
-  return nam
 
-genFormattedText :: Element a -> GenM String
-genFormattedText (Elem _ _ _) = do
-  nam <- newEntry
-
+genFormattedText :: Element a -> String -> GenM ()
+genFormattedText _ nam = do
   append $ text $ nam ++ " <- plainText \"\""
   append $ text $ "setText " ++ nam ++ " \"\""
-
-  return nam
 
 main :: IO ()
 main = do
@@ -118,6 +121,6 @@ main = do
          let errors = partialValidate dtd e
          case errors of
            [] -> do
-             let (_, st') = runState (gen e) (GenState 0 empty)
+             let (_, st') = runState (gen e "root") (GenState 0 empty)
              putStrLn $ render $ genDoc st'
            _ -> mapM_ putStrLn errors
