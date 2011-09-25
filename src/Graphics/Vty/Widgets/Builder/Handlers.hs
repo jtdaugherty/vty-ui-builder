@@ -26,11 +26,13 @@ elementHandlers = [ ("interface", genInterface)
 
 genInterface :: ElementHandler a
 genInterface e nam = do
+  -- DTD: one child
   let [c1] = elemChildren e
   gen c1 nam
 
 genVBox :: ElementHandler a
 genVBox e nam = do
+  -- DTD: >= 2 children
   -- TODO: handle _cs
   let (c1:c2:_cs) = elemChildren e
 
@@ -44,6 +46,7 @@ genVBox e nam = do
 
 genHBox :: ElementHandler a
 genHBox e nam = do
+  -- DTD: >= 2 children
   -- TODO: handle _cs
   let (c1:c2:_cs) = elemChildren e
 
