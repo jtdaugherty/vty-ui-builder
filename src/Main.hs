@@ -93,34 +93,51 @@ genFormattedText _ nam = do
   append $ text $ nam ++ " <- plainText \"\""
   append $ text $ "setText " ++ nam ++ " \"\""
 
+generateMasterDTD :: [String] -> IO String
+generateMasterDTD dtdFragments = do
+  let attLists = map mkAttList dtdFragments
+      mkAttList nam = concat [ "<!ATTLIST "
+                             , nam
+                             , " normalFg (%fgcolor;) #IMPLIED"
+                             , " normalBg (%bgcolor;) #IMPLIED"
+                             , " focusFg (%fgcolor;) #IMPLIED"
+                             , " focusBg (%bgcolor;) #IMPLIED"
+                             , " name ID #IMPLIED"
+                             , ">\n"
+                             ]
+      mkLoadFragment n = concat [ "<!ENTITY % load" ++ n ++ " SYSTEM \"dtd/" ++ n ++ ".dtd\">\n"
+                                , "%load" ++ n ++ ";\n"
+                                ]
+      dtdStr = concat ([ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+                       , "<!ENTITY % all \"" ++ (intercalate "|" dtdFragments) ++ "\">\n"
+                       ]
+                       ++ map mkLoadFragment dtdFragments
+                       ++ attLists
+                      )
+
+  return dtdStr
+
 main :: IO ()
 main = do
   args <- getArgs
   when (length args /= 1) $ error usage
 
   let [xmlFilename] = args
-      dtdFragments = ["vBox", "hBox", "fText"]
-      dtdStr = concat ([ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                       , "<!ENTITY % all \"" ++ (intercalate "|" dtdFragments) ++ "\">\n"
-                       ]
-                       ++ map mkLoadFragment dtdFragments
-                       ++ ["<!ELEMENT interface (%all;)>"]
-                      )
-      mkLoadFragment n = concat [ "<!ENTITY % load" ++ n ++ " SYSTEM \"dtd/" ++ n ++ ".dtd\">\n"
-                                , "%load" ++ n ++ ";\n"
-                                ]
+      dtdFragments = ["interface", "vBox", "hBox", "fText"]
 
-  let Right (Just dtd) = dtdParse' "<generated>" dtdStr
+  masterDTD <- generateMasterDTD dtdFragments
+  dtd <- case dtdParse' "<generated>" masterDTD of
+           Right (Just dtd) -> return dtd
+           Right Nothing -> error "No DTD found in generated DTD text!"
+           Left e -> error $ "Error parsing generated DTD: " ++ e
 
   xmlContents <- readFile xmlFilename
-
   case xmlParse' xmlFilename xmlContents of
     Left e -> putStrLn e
 
     Right (Document _ _ e _) -> do
-         let errors = partialValidate dtd e
-         case errors of
+         case partialValidate dtd e of
            [] -> do
              let (_, st') = runState (gen e "root") (GenState 0 empty)
              putStrLn $ render $ genDoc st'
-           _ -> mapM_ putStrLn errors
+           es -> mapM_ putStrLn es
