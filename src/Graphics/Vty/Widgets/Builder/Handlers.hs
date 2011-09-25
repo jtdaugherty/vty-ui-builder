@@ -9,7 +9,9 @@ module Graphics.Vty.Widgets.Builder.Handlers
 where
 
 import Control.Monad (forM)
+import Data.List (intercalate)
 import Text.PrettyPrint.HughesPJ
+import Text.XML.HaXml.Types
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -70,7 +72,49 @@ genHBox e nam = do
   append $ text $ "let " ++ nam ++ " = " ++ result
 
 genFormattedText :: ElementHandler a
-genFormattedText _ nam = do
+genFormattedText (Elem _ _ eContents) nam = do
   -- TODO: implement scanning child text and attr elements
+
+  -- For each entry in the contents list: If it is a string, give it
+  -- the default attribute and put it in a list.  If it is an Attr
+  -- element, recurse on it, building another list of (string, attr)
+  -- to merge.
+
+  let processContent expr c =
+          case c of
+            CString _ cd _ -> [(cd, expr)]
+            CElem (Elem (N "br") _ _) _ -> [("\n", expr)]
+            CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
+            _ -> error "BUG: fText got unsupported content, should \
+                       \have been disallowed by DTD"
+
+      processAttr attr@(Elem _ _ contents) =
+          let attrResult = ( getAttribute attr "fg"
+                           , getAttribute attr "bg"
+                           )
+              attrExpr = case attrsToExpr attrResult of
+                           Nothing -> "def_attr"
+                           Just expr -> expr
+          in concat $ map (processContent attrExpr) contents
+
+      collapse [] = []
+      collapse [e] = [e]
+      collapse ((s1, e1):(s2, e2):es) =
+          if e1 == e2
+          then collapse ((s1 ++ s2, e1) : es)
+          else (s1, e1) : collapse ((s2, e2):es)
+
+      pairs = concat $ mapM (processContent "def_attr") eContents
+
+      collapsed = collapse pairs
+      pairListExpr = intercalate ", " $
+                     map pairExpr collapsed
+      pairExpr (s, expr) = "(" ++ show s ++ ", " ++ expr ++ ")"
+
   append $ text $ nam ++ " <- plainText \"\""
-  append $ text $ "setText " ++ nam ++ " \"\""
+  append $ text $ concat [ "setTextWithAttrs "
+                         , nam
+                         , " ["
+                         , pairListExpr
+                         , "]"
+                         ]

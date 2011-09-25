@@ -4,6 +4,8 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getString
     , append
     , newEntry
+    , getAttribute
+    , attrsToExpr
     )
 where
 
@@ -28,60 +30,38 @@ getAttribute (Elem _ attrs _) attrName =
       Just (AttValue ((Left s):_)) -> Just s
       _ -> Nothing
 
+attrsToExpr :: (Maybe String, Maybe String) -> Maybe String
+attrsToExpr (Nothing, Nothing) = Nothing
+attrsToExpr (Just fg, Nothing) = Just $ "fgColor " ++ fg
+attrsToExpr (Nothing, Just bg) = Just $ "bgColor " ++ bg
+attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
+
 annotateElement :: Element a -> String -> GenM a ()
 annotateElement e nam = do
   -- Normal attribute override
   let normalResult = ( getAttribute e "normalFg"
                      , getAttribute e "normalBg"
                      )
-  case normalResult of
-    (Nothing, Nothing) -> return ()
-    (Just fg, Just bg) ->
+  case attrsToExpr normalResult of
+    Nothing -> return ()
+    Just expr ->
         append $ text $ concat [ "setNormalAttribute "
                                , nam
                                , " $ "
-                               , fg
-                               , " `on` "
-                               , bg
-                               ]
-    (Just fg, Nothing) ->
-        append $ text $ concat [ "setNormalAttribute "
-                               , nam
-                               , " $ fgColor "
-                               , fg
-                               ]
-    (Nothing, Just bg) ->
-        append $ text $ concat [ "setNormalAttribute "
-                               , nam
-                               , " $ bgColor "
-                               , bg
+                               , expr
                                ]
 
   -- Focus attribute override
   let focusResult = ( getAttribute e "focusFg"
                     , getAttribute e "focusBg"
                     )
-  case focusResult of
-    (Nothing, Nothing) -> return ()
-    (Just fg, Just bg) ->
+  case attrsToExpr focusResult of
+    Nothing -> return ()
+    Just expr ->
         append $ text $ concat [ "setFocusAttribute "
                                , nam
                                , " $ "
-                               , fg
-                               , " `on` "
-                               , bg
-                               ]
-    (Just fg, Nothing) ->
-        append $ text $ concat [ "setFocusAttribute "
-                               , nam
-                               , " $ fgColor "
-                               , fg
-                               ]
-    (Nothing, Just bg) ->
-        append $ text $ concat [ "setFocusAttribute "
-                               , nam
-                               , " $ bgColor "
-                               , bg
+                               , expr
                                ]
 
 elemChildren :: Element a -> [Element a]
