@@ -6,9 +6,12 @@ import Text.XML.HaXml.Types
 import Text.XML.HaXml.Combinators hiding (when)
 
 import System
+import System.FilePath ((</>))
 import Control.Monad
 import Control.Monad.State
 import Data.List (intercalate)
+
+import Paths_vty_ui_builder
 
 import Text.PrettyPrint.HughesPJ
 
@@ -96,8 +99,8 @@ elementHandlers = [ ("fText", genFormattedText)
                   , ("interface", genInterface)
                   ]
 
-generateMasterDTD :: [(String, ElementHandler a)] -> IO String
-generateMasterDTD hs = do
+generateMasterDTD :: [(String, ElementHandler a)] -> FilePath -> IO String
+generateMasterDTD hs dtdPath = do
   let names = map fst hs
       attLists = map mkAttList names
       mkAttList nam = concat [ "<!ATTLIST "
@@ -109,7 +112,9 @@ generateMasterDTD hs = do
                              , " name ID #IMPLIED"
                              , ">\n"
                              ]
-      mkLoadFragment n = concat [ "<!ENTITY % load" ++ n ++ " SYSTEM \"dtd/" ++ n ++ ".dtd\">\n"
+      mkLoadFragment n = concat [ "<!ENTITY % load" ++ n
+                                , " SYSTEM \""
+                                , dtdPath ++ "/" ++ n ++ ".dtd\">\n"
                                 , "%load" ++ n ++ ";\n"
                                 ]
       dtdStr = concat ([ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
@@ -128,7 +133,10 @@ main = do
 
   let [xmlFilename] = args
 
-  masterDTD <- generateMasterDTD elementHandlers
+  dataDir <- getDataDir
+  let dtdPath = dataDir </> "dtd"
+
+  masterDTD <- generateMasterDTD elementHandlers dtdPath
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"
