@@ -21,8 +21,22 @@ gen e@(Elem (N n) _ _) nam = do
   hs <- gets handlers
   case lookup n hs of
     Nothing -> error $ "No handler for element type " ++ (show n)
-    Just h -> h e nam >> annotateElement e nam
+    Just h -> do
+      h e nam
+      annotateElement e nam
+      case getAttribute e "name" of
+        Nothing -> return ()
+        Just newName -> registerName newName nam
 gen _ _ = error "Got unsupported element structure"
+
+registerName :: String -> String -> GenM a ()
+registerName newName valueName = do
+  st <- get
+  case lookup newName (namedValues st) of
+    Just _ -> error "BUG: DTD should have disallowed multiple\
+                    \instances of the same element 'name' attribute"
+    Nothing -> do
+      put $ st { namedValues = (newName, valueName) : namedValues st }
 
 getAttribute :: Element a -> String -> Maybe String
 getAttribute (Elem _ attrs _) attrName =

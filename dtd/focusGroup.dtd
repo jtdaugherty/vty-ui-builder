@@ -1,0 +1,3 @@
+<!ELEMENT focusGroup (entry+)>
+<!ELEMENT entry EMPTY>
+<!ATTLIST entry name CDATA #REQUIRED>

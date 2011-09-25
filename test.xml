@@ -9,4 +9,7 @@
     <fText>other</fText>
     <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
   </vBox>
+  <focusGroup>
+    <entry name="test"/>
+  </focusGroup>
 </interface>

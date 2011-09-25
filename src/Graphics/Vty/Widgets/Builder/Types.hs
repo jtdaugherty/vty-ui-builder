@@ -12,6 +12,7 @@ import Text.PrettyPrint.HughesPJ
 data GenState a = GenState { nameCounter :: Int
                            , genDoc :: Doc
                            , handlers :: [(String, ElementHandler a)]
+                           , namedValues :: [(String, String)]
                            }
 
 type GenM a b = State (GenState a) b

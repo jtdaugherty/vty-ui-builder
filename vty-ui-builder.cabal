@@ -14,6 +14,7 @@ Data-files:
   dtd/vBox.dtd
   dtd/fText.dtd
   dtd/interface.dtd
+  dtd/focusGroup.dtd
 
 Library
   Hs-Source-Dirs:    src

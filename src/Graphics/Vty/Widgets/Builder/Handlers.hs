@@ -25,13 +25,14 @@ elementHandlers = [ ("interface", genInterface)
                   , ("fText", genFormattedText)
                   , ("vBox", genVBox)
                   , ("hBox", genHBox)
+                  , ("focusGroup", genFocusGroup)
                   ]
 
 genInterface :: ElementHandler a
 genInterface e nam = do
   -- DTD: one child
-  let [c1] = elemChildren e
-  gen c1 nam
+  let [ch, _fg] = elemChildren e
+  gen ch nam
 
 genVBox :: ElementHandler a
 genVBox e nam = do
@@ -116,3 +117,6 @@ genFormattedText (Elem _ _ eContents) nam = do
                          , pairListExpr
                          , "]"
                          ]
+
+genFocusGroup :: ElementHandler a
+genFocusGroup _ _ = return ()
