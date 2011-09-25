@@ -8,6 +8,7 @@ module Graphics.Vty.Widgets.Builder.Handlers
     )
 where
 
+import Control.Monad (forM)
 import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
@@ -33,30 +34,40 @@ genInterface e nam = do
 genVBox :: ElementHandler a
 genVBox e nam = do
   -- DTD: >= 2 children
-  -- TODO: handle _cs
-  let (c1:c2:_cs) = elemChildren e
+  names <- forM (elemChildren e) $
+           \child -> do
+                  chname <- newEntry
+                  gen child chname
+                  return chname
 
-  c1name <- newEntry
-  c2name <- newEntry
+  let buildVBox [] = error "BUG: vBox cannot be built from zero children"
+      buildVBox [c] = return c
+      buildVBox (c1:c2:rest) = do
+                  nextName <- newEntry
+                  append $ text $ nextName ++ " <- vBox " ++ c1 ++ " " ++ c2
+                  buildVBox (nextName:rest)
 
-  gen c1 c1name
-  gen c2 c2name
-
-  append $ text $ nam ++ " <- vBox " ++ c1name ++ " " ++ c2name
+  result <- buildVBox names
+  append $ text $ "let " ++ nam ++ " = " ++ result
 
 genHBox :: ElementHandler a
 genHBox e nam = do
   -- DTD: >= 2 children
-  -- TODO: handle _cs
-  let (c1:c2:_cs) = elemChildren e
+  names <- forM (elemChildren e) $
+           \child -> do
+                  chname <- newEntry
+                  gen child chname
+                  return chname
 
-  c1name <- newEntry
-  c2name <- newEntry
+  let buildHBox [] = error "BUG: hBox cannot be built from zero children"
+      buildHBox [c] = return c
+      buildHBox (c1:c2:rest) = do
+                  nextName <- newEntry
+                  append $ text $ nextName ++ " <- hBox " ++ c1 ++ " " ++ c2
+                  buildHBox (nextName:rest)
 
-  gen c1 c1name
-  gen c2 c2name
-
-  append $ text $ nam ++ " <- hBox " ++ c1name ++ " " ++ c2name
+  result <- buildHBox names
+  append $ text $ "let " ++ nam ++ " = " ++ result
 
 genFormattedText :: ElementHandler a
 genFormattedText _ nam = do
