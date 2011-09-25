@@ -31,7 +31,8 @@ genInterface e nam = do
 
 genVBox :: ElementHandler a
 genVBox e nam = do
-  let [c1, c2] = elemChildren e
+  -- TODO: handle _cs
+  let (c1:c2:_cs) = elemChildren e
 
   c1name <- newEntry
   c2name <- newEntry
@@ -43,7 +44,8 @@ genVBox e nam = do
 
 genHBox :: ElementHandler a
 genHBox e nam = do
-  let [c1, c2] = elemChildren e
+  -- TODO: handle _cs
+  let (c1:c2:_cs) = elemChildren e
 
   c1name <- newEntry
   c2name <- newEntry

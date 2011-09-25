@@ -1,1 +1,1 @@
-<!ELEMENT hBox (%all;)+>
+<!ELEMENT hBox ((%all;),(%all;)+)>
