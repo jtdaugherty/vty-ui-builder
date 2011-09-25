@@ -16,8 +16,11 @@ Data-files:
   dtd/interface.dtd
 
 Library
-  -- Exposed-modules:
-  -- Other-modules:
+  Hs-Source-Dirs:    src
+  GHC-Options:       -Wall
+  Exposed-modules:
+    Graphics.Vty.Widgets.Builder.Types
+    Graphics.Vty.Widgets.Builder.DTDGenerator
 
 Executable builder-test
   Hs-Source-Dirs:    src

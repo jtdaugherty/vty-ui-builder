@@ -9,23 +9,16 @@ import System
 import System.FilePath ((</>))
 import Control.Monad
 import Control.Monad.State
-import Data.List (intercalate)
 
 import Paths_vty_ui_builder
 
 import Text.PrettyPrint.HughesPJ
 
+import Graphics.Vty.Widgets.Builder.DTDGenerator
+import Graphics.Vty.Widgets.Builder.Types
+
 usage :: String
 usage = "builder-test <XML filename>"
-
-data GenState a = GenState { nameCounter :: Int
-                           , genDoc :: Doc
-                           , handlers :: [(String, ElementHandler a)]
-                           }
-
-type GenM a b = State (GenState a) b
-
-type ElementHandler a = Element a -> String -> GenM a ()
 
 append :: Doc -> GenM a ()
 append d = do
@@ -98,33 +91,6 @@ elementHandlers = [ ("fText", genFormattedText)
                   , ("hBox", genHBox)
                   , ("interface", genInterface)
                   ]
-
-generateMasterDTD :: [(String, ElementHandler a)] -> FilePath -> IO String
-generateMasterDTD hs dtdPath = do
-  let names = map fst hs
-      attLists = map mkAttList names
-      mkAttList nam = concat [ "<!ATTLIST "
-                             , nam
-                             , " normalFg (%fgcolor;) #IMPLIED"
-                             , " normalBg (%bgcolor;) #IMPLIED"
-                             , " focusFg (%fgcolor;) #IMPLIED"
-                             , " focusBg (%bgcolor;) #IMPLIED"
-                             , " name ID #IMPLIED"
-                             , ">\n"
-                             ]
-      mkLoadFragment n = concat [ "<!ENTITY % load" ++ n
-                                , " SYSTEM \""
-                                , dtdPath ++ "/" ++ n ++ ".dtd\">\n"
-                                , "%load" ++ n ++ ";\n"
-                                ]
-      dtdStr = concat ([ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                       , "<!ENTITY % all \"" ++ (intercalate "|" names) ++ "\">\n"
-                       ]
-                       ++ map mkLoadFragment names
-                       ++ attLists
-                      )
-
-  return dtdStr
 
 main :: IO ()
 main = do
