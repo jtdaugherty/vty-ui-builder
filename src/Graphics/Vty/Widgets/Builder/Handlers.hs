@@ -73,8 +73,6 @@ genHBox e nam = do
 
 genFormattedText :: ElementHandler a
 genFormattedText (Elem _ _ eContents) nam = do
-  -- TODO: implement scanning child text and attr elements
-
   -- For each entry in the contents list: If it is a string, give it
   -- the default attribute and put it in a list.  If it is an Attr
   -- element, recurse on it, building another list of (string, attr)
