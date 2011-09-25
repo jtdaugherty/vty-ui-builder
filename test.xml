@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE interface SYSTEM "test.dtd">
-<interface>
+<interface normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
   <vBox>
     <hBox>
       <fText>foo</fText>

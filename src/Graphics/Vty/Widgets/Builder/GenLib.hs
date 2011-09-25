@@ -10,7 +10,7 @@ where
 import Control.Monad.State
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Combinators
-import Text.PrettyPrint.HughesPJ (Doc, ($$))
+import Text.PrettyPrint.HughesPJ (Doc, text, ($$))
 
 import Graphics.Vty.Widgets.Builder.Types
 
@@ -19,8 +19,70 @@ gen e@(Elem (N n) _ _) nam = do
   hs <- gets handlers
   case lookup n hs of
     Nothing -> error $ "No handler for element type " ++ (show n)
-    Just h -> h e nam
+    Just h -> h e nam >> annotateElement e nam
 gen _ _ = error "Got unsupported element structure"
+
+getAttribute :: Element a -> String -> Maybe String
+getAttribute (Elem _ attrs _) attrName =
+    case lookup (N attrName) attrs of
+      Just (AttValue ((Left s):_)) -> Just s
+      _ -> Nothing
+
+annotateElement :: Element a -> String -> GenM a ()
+annotateElement e nam = do
+  -- Normal attribute override
+  let normalResult = ( getAttribute e "normalFg"
+                     , getAttribute e "normalBg"
+                     )
+  case normalResult of
+    (Nothing, Nothing) -> return ()
+    (Just fg, Just bg) ->
+        append $ text $ concat [ "setNormalAttribute "
+                               , nam
+                               , " $ "
+                               , fg
+                               , " `on` "
+                               , bg
+                               ]
+    (Just fg, Nothing) ->
+        append $ text $ concat [ "setNormalAttribute "
+                               , nam
+                               , " $ fgColor "
+                               , fg
+                               ]
+    (Nothing, Just bg) ->
+        append $ text $ concat [ "setNormalAttribute "
+                               , nam
+                               , " $ bgColor "
+                               , bg
+                               ]
+
+  -- Focus attribute override
+  let focusResult = ( getAttribute e "focusFg"
+                    , getAttribute e "focusBg"
+                    )
+  case focusResult of
+    (Nothing, Nothing) -> return ()
+    (Just fg, Just bg) ->
+        append $ text $ concat [ "setFocusAttribute "
+                               , nam
+                               , " $ "
+                               , fg
+                               , " `on` "
+                               , bg
+                               ]
+    (Just fg, Nothing) ->
+        append $ text $ concat [ "setFocusAttribute "
+                               , nam
+                               , " $ fgColor "
+                               , fg
+                               ]
+    (Nothing, Just bg) ->
+        append $ text $ concat [ "setFocusAttribute "
+                               , nam
+                               , " $ bgColor "
+                               , bg
+                               ]
 
 elemChildren :: Element a -> [Element a]
 elemChildren (Elem _ _ cs) = map getElem contents
