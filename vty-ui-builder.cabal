@@ -19,6 +19,7 @@ Library
   Hs-Source-Dirs:    src
   GHC-Options:       -Wall
   Exposed-modules:
+    Graphics.Vty.Widgets.Builder
     Graphics.Vty.Widgets.Builder.Types
     Graphics.Vty.Widgets.Builder.DTDGenerator
     Graphics.Vty.Widgets.Builder.GenLib
