@@ -21,6 +21,8 @@ Library
   Exposed-modules:
     Graphics.Vty.Widgets.Builder.Types
     Graphics.Vty.Widgets.Builder.DTDGenerator
+    Graphics.Vty.Widgets.Builder.GenLib
+    Graphics.Vty.Widgets.Builder.Handlers
 
 Executable builder-test
   Hs-Source-Dirs:    src
