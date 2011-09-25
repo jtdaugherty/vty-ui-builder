@@ -1,0 +1,9 @@
+<!ELEMENT fText (#PCDATA | attr | br)*>
+<!ELEMENT attr (#PCDATA | attr | br)*>
+<!ELEMENT br EMPTY>
+
+<!ENTITY % fgcolor "red|blue|green">
+<!ENTITY % bgcolor "red|blue|green">
+<!ATTLIST attr
+          bg (%bgcolor;) #IMPLIED
+          fg (%fgcolor;) #IMPLIED>
