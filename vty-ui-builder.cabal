@@ -9,6 +9,12 @@ Category:            Graphics
 Build-type:          Simple
 Cabal-version:       >=1.2
 
+Data-files:
+  dtd/hBox.dtd
+  dtd/vBox.dtd
+  dtd/fText.dtd
+  dtd/interface.dtd
+
 Library
   -- Exposed-modules:
   -- Other-modules:
