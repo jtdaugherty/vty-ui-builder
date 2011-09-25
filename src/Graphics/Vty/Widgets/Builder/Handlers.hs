@@ -30,7 +30,7 @@ elementHandlers = [ ("interface", genInterface)
 
 genInterface :: ElementHandler a
 genInterface e nam = do
-  -- DTD: one child
+  -- DTD: two children
   let [ch, _fg] = elemChildren e
   gen ch nam
 
