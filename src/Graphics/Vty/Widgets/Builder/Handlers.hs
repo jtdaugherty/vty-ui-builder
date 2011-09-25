@@ -60,5 +60,6 @@ genHBox e nam = do
 
 genFormattedText :: ElementHandler a
 genFormattedText _ nam = do
+  -- TODO: implement scanning child text and attr elements
   append $ text $ nam ++ " <- plainText \"\""
   append $ text $ "setText " ++ nam ++ " \"\""
