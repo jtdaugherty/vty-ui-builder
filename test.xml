@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE interface SYSTEM "test.dtd">
-<interface normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
-  <vBox name="flub">
-    <hBox>
-      <fText name="username">foo</fText>
-      <fText>bar</fText>
-    </hBox>
-    <fText name="email">other</fText>
-    <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
-  </vBox>
-  <focusGroup>
-  </focusGroup>
-</interface>
+<collection>
+  <interface name="main" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
+    <vBox fieldName="flub">
+      <hBox>
+        <fText fieldName="username">foo</fText>
+        <fText>bar</fText>
+      </hBox>
+      <fText fieldName="email">other</fText>
+      <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
+    </vBox>
+    <focusGroup>
+    </focusGroup>
+  </interface>
+  <interface name="other">
+    <fText fieldName="t">Stuff!</fText>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>

@@ -34,7 +34,7 @@ generateModuleSource inputXmlPath dtdPath extraHandlers = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let (_, finalState) = runState (gen e "root") (GenState 0 empty elementHandlers [] [])
+             let (_, finalState) = runState (gen e "root") (GenState 0 empty elementHandlers [] [] [])
              return $ render $ fullModuleSource "FooBar" finalState
            es -> do
              mapM_ putStrLn es
@@ -43,7 +43,6 @@ generateModuleSource inputXmlPath dtdPath extraHandlers = do
 fullModuleSource :: String -> GenState a -> Doc
 fullModuleSource moduleName st =
     let typeDoc = generateTypes st
-        rootType = fromJust $ lookup "root" $ valueTypes st
     in vcat [ text $ "module " ++ moduleName
             , text "   ( mkInterface"
             , text "   , InterfaceElements(..)"
@@ -53,23 +52,24 @@ fullModuleSource moduleName st =
             , text "import Graphics.Vty"
             , text "import Graphics.Vty.Widgets.All"
             , text ""
-            , text $ "type UIRootType = " ++ rootType
-            , text ""
             , typeDoc
             , text ""
-            , text $ "mkInterface :: IO (Widget UIRootType, InterfaceElements)"
+            , text $ "mkInterface :: IO (Collection, InterfaceElements)"
             , text "mkInterface = do"
             , nest 2 $ vcat [ genDoc st
                             , mkElementsValue st
-                            , text "return (root, elems)"
+                            , text "return (c, elems)"
                             ]
             ]
 
 mkElementsValue :: GenState a -> Doc
 mkElementsValue st =
     let lines = header ++ [nest 2 $ vcat body] ++ footer
-        body = intersperse (text ", ") $ (flip map) (namedValues st) $ \(fieldName, valName) ->
-               text $ "elem_" ++ fieldName ++ " = " ++ valName
+        body = intersperse (text ", ") (elem_lines ++ if_act_lines)
+        elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
+                     text $ "elem_" ++ fieldName ++ " = " ++ valName
+        if_act_lines = (flip map) (interfaceNames st) $ \(ifName, (valName, actName)) ->
+                       text $ "switchTo_" ++ ifName ++ " = " ++ actName
         header = [ text "InterfaceElements {"
                  ]
         footer = [ text "}"

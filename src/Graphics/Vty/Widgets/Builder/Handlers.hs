@@ -17,11 +17,12 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 
 elementHandlers :: [(String, ElementHandler a)]
-elementHandlers = [ ("interface", genInterface)
-                  -- Since the 'interface' DTD specifies some global
+elementHandlers = [ ("collection", genCollection)
+                  -- Since the 'collection' DTD specifies some global
                   -- entities for the other DTDs, it MUST come first
                   -- since those entities are *parsed* entities.  See
                   -- also http://www.w3.org/TR/xml/#dt-parsedent
+                  , ("interface", genInterface)
                   , ("fText", genFormattedText)
                   , ("vBox", genVBox)
                   , ("hBox", genHBox)
@@ -31,6 +32,19 @@ elementHandlers = [ ("interface", genInterface)
                   -- DTD fragment for this tag.
                   , ("focusGroup", genFocusGroup)
                   ]
+
+genCollection :: ElementHandler a
+genCollection e nam = do
+  -- DTD: two children
+  let chs = elemChildren e
+  append $ text "c <- newCollection"
+  forM_ chs $ \ch -> do
+    let Just ifName = getAttribute ch "name"
+    nam <- newEntry
+    actName <- newEntry
+    genInterface ch nam
+    append $ text $ actName ++ " <- addToCollection c " ++ nam
+    registerInterface ifName nam actName
 
 genInterface :: ElementHandler a
 genInterface e nam = do

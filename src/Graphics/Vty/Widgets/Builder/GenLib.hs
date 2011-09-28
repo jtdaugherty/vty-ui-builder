@@ -9,6 +9,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , attrsToExpr
     , lookupName
     , registerStateType
+    , registerInterface
     , getStateType
     )
 where
@@ -31,7 +32,7 @@ gen e@(Elem (N n) _ _) nam = do
     Just h -> do
       h e nam
       annotateElement e nam
-      case getAttribute e "name" of
+      case getAttribute e "fieldName" of
         Nothing -> return ()
         Just newName -> registerName newName nam
 gen _ _ = error "Got unsupported element structure"
@@ -44,10 +45,14 @@ generateTypes st =
                  ]
         footer = [ text "}"
                  ]
-        body = nest 2 $ vcat $ intersperse (text ", ") $
-               (flip map) (namedValues st) $ \(fieldName, valName) ->
-                   (text $ "elem_" ++ fieldName ++ " :: Widget (" ++ (fromJust $ lookup valName $ valueTypes st) ++ ")")
-    in vcat (header ++ [body] ++ footer)
+        body = intersperse (text ", ") (elem_lines ++ if_act_lines)
+        elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
+                     (text $ "elem_" ++ fieldName ++ " :: Widget (" ++
+                               (fromJust $ lookup valName $ valueTypes st) ++ ")")
+        if_act_lines = (flip map) (interfaceNames st) $ \(ifName, (valName, actName)) ->
+                       (text $ "switchTo_" ++ ifName ++ " :: IO ()")
+
+    in vcat (header ++ [nest 2 $ vcat body] ++ footer)
 
 registerStateType :: String -> String -> GenM a ()
 registerStateType valueName typeStr = do
@@ -89,6 +94,12 @@ attrsToExpr (Nothing, Nothing) = Nothing
 attrsToExpr (Just fg, Nothing) = Just $ "fgColor " ++ fg
 attrsToExpr (Nothing, Just bg) = Just $ "bgColor " ++ bg
 attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
+
+registerInterface :: String -> String -> String -> GenM a ()
+registerInterface ifName valName activateActionName = do
+  st <- get
+  put $ st { interfaceNames = (ifName, (valName, activateActionName))
+                              : interfaceNames st }
 
 annotateElement :: Element a -> String -> GenM a ()
 annotateElement e nam = do

@@ -14,6 +14,7 @@ data GenState a = GenState { nameCounter :: Int
                            , handlers :: [(String, ElementHandler a)]
                            , namedValues :: [(String, String)]
                            , valueTypes :: [(String, String)]
+                           , interfaceNames :: [(String, (String, String))]
                            }
 
 type GenM a b = State (GenState a) b

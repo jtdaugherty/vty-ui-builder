@@ -15,6 +15,7 @@ Data-files:
   dtd/fText.dtd
   dtd/interface.dtd
   dtd/focusGroup.dtd
+  dtd/collection.dtd
 
 Library
   Hs-Source-Dirs:    src
