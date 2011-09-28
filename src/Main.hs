@@ -20,9 +20,8 @@ main = do
 
   dataDir <- getDataDir
   let dtdPath = dataDir </> "dtd"
-      config = BuilderConfig { moduleName = modName
-                             , generateImports = True
-                             , generateModulePreamble = True
+
+      config = defaultConfig { moduleName = modName
                              }
 
   putStrLn =<< generateModuleSource config xmlFilename dtdPath []

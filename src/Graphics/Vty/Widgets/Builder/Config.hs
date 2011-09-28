@@ -1,5 +1,6 @@
 module Graphics.Vty.Widgets.Builder.Config
     ( BuilderConfig(..)
+    , defaultConfig
     )
 where
 
@@ -8,3 +9,9 @@ data BuilderConfig =
                   , generateImports :: Bool
                   , generateModulePreamble :: Bool
                   }
+
+defaultConfig :: BuilderConfig
+defaultConfig = BuilderConfig { moduleName = "Interface"
+                              , generateImports = True
+                              , generateModulePreamble = True
+                              }
