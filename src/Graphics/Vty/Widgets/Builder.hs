@@ -45,24 +45,29 @@ generateModuleSource config inputXmlPath dtdPath extraHandlers = do
 fullModuleSource :: BuilderConfig -> GenState a -> Doc
 fullModuleSource config st =
     let typeDoc = generateTypes st
-    in vcat [ text $ "module " ++ moduleName config
-            , text "   ( mkInterface"
-            , text "   , InterfaceElements(..)"
-            , text "   )"
-            , text "where"
-            , text ""
-            , text "import Graphics.Vty"
-            , text "import Graphics.Vty.Widgets.All"
-            , text ""
-            , typeDoc
-            , text ""
-            , text $ "mkInterface :: IO (Collection, InterfaceElements)"
-            , text "mkInterface = do"
-            , nest 2 $ vcat [ genDoc st
-                            , mkElementsValue st
-                            , text "return (c, elems)"
-                            ]
-            ]
+        imports = if generateImports config
+                  then [ text ""
+                       , text "import Graphics.Vty"
+                       , text "import Graphics.Vty.Widgets.All"
+                       ]
+                  else []
+    in vcat $ [ text $ "module " ++ moduleName config
+              , text "   ( mkInterface"
+              , text "   , InterfaceElements(..)"
+              , text "   )"
+              , text "where"
+              ]
+           ++ imports
+           ++ [ text ""
+              , typeDoc
+              , text ""
+              , text $ "mkInterface :: IO (Collection, InterfaceElements)"
+              , text "mkInterface = do"
+              , nest 2 $ vcat [ genDoc st
+                              , mkElementsValue st
+                              , text "return (c, elems)"
+                              ]
+              ]
 
 mkElementsValue :: GenState a -> Doc
 mkElementsValue st =
