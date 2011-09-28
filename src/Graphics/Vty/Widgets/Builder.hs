@@ -45,18 +45,21 @@ generateModuleSource config inputXmlPath dtdPath extraHandlers = do
 fullModuleSource :: BuilderConfig -> GenState a -> Doc
 fullModuleSource config st =
     let typeDoc = generateTypes st
+        preamble = if generateModulePreamble config
+                   then [ text $ "module " ++ moduleName config
+                        , text "   ( mkInterface"
+                        , text "   , InterfaceElements(..)"
+                        , text "   )"
+                        , text "where"
+                        ]
+                   else []
         imports = if generateImports config
                   then [ text ""
                        , text "import Graphics.Vty"
                        , text "import Graphics.Vty.Widgets.All"
                        ]
                   else []
-    in vcat $ [ text $ "module " ++ moduleName config
-              , text "   ( mkInterface"
-              , text "   , InterfaceElements(..)"
-              , text "   )"
-              , text "where"
-              ]
+    in vcat $ preamble
            ++ imports
            ++ [ text ""
               , typeDoc
