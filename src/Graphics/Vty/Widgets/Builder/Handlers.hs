@@ -8,7 +8,7 @@ module Graphics.Vty.Widgets.Builder.Handlers
     )
 where
 
-import Control.Monad (forM)
+import Control.Monad
 import Data.List (intercalate)
 import Text.PrettyPrint.HughesPJ
 import Text.XML.HaXml.Types
@@ -25,14 +25,20 @@ elementHandlers = [ ("interface", genInterface)
                   , ("fText", genFormattedText)
                   , ("vBox", genVBox)
                   , ("hBox", genHBox)
+                  -- This should never be invoked by 'gen', but should
+                  -- instead be invoked directly by genInterface.
+                  -- It's only here so that the DTD loader loads the
+                  -- DTD fragment for this tag.
                   , ("focusGroup", genFocusGroup)
                   ]
 
 genInterface :: ElementHandler a
 genInterface e nam = do
   -- DTD: two children
-  let [ch, _fg] = elemChildren e
+  let [ch, fg] = elemChildren e
   gen ch nam
+  genFocusGroup fg "fg"
+  -- XXX: add resulting UI widget and focus group to a collection
 
 genVBox :: ElementHandler a
 genVBox e nam = do
@@ -119,4 +125,21 @@ genFormattedText (Elem _ _ eContents) nam = do
                          ]
 
 genFocusGroup :: ElementHandler a
-genFocusGroup _ _ = return ()
+genFocusGroup e nam = do
+  append $ text $ nam ++ " <- newFocusGroup"
+
+  -- For each child element of the focus group, resolve it to a named
+  -- value and add the specified widget to the focus group.
+  forM_ (elemChildren e) $ \ch ->
+      do
+        let attr = getAttribute ch "name"
+        case attr of
+          Nothing -> error "BUG: attribute 'name' missing from child of 'focusGroup'; \
+                           \DTD should have disallowed this"
+          Just registeredName ->
+              do
+                result <- lookupName registeredName
+                case result of
+                  Nothing -> error $ "Focus group error: widget name " ++ show registeredName
+                             ++ " not found in document"
+                  Just valName -> append $ text $ "addToFocusGroup " ++ nam ++ " " ++ valName

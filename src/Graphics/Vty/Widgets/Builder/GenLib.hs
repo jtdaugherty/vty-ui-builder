@@ -6,9 +6,11 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , newEntry
     , getAttribute
     , attrsToExpr
+    , lookupName
     )
 where
 
+import Control.Applicative
 import Control.Monad.State
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Combinators
@@ -37,6 +39,9 @@ registerName newName valueName = do
                     \instances of the same element 'name' attribute"
     Nothing -> do
       put $ st { namedValues = (newName, valueName) : namedValues st }
+
+lookupName :: String -> GenM a (Maybe String)
+lookupName registeredName = lookup registeredName <$> gets namedValues
 
 getAttribute :: Element a -> String -> Maybe String
 getAttribute (Elem _ attrs _) attrName =

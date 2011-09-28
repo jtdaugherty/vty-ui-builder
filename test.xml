@@ -3,13 +3,14 @@
 <interface normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
   <vBox>
     <hBox>
-      <fText>foo</fText>
+      <fText name="t1">foo</fText>
       <fText>bar</fText>
     </hBox>
-    <fText>other</fText>
+    <fText name="t2">other</fText>
     <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
   </vBox>
   <focusGroup>
-    <entry name="test"/>
+    <entry name="t1"/>
+    <entry name="t2"/>
   </focusGroup>
 </interface>
