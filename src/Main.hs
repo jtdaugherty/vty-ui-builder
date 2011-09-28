@@ -6,18 +6,21 @@ import Control.Monad
 
 import Paths_vty_ui_builder
 import Graphics.Vty.Widgets.Builder
+import Graphics.Vty.Widgets.Builder.Config
 
 usage :: String
-usage = "builder-test <XML filename>"
+usage = "builder-test <generated module name> <XML filename>"
 
 main :: IO ()
 main = do
   args <- getArgs
-  when (length args /= 1) $ error usage
+  when (length args /= 2) $ error usage
 
-  let [xmlFilename] = args
+  let [modName, xmlFilename] = args
 
   dataDir <- getDataDir
   let dtdPath = dataDir </> "dtd"
+      config = BuilderConfig { moduleName = modName
+                             }
 
-  putStrLn =<< generateModuleSource xmlFilename dtdPath []
+  putStrLn =<< generateModuleSource config xmlFilename dtdPath []

@@ -11,15 +11,17 @@ import Text.XML.HaXml.Validate
 import Text.XML.HaXml.Types
 
 import Graphics.Vty.Widgets.Builder.Types
+import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Handlers
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 
-generateModuleSource :: FilePath
+generateModuleSource :: BuilderConfig
+                     -> FilePath
                      -> FilePath
                      -> [(String, ElementHandler a)]
                      -> IO String
-generateModuleSource inputXmlPath dtdPath extraHandlers = do
+generateModuleSource config inputXmlPath dtdPath extraHandlers = do
   masterDTD <- generateMasterDTD (elementHandlers ++ extraHandlers) dtdPath
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
@@ -35,15 +37,15 @@ generateModuleSource inputXmlPath dtdPath extraHandlers = do
            [] -> do
              let (_, finalState) = runState (gen e $ ValueName "root")
                                    (GenState 0 empty elementHandlers [] [] [])
-             return $ render $ fullModuleSource "FooBar" finalState
+             return $ render $ fullModuleSource config finalState
            es -> do
              mapM_ putStrLn es
              error $ "Error validating " ++ (show inputXmlPath)
 
-fullModuleSource :: String -> GenState a -> Doc
-fullModuleSource moduleName st =
+fullModuleSource :: BuilderConfig -> GenState a -> Doc
+fullModuleSource config st =
     let typeDoc = generateTypes st
-    in vcat [ text $ "module " ++ moduleName
+    in vcat [ text $ "module " ++ moduleName config
             , text "   ( mkInterface"
             , text "   , InterfaceElements(..)"
             , text "   )"
