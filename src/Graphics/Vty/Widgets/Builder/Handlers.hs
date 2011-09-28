@@ -37,6 +37,8 @@ genCollection e _ = do
   -- DTD: two children
   let chs = elemChildren e
   append $ text "c <- newCollection"
+  append $ text ""
+
   forM_ chs $ \ch -> do
     nam <- newEntry
     genInterface ch nam
