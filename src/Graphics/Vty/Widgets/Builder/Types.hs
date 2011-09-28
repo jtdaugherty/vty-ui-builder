@@ -43,13 +43,11 @@ type ElementHandler a = Element a -> ValueName -> GenM a ()
 
 data TyCon = TyCon String [TyCon]
 
-conNumFields :: TyCon -> Int
-conNumFields (TyCon _ ch) = length ch
-
 instance ToDoc TyCon where
     toDoc (TyCon s []) = text s
     toDoc (TyCon s tcs) = text s <> (hcat $ map (text " " <>) fields)
         where
+          conNumFields (TyCon _ ch) = length ch
           fields = map mkField tcs
           mkField tc = if conNumFields tc > 0
                        then text "(" <> toDoc tc <> text ")"
