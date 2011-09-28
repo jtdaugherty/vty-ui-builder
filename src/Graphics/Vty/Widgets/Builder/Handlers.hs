@@ -54,9 +54,16 @@ genVBox e nam = do
       buildVBox (c1:c2:rest) = do
                   nextName <- newEntry
                   append $ text $ nextName ++ " <- vBox " ++ c1 ++ " " ++ c2
+
+                  c1Type <- getStateType c1
+                  c2Type <- getStateType c2
+
+                  registerStateType nextName $ "VBox (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
                   buildVBox (nextName:rest)
 
   result <- buildVBox names
+  registerStateType nam =<< getStateType result
+
   append $ text $ "let " ++ nam ++ " = " ++ result
 
 genHBox :: ElementHandler a
@@ -73,9 +80,16 @@ genHBox e nam = do
       buildHBox (c1:c2:rest) = do
                   nextName <- newEntry
                   append $ text $ nextName ++ " <- hBox " ++ c1 ++ " " ++ c2
+
+                  c1Type <- getStateType c1
+                  c2Type <- getStateType c2
+
+                  registerStateType nextName $ "HBox (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
                   buildHBox (nextName:rest)
 
   result <- buildHBox names
+  registerStateType nam =<< getStateType result
+
   append $ text $ "let " ++ nam ++ " = " ++ result
 
 genFormattedText :: ElementHandler a
@@ -115,6 +129,8 @@ genFormattedText (Elem _ _ eContents) nam = do
       pairListExpr = intercalate ", " $
                      map pairExpr collapsed
       pairExpr (s, expr) = "(" ++ show s ++ ", " ++ expr ++ ")"
+
+  registerStateType nam "FormattedText"
 
   append $ text $ nam ++ " <- plainText \"\""
   append $ text $ concat [ "setTextWithAttrs "

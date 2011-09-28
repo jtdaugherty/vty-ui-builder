@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE interface SYSTEM "test.dtd">
 <interface normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
-  <vBox>
+  <vBox name="flub">
     <hBox>
-      <fText name="t1">foo</fText>
+      <fText name="username">foo</fText>
       <fText>bar</fText>
     </hBox>
-    <fText name="t2">other</fText>
+    <fText name="email">other</fText>
     <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
   </vBox>
   <focusGroup>
-    <entry name="t1"/>
-    <entry name="t2"/>
   </focusGroup>
 </interface>

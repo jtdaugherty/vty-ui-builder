@@ -1,5 +1,6 @@
 module Graphics.Vty.Widgets.Builder.GenLib
     ( gen
+    , generateTypes
     , elemChildren
     , getString
     , append
@@ -7,14 +8,18 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getAttribute
     , attrsToExpr
     , lookupName
+    , registerStateType
+    , getStateType
     )
 where
 
 import Control.Applicative
 import Control.Monad.State
+import Data.List (intersperse)
+import Data.Maybe (fromJust)
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Combinators
-import Text.PrettyPrint.HughesPJ (Doc, text, ($$))
+import Text.PrettyPrint.HughesPJ (Doc, text, ($$), vcat, nest)
 
 import Graphics.Vty.Widgets.Builder.Types
 
@@ -30,6 +35,36 @@ gen e@(Elem (N n) _ _) nam = do
         Nothing -> return ()
         Just newName -> registerName newName nam
 gen _ _ = error "Got unsupported element structure"
+
+-- Using the registered element names in the input document, generate
+-- a type with fields for each of the named elements.
+generateTypes :: GenState a -> Doc
+generateTypes st =
+    let header = [ text "data InterfaceElements = InterfaceElements {"
+                 ]
+        footer = [ text "}"
+                 ]
+        body = nest 2 $ vcat $ intersperse (text ", ") $
+               (flip map) (namedValues st) $ \(fieldName, valName) ->
+                   (text $ "elem_" ++ fieldName ++ " :: Widget (" ++ (fromJust $ lookup valName $ valueTypes st) ++ ")")
+    in vcat (header ++ [body] ++ footer)
+
+registerStateType :: String -> String -> GenM a ()
+registerStateType valueName typeStr = do
+  st <- get
+  case lookup valueName (valueTypes st) of
+    Just _ -> error $ "BUG: type registration for value '" ++ valueName ++
+              "' happened already!"
+    Nothing -> do
+      put $ st { valueTypes  = (valueName, typeStr) : valueTypes st }
+
+getStateType :: String -> GenM a String
+getStateType valueName = do
+  vts <- gets valueTypes
+  case lookup valueName vts of
+    Nothing -> error $ "BUG: request for state type for value '" ++ valueName ++
+               "' impossible"
+    Just t -> return t
 
 registerName :: String -> String -> GenM a ()
 registerName newName valueName = do

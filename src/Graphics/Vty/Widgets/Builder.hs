@@ -4,6 +4,8 @@ module Graphics.Vty.Widgets.Builder
 where
 
 import Control.Monad.State
+import Data.List (intersperse)
+import Data.Maybe (fromJust)
 import Text.PrettyPrint.HughesPJ
 
 import Text.XML.HaXml.Parse hiding (doctypedecl)
@@ -32,8 +34,44 @@ generateModuleSource inputXmlPath dtdPath extraHandlers = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let (_, st') = runState (gen e "root") (GenState 0 empty elementHandlers [])
-             return $ render $ genDoc st'
+             let (_, finalState) = runState (gen e "root") (GenState 0 empty elementHandlers [] [])
+             return $ render $ fullModuleSource "FooBar" finalState
            es -> do
              mapM_ putStrLn es
              error $ "Error validating " ++ (show inputXmlPath)
+
+fullModuleSource :: String -> GenState a -> Doc
+fullModuleSource moduleName st =
+    let typeDoc = generateTypes st
+        rootType = fromJust $ lookup "root" $ valueTypes st
+    in vcat [ text $ "module " ++ moduleName
+            , text "   ( mkInterface"
+            , text "   , InterfaceElements(..)"
+            , text "   )"
+            , text "where"
+            , text ""
+            , text "import Graphics.Vty"
+            , text "import Graphics.Vty.Widgets.All"
+            , text ""
+            , text $ "type UIRootType = " ++ rootType
+            , text ""
+            , typeDoc
+            , text ""
+            , text $ "mkInterface :: IO (Widget UIRootType, InterfaceElements)"
+            , text "mkInterface = do"
+            , nest 2 $ vcat [ genDoc st
+                            , mkElementsValue st
+                            , text "return (root, elems)"
+                            ]
+            ]
+
+mkElementsValue :: GenState a -> Doc
+mkElementsValue st =
+    let lines = header ++ [nest 2 $ vcat body] ++ footer
+        body = intersperse (text ", ") $ (flip map) (namedValues st) $ \(fieldName, valName) ->
+               text $ "elem_" ++ fieldName ++ " = " ++ valName
+        header = [ text "InterfaceElements {"
+                 ]
+        footer = [ text "}"
+                 ]
+    in text "let elems = " <> (vcat lines)

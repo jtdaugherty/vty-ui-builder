@@ -13,6 +13,7 @@ data GenState a = GenState { nameCounter :: Int
                            , genDoc :: Doc
                            , handlers :: [(String, ElementHandler a)]
                            , namedValues :: [(String, String)]
+                           , valueTypes :: [(String, String)]
                            }
 
 type GenM a b = State (GenState a) b
