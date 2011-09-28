@@ -58,7 +58,7 @@ genVBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerStateType nextName $ "VBox (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
+                  registerStateType nextName $ "Box (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
                   buildVBox (nextName:rest)
 
   result <- buildVBox names
@@ -84,7 +84,7 @@ genHBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerStateType nextName $ "HBox (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
+                  registerStateType nextName $ "Box (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
                   buildHBox (nextName:rest)
 
   result <- buildHBox names
