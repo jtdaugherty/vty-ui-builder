@@ -34,7 +34,7 @@ elementHandlers = [ ("collection", genCollection)
                   ]
 
 genCollection :: ElementHandler a
-genCollection e nam = do
+genCollection e _ = do
   -- DTD: two children
   let chs = elemChildren e
   append $ text "c <- newCollection"
@@ -43,7 +43,10 @@ genCollection e nam = do
     nam <- newEntry
     actName <- newEntry
     genInterface ch nam
-    append $ text $ actName ++ " <- addToCollection c " ++ nam
+    append $ hcat [ toDoc actName
+                  , text " <- addToCollection c "
+                  , toDoc nam
+                  ]
     registerInterface ifName nam actName
 
 genInterface :: ElementHandler a
@@ -51,7 +54,7 @@ genInterface e nam = do
   -- DTD: two children
   let [ch, fg] = elemChildren e
   gen ch nam
-  genFocusGroup fg "fg"
+  genFocusGroup fg $ ValueName "fg"
   -- XXX: add resulting UI widget and focus group to a collection
 
 genVBox :: ElementHandler a
@@ -67,7 +70,12 @@ genVBox e nam = do
       buildVBox [c] = return c
       buildVBox (c1:c2:rest) = do
                   nextName <- newEntry
-                  append $ text $ nextName ++ " <- vBox " ++ c1 ++ " " ++ c2
+                  append $ hcat [ toDoc nextName
+                                , text " <- vBox "
+                                , toDoc c1
+                                , text " "
+                                , toDoc c2
+                                ]
 
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
@@ -78,7 +86,11 @@ genVBox e nam = do
   result <- buildVBox names
   registerStateType nam =<< getStateType result
 
-  append $ text $ "let " ++ nam ++ " = " ++ result
+  append $ hcat [ text "let "
+                , toDoc nam
+                , text " = "
+                , toDoc result
+                ]
 
 genHBox :: ElementHandler a
 genHBox e nam = do
@@ -93,7 +105,12 @@ genHBox e nam = do
       buildHBox [c] = return c
       buildHBox (c1:c2:rest) = do
                   nextName <- newEntry
-                  append $ text $ nextName ++ " <- hBox " ++ c1 ++ " " ++ c2
+                  append $ hcat [ toDoc nextName
+                                , text " <- hBox "
+                                , toDoc c1
+                                , text " "
+                                , toDoc c2
+                                ]
 
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
@@ -104,7 +121,11 @@ genHBox e nam = do
   result <- buildHBox names
   registerStateType nam =<< getStateType result
 
-  append $ text $ "let " ++ nam ++ " = " ++ result
+  append $ hcat [ text "let "
+                , toDoc nam
+                , text " = "
+                , toDoc result
+                ]
 
 genFormattedText :: ElementHandler a
 genFormattedText (Elem _ _ eContents) nam = do
@@ -146,17 +167,17 @@ genFormattedText (Elem _ _ eContents) nam = do
 
   registerStateType nam "FormattedText"
 
-  append $ text $ nam ++ " <- plainText \"\""
-  append $ text $ concat [ "setTextWithAttrs "
-                         , nam
-                         , " ["
-                         , pairListExpr
-                         , "]"
-                         ]
+  append $ toDoc nam <> text " <- plainText \"\""
+  append $ hcat [ text "setTextWithAttrs "
+                , toDoc nam
+                , text " ["
+                , text pairListExpr
+                , text "]"
+                ]
 
 genFocusGroup :: ElementHandler a
 genFocusGroup e nam = do
-  append $ text $ nam ++ " <- newFocusGroup"
+  append $ toDoc nam <> text " <- newFocusGroup"
 
   -- For each child element of the focus group, resolve it to a named
   -- value and add the specified widget to the focus group.
@@ -168,8 +189,12 @@ genFocusGroup e nam = do
                            \DTD should have disallowed this"
           Just registeredName ->
               do
-                result <- lookupName registeredName
+                result <- lookupName $ RegisteredName registeredName
                 case result of
-                  Nothing -> error $ "Focus group error: widget name " ++ show registeredName
+                  Nothing -> error $ "Focus group error: widget name "
+                             ++ show registeredName
                              ++ " not found in document"
-                  Just valName -> append $ text $ "addToFocusGroup " ++ nam ++ " " ++ valName
+                  Just valName -> append $ text "addToFocusGroup "
+                                  <> toDoc nam
+                                  <> text " "
+                                  <> toDoc valName

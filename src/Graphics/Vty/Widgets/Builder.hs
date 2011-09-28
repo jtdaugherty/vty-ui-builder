@@ -4,8 +4,6 @@ module Graphics.Vty.Widgets.Builder
 where
 
 import Control.Monad.State
-import Data.List (intersperse)
-import Data.Maybe (fromJust)
 import Text.PrettyPrint.HughesPJ
 
 import Text.XML.HaXml.Parse hiding (doctypedecl)
@@ -30,11 +28,13 @@ generateModuleSource inputXmlPath dtdPath extraHandlers = do
 
   xmlContents <- readFile inputXmlPath
   case xmlParse' inputXmlPath xmlContents of
-    Left e -> error $ "Error parsing input XML " ++ (show inputXmlPath) ++ ": " ++ e
+    Left e -> error $ "Error parsing input XML "
+              ++ (show inputXmlPath) ++ ": " ++ e
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let (_, finalState) = runState (gen e "root") (GenState 0 empty elementHandlers [] [] [])
+             let (_, finalState) = runState (gen e $ ValueName "root")
+                                   (GenState 0 empty elementHandlers [] [] [])
              return $ render $ fullModuleSource "FooBar" finalState
            es -> do
              mapM_ putStrLn es
@@ -64,14 +64,19 @@ fullModuleSource moduleName st =
 
 mkElementsValue :: GenState a -> Doc
 mkElementsValue st =
-    let lines = header ++ [nest 2 $ vcat body] ++ footer
-        body = intersperse (text ", ") (elem_lines ++ if_act_lines)
+    let ls = header ++ [nest 2 $ addCommas body] ++ footer
+        body = elem_lines ++ if_act_lines
         elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
-                     text $ "elem_" ++ fieldName ++ " = " ++ valName
-        if_act_lines = (flip map) (interfaceNames st) $ \(ifName, (valName, actName)) ->
-                       text $ "switchTo_" ++ ifName ++ " = " ++ actName
+                     text "elem_" <> toDoc fieldName
+                     <> text " = " <> toDoc valName
+        if_act_lines = (flip map) (interfaceNames st) $
+                       \(ifName, (_, actName)) ->
+                           text "switchTo_"
+                                    <> text ifName
+                                    <> text " = "
+                                    <> toDoc actName
         header = [ text "InterfaceElements {"
                  ]
         footer = [ text "}"
                  ]
-    in text "let elems = " <> (vcat lines)
+    in text "let elems = " <> (vcat ls)

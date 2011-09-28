@@ -11,16 +11,16 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , registerStateType
     , registerInterface
     , getStateType
+    , addCommas
     )
 where
 
 import Control.Applicative
 import Control.Monad.State
-import Data.List (intersperse)
 import Data.Maybe (fromJust)
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Combinators
-import Text.PrettyPrint.HughesPJ (Doc, text, ($$), vcat, nest)
+import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
 
@@ -34,7 +34,7 @@ gen e@(Elem (N n) _ _) nam = do
       annotateElement e nam
       case getAttribute e "fieldName" of
         Nothing -> return ()
-        Just newName -> registerName newName nam
+        Just newName -> registerName (RegisteredName newName) nam
 gen _ _ = error "Got unsupported element structure"
 
 -- Using the registered element names in the input document, generate
@@ -45,33 +45,39 @@ generateTypes st =
                  ]
         footer = [ text "}"
                  ]
-        body = intersperse (text ", ") (elem_lines ++ if_act_lines)
+        body = elem_lines ++ if_act_lines
         elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
-                     (text $ "elem_" ++ fieldName ++ " :: Widget (" ++
-                               (fromJust $ lookup valName $ valueTypes st) ++ ")")
-        if_act_lines = (flip map) (interfaceNames st) $ \(ifName, (valName, actName)) ->
+                     hcat [ text "elem_"
+                          , toDoc fieldName
+                          , text " :: Widget ("
+                          , text $ fromJust $ lookup valName $ valueTypes st
+                          , text ")"
+                          ]
+        if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
                        (text $ "switchTo_" ++ ifName ++ " :: IO ()")
 
-    in vcat (header ++ [nest 2 $ vcat body] ++ footer)
+    in vcat (header ++ [nest 2 $ addCommas body] ++ footer)
 
-registerStateType :: String -> String -> GenM a ()
+registerStateType :: ValueName -> String -> GenM a ()
 registerStateType valueName typeStr = do
   st <- get
   case lookup valueName (valueTypes st) of
-    Just _ -> error $ "BUG: type registration for value '" ++ valueName ++
-              "' happened already!"
+    Just _ -> error $ "BUG: type registration for value "
+              ++ show valueName
+              ++ " happened already!"
     Nothing -> do
       put $ st { valueTypes  = (valueName, typeStr) : valueTypes st }
 
-getStateType :: String -> GenM a String
+getStateType :: ValueName -> GenM a String
 getStateType valueName = do
   vts <- gets valueTypes
   case lookup valueName vts of
-    Nothing -> error $ "BUG: request for state type for value '" ++ valueName ++
-               "' impossible"
+    Nothing -> error $ "BUG: request for state type for value "
+               ++ show valueName
+               ++ " impossible"
     Just t -> return t
 
-registerName :: String -> String -> GenM a ()
+registerName :: RegisteredName -> ValueName -> GenM a ()
 registerName newName valueName = do
   st <- get
   case lookup newName (namedValues st) of
@@ -80,7 +86,7 @@ registerName newName valueName = do
     Nothing -> do
       put $ st { namedValues = (newName, valueName) : namedValues st }
 
-lookupName :: String -> GenM a (Maybe String)
+lookupName :: RegisteredName -> GenM a (Maybe ValueName)
 lookupName registeredName = lookup registeredName <$> gets namedValues
 
 getAttribute :: Element a -> String -> Maybe String
@@ -95,13 +101,13 @@ attrsToExpr (Just fg, Nothing) = Just $ "fgColor " ++ fg
 attrsToExpr (Nothing, Just bg) = Just $ "bgColor " ++ bg
 attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
 
-registerInterface :: String -> String -> String -> GenM a ()
+registerInterface :: String -> ValueName -> ValueName -> GenM a ()
 registerInterface ifName valName activateActionName = do
   st <- get
   put $ st { interfaceNames = (ifName, (valName, activateActionName))
                               : interfaceNames st }
 
-annotateElement :: Element a -> String -> GenM a ()
+annotateElement :: Element a -> ValueName -> GenM a ()
 annotateElement e nam = do
   -- Normal attribute override
   let normalResult = ( getAttribute e "normalFg"
@@ -110,11 +116,11 @@ annotateElement e nam = do
   case attrsToExpr normalResult of
     Nothing -> return ()
     Just expr ->
-        append $ text $ concat [ "setNormalAttribute "
-                               , nam
-                               , " $ "
-                               , expr
-                               ]
+        append $ hcat [ text "setNormalAttribute "
+                      , toDoc nam
+                      , text " $ "
+                      , text expr
+                      ]
 
   -- Focus attribute override
   let focusResult = ( getAttribute e "focusFg"
@@ -123,11 +129,11 @@ annotateElement e nam = do
   case attrsToExpr focusResult of
     Nothing -> return ()
     Just expr ->
-        append $ text $ concat [ "setFocusAttribute "
-                               , nam
-                               , " $ "
-                               , expr
-                               ]
+        append $ hcat [ text "setFocusAttribute "
+                      , toDoc nam
+                      , text " $ "
+                      , text expr
+                      ]
 
 elemChildren :: Element a -> [Element a]
 elemChildren (Elem _ _ cs) = map getElem contents
@@ -145,9 +151,14 @@ append d = do
   st <- get
   put $ st { genDoc = (genDoc st) $$ d }
 
-newEntry :: GenM a String
+newEntry :: GenM a ValueName
 newEntry = do
   st <- get
   put $ st { nameCounter = (nameCounter st) + 1
            }
-  return $ "val" ++ show (nameCounter st)
+  return $ ValueName $ "val" ++ show (nameCounter st)
+
+addCommas :: [Doc] -> Doc
+addCommas [] = text ""
+addCommas (l:ls) =
+    (text "  " <> l) $$ (vcat $ map (text ", " <>) ls)
