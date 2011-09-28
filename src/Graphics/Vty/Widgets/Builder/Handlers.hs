@@ -83,7 +83,7 @@ genVBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerStateType nextName $ "Box (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
+                  registerStateType nextName $ TyCon "Box" [c1Type, c2Type]
                   buildVBox (nextName:rest)
 
   result <- buildVBox names
@@ -118,7 +118,7 @@ genHBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerStateType nextName $ "Box (" ++ c1Type ++ ") (" ++ c2Type ++ ")"
+                  registerStateType nextName $ TyCon "Box" [c1Type, c2Type]
                   buildHBox (nextName:rest)
 
   result <- buildHBox names
@@ -168,7 +168,7 @@ genFormattedText (Elem _ _ eContents) nam = do
                      map pairExpr collapsed
       pairExpr (s, expr) = "(" ++ show s ++ ", " ++ expr ++ ")"
 
-  registerStateType nam "FormattedText"
+  registerStateType nam $ TyCon "FormattedText" []
 
   append $ toDoc nam <> text " <- plainText \"\""
   append $ hcat [ text "setTextWithAttrs "

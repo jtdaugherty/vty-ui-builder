@@ -50,26 +50,25 @@ generateTypes st =
         elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
                      hcat [ text "elem_"
                           , toDoc fieldName
-                          , text " :: Widget ("
-                          , text $ fromJust $ lookup valName $ valueTypes st
-                          , text ")"
+                          , text " :: "
+                          , toDoc $ TyCon "Widget" [fromJust $ lookup valName $ valueTypes st]
                           ]
         if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
                        (text $ "switchTo_" ++ ifName ++ " :: IO ()")
 
     in vcat (header ++ [nest 2 $ addCommas body] ++ footer)
 
-registerStateType :: ValueName -> String -> GenM a ()
-registerStateType valueName typeStr = do
+registerStateType :: ValueName -> TyCon -> GenM a ()
+registerStateType valueName tyCon = do
   st <- get
   case lookup valueName (valueTypes st) of
     Just _ -> error $ "BUG: type registration for value "
               ++ show valueName
               ++ " happened already!"
     Nothing -> do
-      put $ st { valueTypes  = (valueName, typeStr) : valueTypes st }
+      put $ st { valueTypes  = (valueName, tyCon) : valueTypes st }
 
-getStateType :: ValueName -> GenM a String
+getStateType :: ValueName -> GenM a TyCon
 getStateType valueName = do
   vts <- gets valueTypes
   case lookup valueName vts of
