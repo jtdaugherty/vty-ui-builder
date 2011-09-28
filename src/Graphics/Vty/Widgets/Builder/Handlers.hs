@@ -39,23 +39,26 @@ genCollection e _ = do
   let chs = elemChildren e
   append $ text "c <- newCollection"
   forM_ chs $ \ch -> do
-    let Just ifName = getAttribute ch "name"
     nam <- newEntry
-    actName <- newEntry
     genInterface ch nam
-    append $ hcat [ toDoc actName
-                  , text " <- addToCollection c "
-                  , toDoc nam
-                  ]
-    registerInterface ifName nam actName
 
 genInterface :: ElementHandler a
 genInterface e nam = do
   -- DTD: two children
   let [ch, fg] = elemChildren e
+      Just ifName = getAttribute e "name"
+
   gen ch nam
-  genFocusGroup fg $ ValueName "fg"
-  -- XXX: add resulting UI widget and focus group to a collection
+  actName <- newEntry
+  fgName <- newEntry
+  genFocusGroup fg fgName
+  append $ hcat [ toDoc actName
+                , text " <- addToCollection c "
+                , toDoc nam
+                , text " "
+                , toDoc fgName
+                ]
+  registerInterface ifName nam actName
 
 genVBox :: ElementHandler a
 genVBox e nam = do

@@ -32,6 +32,7 @@ gen e@(Elem (N n) _ _) nam = do
     Just h -> do
       h e nam
       annotateElement e nam
+      append $ text ""
       case getAttribute e "fieldName" of
         Nothing -> return ()
         Just newName -> registerName (RegisteredName newName) nam
