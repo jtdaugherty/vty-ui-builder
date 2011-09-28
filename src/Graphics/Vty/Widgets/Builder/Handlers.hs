@@ -9,7 +9,6 @@ module Graphics.Vty.Widgets.Builder.Handlers
 where
 
 import Control.Monad
-import Data.List (intercalate)
 import Text.PrettyPrint.HughesPJ
 import Text.XML.HaXml.Types
 
@@ -164,18 +163,21 @@ genFormattedText (Elem _ _ eContents) nam = do
       pairs = concat $ mapM (processContent "def_attr") eContents
 
       collapsed = collapse pairs
-      pairListExpr = intercalate ", " $
-                     map pairExpr collapsed
-      pairExpr (s, expr) = "(" ++ show s ++ ", " ++ expr ++ ")"
+      pairExprList = map pairExpr collapsed
+      pairExpr (s, expr) = parens $ hcat [ text $ show s
+                                         , text ", "
+                                         , text expr
+                                         ]
 
   registerStateType nam $ TyCon "FormattedText" []
 
   append $ toDoc nam <> text " <- plainText \"\""
   append $ hcat [ text "setTextWithAttrs "
                 , toDoc nam
-                , text " ["
-                , text pairListExpr
-                , text "]"
+                , text " "
+                , vcat [ addCommas pairExprList "[ "
+                       , text "]"
+                       ]
                 ]
 
 genFocusGroup :: ElementHandler a

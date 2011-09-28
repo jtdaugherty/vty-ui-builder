@@ -66,7 +66,7 @@ fullModuleSource config st =
 
 mkElementsValue :: GenState a -> Doc
 mkElementsValue st =
-    let ls = header ++ [nest 2 $ addCommas body] ++ footer
+    let ls = header ++ [nest 2 $ addCommas body "  "] ++ footer
         body = elem_lines ++ if_act_lines
         elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
                      text "elem_" <> toDoc fieldName

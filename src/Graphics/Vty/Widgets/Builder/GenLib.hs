@@ -56,7 +56,7 @@ generateTypes st =
         if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
                        (text $ "switchTo_" ++ ifName ++ " :: IO ()")
 
-    in vcat (header ++ [nest 2 $ addCommas body] ++ footer)
+    in vcat (header ++ [nest 2 $ addCommas body "  "] ++ footer)
 
 registerStateType :: ValueName -> TyCon -> GenM a ()
 registerStateType valueName tyCon = do
@@ -158,7 +158,7 @@ newEntry = do
            }
   return $ ValueName $ "val" ++ show (nameCounter st)
 
-addCommas :: [Doc] -> Doc
-addCommas [] = text ""
-addCommas (l:ls) =
-    (text "  " <> l) $$ (vcat $ map (text ", " <>) ls)
+addCommas :: [Doc] -> String -> Doc
+addCommas [] _ = text ""
+addCommas (l:ls) s =
+    text s <> l $$ (vcat $ map (text ", " <>) ls)
