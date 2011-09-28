@@ -50,6 +50,7 @@ instance ToDoc TyCon where
         where
           conNumFields (TyCon _ ch) = length ch
           fields = map mkField tcs
-          mkField tc = if conNumFields tc > 0
-                       then text "(" <> toDoc tc <> text ")"
-                       else toDoc tc
+          mkField tc = f $ toDoc tc
+              where f = if conNumFields tc > 0
+                        then parens
+                        else id
