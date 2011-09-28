@@ -10,6 +10,7 @@ module Graphics.Vty.Widgets.Builder.Types
 where
 
 import Control.Monad.State
+import Data.List (intersperse)
 import Text.XML.HaXml.Types
 import Text.PrettyPrint.HughesPJ
 
@@ -45,7 +46,7 @@ data TyCon = TyCon String [TyCon]
 
 instance ToDoc TyCon where
     toDoc (TyCon s []) = text s
-    toDoc (TyCon s tcs) = text s <> (hcat $ map (text " " <>) fields)
+    toDoc (TyCon s tcs) = hcat $ intersperse (text " ") $ text s : fields
         where
           conNumFields (TyCon _ ch) = length ch
           fields = map mkField tcs
