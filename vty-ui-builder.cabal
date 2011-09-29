@@ -16,6 +16,7 @@ Data-files:
   dtd/interface.dtd
   dtd/focusGroup.dtd
   dtd/collection.dtd
+  dtd/format.dtd
 
 Library
   Hs-Source-Dirs:    src
@@ -33,7 +34,7 @@ Executable builder-test
   Main-is:           Main.hs
   GHC-Options:       -Wall
   Build-Depends:
-    vty-ui >= 1.2 && < 1.3,
+    vty-ui >= 1.3 && < 1.4,
     HaXml >= 1.22 && < 1.23,
     pretty >= 1.0 && < 1.1,
     mtl >= 2.0 && < 2.1,

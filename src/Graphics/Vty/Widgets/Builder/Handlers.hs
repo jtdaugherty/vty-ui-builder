@@ -22,6 +22,7 @@ elementHandlers = [ ("collection", genCollection)
                   -- since those entities are *parsed* entities.  See
                   -- also http://www.w3.org/TR/xml/#dt-parsedent
                   , ("interface", genInterface)
+                  , ("format", genFormat)
                   , ("fText", genFormattedText)
                   , ("vBox", genVBox)
                   , ("hBox", genHBox)
@@ -129,6 +130,23 @@ genHBox e nam = do
                 , toDoc nam
                 , text " = "
                 , toDoc result
+                ]
+
+genFormat :: ElementHandler a
+genFormat e nam = do
+  let [ch] = elemChildren e
+      Just formatName = getAttribute e "name"
+
+  gen ch nam
+  tempNam <- newEntry
+  append $ toDoc tempNam <> text " <- getTextFormatter " <> toDoc nam
+  append $ hcat [ text "setTextFormatter "
+                , toDoc nam
+                , text " "
+                , parens $ hcat [ toDoc tempNam
+                                , text " &.& "
+                                , text formatName
+                                ]
                 ]
 
 genFormattedText :: ElementHandler a

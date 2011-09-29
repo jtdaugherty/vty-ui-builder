@@ -1,0 +1,2 @@
+<!ELEMENT format (fText|format)>
+<!ATTLIST format name CDATA #REQUIRED>

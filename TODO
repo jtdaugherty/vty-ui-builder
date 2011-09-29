@@ -39,7 +39,3 @@ Add support for:
   * Group
 
   * Skinning configuration
-  * FormattedText formatters, e.g.,
-    <format name="wrap">
-      <fText>...</fText>
-    </format>
