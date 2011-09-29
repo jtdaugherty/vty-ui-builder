@@ -1,0 +1,45 @@
+
+vBox/hBox
+
+  * Support child spacing controls (applies to all generated boxes
+    within any vBox / hBox)
+
+  * Support child size policy controls, e.g.,
+
+    <!-- Percentage of top-level box size -->
+    <vBox sizing="50%,25%,25%">
+      <ch1>...</ch1>
+      <ch2>...</ch2>
+      <ch3>...</ch3>
+    </vBox>
+
+    <!-- Fixed number of rows/columns -->
+    <vBox sizing="25,auto,13">
+      <ch1>...</ch1>
+      <ch2>...</ch2>
+      <ch3>...</ch3>
+    </vBox>
+
+Add support for:
+
+  * List
+  * Borders
+  * Edit
+  * Table
+  * CheckBox
+  * Padding
+  * Limits
+  * Fixed
+  * Fills
+  * Centering
+  * Dialog?
+  * Button
+  * ProgressBar
+  * DirBrowser
+  * Group
+
+  * Skinning configuration
+  * FormattedText formatters, e.g.,
+    <format name="wrap">
+      <fText>...</fText>
+    </format>
