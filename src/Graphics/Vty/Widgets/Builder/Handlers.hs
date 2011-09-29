@@ -29,6 +29,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("hBorder", genHBorder)
                   , ("vBorder", genVBorder)
                   , ("bordered", genBordered)
+                  , ("edit", genEdit)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -69,6 +70,13 @@ genInterface e nam = do
                              , focusGroupName = fgName
                              }
   registerInterface ifName vals
+
+genEdit :: ElementHandler a
+genEdit _ nam = do
+  append $ hcat [ toDoc nam
+                , text " <- editWidget"
+                ]
+  registerStateType nam $ TyCon "Edit" []
 
 genHBorder :: ElementHandler a
 genHBorder _ nam = do

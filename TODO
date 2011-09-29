@@ -20,10 +20,13 @@ vBox/hBox
       <ch3>...</ch3>
     </vBox>
 
+edit
+
+  * Initial edit widget text
+
 Add support for:
 
   * List
-  * Edit
   * Table
   * CheckBox
   * Padding

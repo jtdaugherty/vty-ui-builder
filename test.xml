@@ -12,9 +12,9 @@
   </interface>
 
   <interface name="other">
-    <fText fieldName="stuff">Stuff.</fText>
+    <edit fieldName="edit"/>
     <focusGroup>
-      <entry name="stuff"/>
+      <entry name="edit"/>
     </focusGroup>
   </interface>
 </collection>

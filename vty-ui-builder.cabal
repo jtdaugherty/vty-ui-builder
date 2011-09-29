@@ -20,6 +20,7 @@ Data-files:
   dtd/hBorder.dtd
   dtd/vBorder.dtd
   dtd/bordered.dtd
+  dtd/edit.dtd
 
 Library
   Hs-Source-Dirs:    src
