@@ -62,20 +62,39 @@ fullModuleSource config st =
                        , text "import Graphics.Vty.Widgets.All"
                        ]
                   else []
+
+        quitHandlers = concat $ (flip map) (interfaceNames st) $
+                       \(nam, _) ->
+                           [ text "  (fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
+                           , text "    case k of"
+                           , text "      (KASCII 'q') -> shutdownUi >> return True"
+                           , text "      _ -> return False"
+                           ]
+
         lastIf = (length $ interfaceNames st) - 1
-        firstIfname = fst (interfaceNames st !! lastIf)
+        switchHandlers = concat $ (flip map) (zip [0..] (interfaceNames st)) $
+                         \(i, (nam, _)) ->
+                             let nextIfName = fst $ interfaceNames st !! if i == lastIf
+                                                                         then 0
+                                                                         else i + 1
+
+                             in [ text "  (fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
+                                , text "    case k of"
+                                , text "      (KASCII 'n') -> switchTo_" <> text nextIfName <> text " values >> return True"
+                                , text "      _ -> return False"
+                                ]
+
         main = if generateMain config
                then [ text ""
                     , text "main :: IO ()"
                     , text "main = do"
                     , text "  (c, values) <- buildCollection"
-                    , text "  (fg_" <> text firstIfname <> text " values) `onKeyPressed` \\_ k _ ->"
-                    , text "    case k of"
-                    , text "      (KASCII 'q') -> shutdownUi >> return True"
-                    , text "      _ -> return False"
-                    , text ""
-                    , text "  runUi c defaultContext"
                     ]
+               ++ quitHandlers
+               ++ switchHandlers
+               ++ [ text ""
+                  , text "  runUi c defaultContext"
+                  ]
                else []
     in vcat $ preamble
            ++ imports
