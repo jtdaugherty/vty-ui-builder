@@ -77,7 +77,7 @@ fullModuleSource config st =
                            in vcat [ text ""
                                    , text "(fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
                                    , blk [ text "case k of"
-                                         , blk [ text "(KASCII 'q') -> shutdownUi >> return True"
+                                         , blk [ text "KEsc -> shutdownUi >> return True"
                                                , text "(KASCII 'n') -> switchTo_" <> text nextIfName <> text " values >> return True"
                                                , text "_ -> return False"
                                                ]
