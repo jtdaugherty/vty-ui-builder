@@ -47,7 +47,7 @@ fullModuleSource config st =
     let typeDoc = generateTypes st
         preamble = if generateModulePreamble config
                    then [ text $ "module " ++ moduleName config
-                        , text "   ( mkInterface"
+                        , text "   ( buildCollection"
                         , text "   , InterfaceElements(..)"
                         , text "   )"
                         , text "where"
@@ -64,8 +64,8 @@ fullModuleSource config st =
            ++ [ text ""
               , typeDoc
               , text ""
-              , text $ "mkInterface :: IO (Collection, InterfaceElements)"
-              , text "mkInterface = do"
+              , text $ "buildCollection :: IO (Collection, InterfaceElements)"
+              , text "buildCollection = do"
               , nest 2 $ vcat [ genDoc st
                               , mkElementsValue st
                               , text "return (c, elems)"
