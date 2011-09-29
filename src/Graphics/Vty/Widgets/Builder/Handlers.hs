@@ -75,7 +75,7 @@ genHBorder _ nam = do
 genVBorder :: ElementHandler a
 genVBorder _ nam = do
   append $ hcat [ toDoc nam
-                , text " <- hBorder"
+                , text " <- vBorder"
                 ]
   registerStateType nam $ TyCon "VBorder" []
 
