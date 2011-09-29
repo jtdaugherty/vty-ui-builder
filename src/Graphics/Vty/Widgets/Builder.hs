@@ -42,6 +42,9 @@ generateModuleSource config inputXmlPath dtdPath extraHandlers = do
              mapM_ putStrLn es
              error $ "Error validating " ++ (show inputXmlPath)
 
+blk :: [Doc] -> Doc
+blk ls = nest 2 $ vcat ls
+
 fullModuleSource :: BuilderConfig -> GenState a -> Doc
 fullModuleSource config st =
     let typeDoc = generateTypes st
@@ -50,9 +53,10 @@ fullModuleSource config st =
                         then [ text "module Main where"
                              ]
                         else [ text $ "module " ++ moduleName config
-                             , text "   ( buildCollection"
-                             , text "   , InterfaceElements(..)"
-                             , text "   )"
+                             , nest 3 $ vcat [ text "( buildCollection"
+                                             , text ", InterfaceElements(..)"
+                                             , text ")"
+                                             ]
                              , text "where"
                              ]
                    else []
@@ -63,38 +67,34 @@ fullModuleSource config st =
                        ]
                   else []
 
-        quitHandlers = concat $ (flip map) (interfaceNames st) $
-                       \(nam, _) ->
-                           [ text "  (fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
-                           , text "    case k of"
-                           , text "      (KASCII 'q') -> shutdownUi >> return True"
-                           , text "      _ -> return False"
-                           ]
-
         lastIf = (length $ interfaceNames st) - 1
-        switchHandlers = concat $ (flip map) (zip [0..] (interfaceNames st)) $
-                         \(i, (nam, _)) ->
-                             let nextIfName = fst $ interfaceNames st !! if i == lastIf
-                                                                         then 0
-                                                                         else i + 1
+        keyHandlers = (flip map) (zip [0..] $ interfaceNames st) $
+                       \(i, (nam, _)) ->
+                           let nextIfName = fst $ interfaceNames st !! if i == lastIf
+                                                                       then 0
+                                                                       else i + 1
 
-                             in [ text "  (fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
-                                , text "    case k of"
-                                , text "      (KASCII 'n') -> switchTo_" <> text nextIfName <> text " values >> return True"
-                                , text "      _ -> return False"
-                                ]
+                           in vcat [ text "(fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
+                                   , blk [ text "case k of"
+                                         , blk [ text "(KASCII 'q') -> shutdownUi >> return True"
+                                               , text "(KASCII 'n') -> switchTo_" <> text nextIfName <> text " values >> return True"
+                                               , text "_ -> return False"
+                                               ]
+                                         ]
+                                   ]
 
         main = if generateMain config
                then [ text ""
                     , text "main :: IO ()"
                     , text "main = do"
-                    , text "  (c, values) <- buildCollection"
+                    , blk ([ text "(c, values) <- buildCollection"
+                           ]
+                           ++ keyHandlers
+                           ++ [ text ""
+                              , text "runUi c defaultContext"
+                              ]
+                          )
                     ]
-               ++ quitHandlers
-               ++ switchHandlers
-               ++ [ text ""
-                  , text "  runUi c defaultContext"
-                  ]
                else []
     in vcat $ preamble
            ++ imports
