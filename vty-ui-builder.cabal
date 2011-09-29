@@ -17,6 +17,9 @@ Data-files:
   dtd/focusGroup.dtd
   dtd/collection.dtd
   dtd/format.dtd
+  dtd/hBorder.dtd
+  dtd/vBorder.dtd
+  dtd/bordered.dtd
 
 Library
   Hs-Source-Dirs:    src

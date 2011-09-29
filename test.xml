@@ -3,10 +3,14 @@
 <collection>
   <interface name="main" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
     <vBox fieldName="flub">
-      <hBox>
-        <fText fieldName="username">foo</fText>
-        <fText>bar</fText>
-      </hBox>
+      <hBorder/>
+      <vBorder/>
+      <bordered>
+        <hBox>
+          <fText fieldName="username">foo</fText>
+          <fText>bar</fText>
+        </hBox>
+      </bordered>
       <fText fieldName="email">other</fText>
       <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
     </vBox>

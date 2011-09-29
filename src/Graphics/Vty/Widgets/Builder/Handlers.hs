@@ -26,6 +26,9 @@ elementHandlers = [ ("collection", genCollection)
                   , ("fText", genFormattedText)
                   , ("vBox", genVBox)
                   , ("hBox", genHBox)
+                  , ("hBorder", genHBorder)
+                  , ("vBorder", genVBorder)
+                  , ("bordered", genBordered)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -61,6 +64,35 @@ genInterface e nam = do
                 , toDoc fgName
                 ]
   registerInterface ifName nam actName
+
+genHBorder :: ElementHandler a
+genHBorder _ nam = do
+  append $ hcat [ toDoc nam
+                , text " <- hBorder"
+                ]
+  registerStateType nam $ TyCon "HBorder" []
+
+genVBorder :: ElementHandler a
+genVBorder _ nam = do
+  append $ hcat [ toDoc nam
+                , text " <- hBorder"
+                ]
+  registerStateType nam $ TyCon "VBorder" []
+
+genBordered :: ElementHandler a
+genBordered e nam = do
+  let [ch] = elemChildren e
+
+  chNam <- newEntry
+  gen ch chNam
+
+  append $ hcat [ toDoc nam
+                , text " <- bordered "
+                , toDoc chNam
+                ]
+
+  chType <- getStateType chNam
+  registerStateType nam $ TyCon "Bordered" [chType]
 
 genVBox :: ElementHandler a
 genVBox e nam = do
