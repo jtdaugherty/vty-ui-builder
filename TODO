@@ -1,4 +1,9 @@
 
+test main generation
+
+  * Add a key handler to each interface to switch to the 'next' one in
+    the collection
+
 vBox/hBox
 
   * Support child spacing controls (applies to all generated boxes

@@ -46,7 +46,7 @@ generateTypes st =
                  ]
         footer = [ text "}"
                  ]
-        body = elem_lines ++ if_act_lines
+        body = elem_lines ++ if_act_lines ++ if_fg_lines
         elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
                      hcat [ text "elem_"
                           , toDoc fieldName
@@ -55,6 +55,8 @@ generateTypes st =
                           ]
         if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
                        (text $ "switchTo_" ++ ifName ++ " :: IO ()")
+        if_fg_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
+                      (text $ "fg_" ++ ifName ++ " :: Widget FocusGroup")
 
     in vcat (header ++ [nest 2 $ addCommas body "  "] ++ footer)
 
@@ -101,10 +103,10 @@ attrsToExpr (Just fg, Nothing) = Just $ "fgColor " ++ fg
 attrsToExpr (Nothing, Just bg) = Just $ "bgColor " ++ bg
 attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
 
-registerInterface :: String -> ValueName -> ValueName -> GenM a ()
-registerInterface ifName valName activateActionName = do
+registerInterface :: String -> InterfaceValues -> GenM a ()
+registerInterface ifName vals = do
   st <- get
-  put $ st { interfaceNames = (ifName, (valName, activateActionName))
+  put $ st { interfaceNames = (ifName, vals)
                               : interfaceNames st }
 
 annotateElement :: Element a -> ValueName -> GenM a ()

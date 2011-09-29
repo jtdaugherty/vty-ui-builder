@@ -3,26 +3,18 @@
 <collection>
   <interface name="main" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
     <vBox fieldName="flub">
-      <hBorder/>
-      <vBorder/>
-      <bordered>
-        <hBox>
-          <fText fieldName="username">foo</fText>
-          <fText>bar</fText>
-        </hBox>
-      </bordered>
-      <fText fieldName="email">other</fText>
-      <fText> <attr fg="blue" bg="green">stuff</attr> <br/></fText>
+      <fText fieldName="username">foo</fText>
+      <fText>bar</fText>
     </vBox>
     <focusGroup>
+      <entry name="flub"/>
     </focusGroup>
   </interface>
+
   <interface name="other">
-    <format name="wrap">
-      <fText fieldName="t">Stuff!</fText>
-    </format>
+    <fText fieldName="stuff">Stuff.</fText>
     <focusGroup>
-      <entry name="t"/>
+      <entry name="stuff"/>
     </focusGroup>
   </interface>
 </collection>

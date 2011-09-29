@@ -63,7 +63,12 @@ genInterface e nam = do
                 , text " "
                 , toDoc fgName
                 ]
-  registerInterface ifName nam actName
+
+  let vals = InterfaceValues { topLevelWidgetName = nam
+                             , switchActionName = actName
+                             , focusGroupName = fgName
+                             }
+  registerInterface ifName vals
 
 genHBorder :: ElementHandler a
 genHBorder _ nam = do

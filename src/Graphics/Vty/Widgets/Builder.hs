@@ -46,12 +46,15 @@ fullModuleSource :: BuilderConfig -> GenState a -> Doc
 fullModuleSource config st =
     let typeDoc = generateTypes st
         preamble = if generateModulePreamble config
-                   then [ text $ "module " ++ moduleName config
-                        , text "   ( buildCollection"
-                        , text "   , InterfaceElements(..)"
-                        , text "   )"
-                        , text "where"
-                        ]
+                   then if generateMain config
+                        then [ text "module Main where"
+                             ]
+                        else [ text $ "module " ++ moduleName config
+                             , text "   ( buildCollection"
+                             , text "   , InterfaceElements(..)"
+                             , text "   )"
+                             , text "where"
+                             ]
                    else []
         imports = if generateImports config
                   then [ text ""
@@ -59,6 +62,21 @@ fullModuleSource config st =
                        , text "import Graphics.Vty.Widgets.All"
                        ]
                   else []
+        lastIf = (length $ interfaceNames st) - 1
+        firstIfname = fst (interfaceNames st !! lastIf)
+        main = if generateMain config
+               then [ text ""
+                    , text "main :: IO ()"
+                    , text "main = do"
+                    , text "  (c, values) <- buildCollection"
+                    , text "  (fg_" <> text firstIfname <> text " values) `onKeyPressed` \\_ k _ ->"
+                    , text "    case k of"
+                    , text "      (KASCII 'q') -> shutdownUi >> return True"
+                    , text "      _ -> return False"
+                    , text ""
+                    , text "  runUi c defaultContext"
+                    ]
+               else []
     in vcat $ preamble
            ++ imports
            ++ [ text ""
@@ -71,20 +89,27 @@ fullModuleSource config st =
                               , text "return (c, elems)"
                               ]
               ]
+           ++ main
 
 mkElementsValue :: GenState a -> Doc
 mkElementsValue st =
     let ls = header ++ [nest 2 $ addCommas body "  "] ++ footer
-        body = elem_lines ++ if_act_lines
+        body = elem_lines ++ if_act_lines ++ if_fg_lines
         elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
                      text "elem_" <> toDoc fieldName
                      <> text " = " <> toDoc valName
         if_act_lines = (flip map) (interfaceNames st) $
-                       \(ifName, (_, actName)) ->
+                       \(ifName, vals) ->
                            text "switchTo_"
                                     <> text ifName
                                     <> text " = "
-                                    <> toDoc actName
+                                    <> (toDoc $ switchActionName vals)
+        if_fg_lines = (flip map) (interfaceNames st) $
+                      \(ifName, vals) ->
+                          text "fg_"
+                                   <> text ifName
+                                   <> text " = "
+                                   <> (toDoc $ focusGroupName vals)
         header = [ text "InterfaceElements {"
                  ]
         footer = [ text "}"

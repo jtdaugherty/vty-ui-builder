@@ -6,6 +6,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , RegisteredName(..)
     , TyCon(..)
     , ToDoc(..)
+    , InterfaceValues(..)
     )
 where
 
@@ -29,13 +30,19 @@ instance ToDoc RegisteredName where
 instance ToDoc ValueName where
     toDoc (ValueName s) = text s
 
+data InterfaceValues =
+    InterfaceValues { topLevelWidgetName :: ValueName
+                    , switchActionName :: ValueName
+                    , focusGroupName :: ValueName
+                    }
+
 data GenState a =
     GenState { nameCounter :: Int
              , genDoc :: Doc
              , handlers :: [(String, ElementHandler a)]
              , namedValues :: [(RegisteredName, ValueName)]
              , valueTypes :: [(ValueName, TyCon)]
-             , interfaceNames :: [(String, (ValueName, ValueName))]
+             , interfaceNames :: [(String, InterfaceValues)]
              }
 
 type GenM a b = State (GenState a) b

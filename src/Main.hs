@@ -22,6 +22,7 @@ main = do
   let dtdPath = dataDir </> "dtd"
 
       config = defaultConfig { moduleName = modName
+                             , generateMain = True
                              }
 
   putStrLn =<< generateModuleSource config xmlFilename dtdPath []
