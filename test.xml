@@ -4,8 +4,8 @@
   <interface name="main" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
     <vCentered>
       <hCentered>
-        <vBox fieldName="flub">
-          <fText fieldName="username">foo</fText>
+        <vBox id="flub">
+          <fText id="username">foo</fText>
           <fText>bar</fText>
         </vBox>
       </hCentered>
@@ -20,9 +20,9 @@
       <vBox>
         <hBox>
           <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
-          <edit fieldName="edit1"/>
-          <edit fieldName="edit2" contents="flurb"/>
-          <button fieldName="button" label="Press Me"/>
+          <edit id="edit1"/>
+          <edit id="edit2" contents="flurb"/>
+          <button id="button" label="Press Me"/>
           <progressBar completeColor="cyan" incompleteColor="white"/>
         </hBox>
         <vFill char="y"/>
@@ -35,11 +35,11 @@
     </focusGroup>
   </interface>
 
-  <interface name="dlgIf">
-    <dialog fieldName="dlg" title="A dialog!">
+  <interface name="dlgIf" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
+    <dialog id="dlg" title="A dialog!">
       <vBox>
         <fText>Some text in the dialog.</fText>
-        <edit fieldName="dlgEdit"/>
+        <edit id="dlgEdit"/>
       </vBox>
     </dialog>
     <focusGroup>
@@ -49,7 +49,7 @@
   </interface>
 
   <interface name="browser">
-    <dirBrowser fieldName="b"/>
+    <dirBrowser id="b"/>
     <focusGroup>
       <entry name="b"/>
     </focusGroup>

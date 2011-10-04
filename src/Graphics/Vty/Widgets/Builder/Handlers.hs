@@ -56,6 +56,7 @@ genCollection e nam = do
   forM_ chs $ \ch -> do
     nam <- newEntry
     genInterface ch nam
+    annotateElement ch nam
 
   return nam
 

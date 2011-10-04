@@ -15,7 +15,7 @@ mkAttList nam = concat [ "<!ATTLIST "
                        , " normalBg (%bgcolor;) #IMPLIED"
                        , " focusFg (%fgcolor;) #IMPLIED"
                        , " focusBg (%bgcolor;) #IMPLIED"
-                       , " fieldName ID #IMPLIED"
+                       , " id ID #IMPLIED"
                        , ">\n"
                        ]
 
