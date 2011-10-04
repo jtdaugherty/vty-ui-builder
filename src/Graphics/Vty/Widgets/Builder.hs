@@ -62,7 +62,7 @@ fullModuleSource config st =
                    else []
         imports = if generateImports config
                   then [ text ""
-                       , text "import Graphics.Vty"
+                       , text "import Graphics.Vty hiding (Button)"
                        , text "import Graphics.Vty.Widgets.All"
                        ]
                   else []

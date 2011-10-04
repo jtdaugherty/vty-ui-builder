@@ -30,6 +30,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("vBorder", genVBorder)
                   , ("bordered", genBordered)
                   , ("edit", genEdit)
+                  , ("button", genButton)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -74,6 +75,31 @@ genInterface e nam = do
   registerInterface ifName vals
 
   return nam
+
+genButton :: ElementHandler a
+genButton e nam = do
+  let Just label = getAttribute e "label"
+
+  buttonName <- newEntry
+
+  append $ hcat [ toDoc buttonName
+                , text " <- newButton "
+                , text $ show label
+                ]
+
+  append $ hcat [ text "let "
+                , toDoc nam
+                , text " = buttonWidget "
+                , toDoc buttonName
+                ]
+
+  -- The state type is 'Padded' because buttons are implemented as
+  -- composite widgets; see the 'Button' type in
+  -- Graphics.Vty.Widgets.Button.
+  registerCustomType buttonName "Button"
+  registerWidgetStateType nam $ TyCon "Padded" []
+
+  return buttonName
 
 genEdit :: ElementHandler a
 genEdit e nam = do

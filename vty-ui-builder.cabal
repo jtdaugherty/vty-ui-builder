@@ -21,6 +21,7 @@ Data-files:
   dtd/vBorder.dtd
   dtd/bordered.dtd
   dtd/edit.dtd
+  dtd/button.dtd
 
 Library
   Hs-Source-Dirs:    src
