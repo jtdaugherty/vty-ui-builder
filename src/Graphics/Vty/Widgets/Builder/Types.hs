@@ -8,6 +8,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , TyCon(..)
     , ToDoc(..)
     , InterfaceValues(..)
+    , FocusMethod(..)
     )
 where
 
@@ -44,7 +45,10 @@ data GenState a =
              , namedValues :: [(RegisteredName, (ValueName, ValueName))]
              , valueTypes :: [(ValueName, Type)]
              , interfaceNames :: [(String, InterfaceValues)]
+             , focusMethods :: [(ValueName, FocusMethod)]
              }
+
+data FocusMethod = Direct | Merge ValueName
 
 type GenM a b = State (GenState a) b
 

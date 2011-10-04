@@ -34,4 +34,17 @@
       <entry name="button"/>
     </focusGroup>
   </interface>
+
+  <interface name="dlgIf">
+    <dialog fieldName="dlg" title="A dialog!">
+      <vBox>
+        <fText>Some text in the dialog.</fText>
+        <edit fieldName="dlgEdit"/>
+      </vBox>
+    </dialog>
+    <focusGroup>
+      <entry name="dlgEdit"/>
+      <entry name="dlg"/>
+    </focusGroup>
+  </interface>
 </collection>

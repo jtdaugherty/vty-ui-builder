@@ -28,6 +28,7 @@ Data-files:
   dtd/vCentered.dtd
   dtd/hCentered.dtd
   dtd/progressBar.dtd
+  dtd/dialog.dtd
 
 Library
   Hs-Source-Dirs:    src

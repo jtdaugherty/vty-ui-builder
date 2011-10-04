@@ -35,8 +35,8 @@ generateModuleSource config inputXmlPath dtdPath extraHandlers = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let (_, finalState) = runState (gen e $ ValueName "root")
-                                   (GenState 0 empty elementHandlers [] [] [])
+             let (_, finalState) = runState (gen e $ ValueName "root") initialState
+                 initialState = GenState 0 empty elementHandlers [] [] [] []
              return $ render $ fullModuleSource config finalState
            es -> do
              mapM_ putStrLn es

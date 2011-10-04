@@ -15,6 +15,9 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getStateType
     , addCommas
     , widgetType
+    , setFocusMethod
+    , lookupFocusMethod
+    , valNameStr
     )
 where
 
@@ -76,6 +79,16 @@ registerWidgetStateType valueName tyCon = registerType' valueName (Widget tyCon)
 registerCustomType :: ValueName -> String -> GenM a ()
 registerCustomType valueName s = registerType' valueName (Custom s)
 
+setFocusMethod :: ValueName -> FocusMethod -> GenM a ()
+setFocusMethod valueName m = do
+  st <- get
+  put $ st { focusMethods = (valueName, m) : focusMethods st }
+
+lookupFocusMethod :: ValueName -> GenM a (Maybe FocusMethod)
+lookupFocusMethod valueName = do
+  st <- get
+  return $ lookup valueName (focusMethods st)
+
 registerType' :: ValueName -> Type -> GenM a ()
 registerType' valueName ty = do
   st <- get
@@ -85,6 +98,9 @@ registerType' valueName ty = do
               ++ " happened already!"
     Nothing -> do
       put $ st { valueTypes  = (valueName, ty) : valueTypes st }
+
+valNameStr :: ValueName -> String
+valNameStr (ValueName s) = s
 
 getStateType :: ValueName -> GenM a TyCon
 getStateType valueName = do

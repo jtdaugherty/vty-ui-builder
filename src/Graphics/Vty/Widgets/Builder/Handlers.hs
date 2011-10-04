@@ -37,6 +37,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("hCentered", genHCentered)
                   , ("vCentered", genVCentered)
                   , ("progressBar", genProgressBar)
+                  , ("dialog", genDialog)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -81,6 +82,38 @@ genInterface e nam = do
   registerInterface ifName vals
 
   return nam
+
+genDialog :: ElementHandler a
+genDialog e nam = do
+  let [ch] = elemChildren e
+      Just title = getAttribute e "title"
+
+  chNam <- newEntry
+  gen ch chNam
+
+  dlgName <- newEntry
+  fgName <- newEntry
+  append $ hcat [ text "("
+                , toDoc dlgName
+                , text ", "
+                , toDoc fgName
+                , text ") <- newDialog "
+                , toDoc chNam
+                , text " "
+                , text $ show title
+                ]
+
+  append $ hcat [ text "let "
+                , toDoc nam
+                , text " = dialogWidget "
+                , toDoc dlgName
+                ]
+
+  registerWidgetStateType nam $ TyCon "Padded" []
+  registerCustomType dlgName "Dialog"
+  setFocusMethod nam $ Merge fgName
+
+  return dlgName
 
 genCentered :: ElementHandler a
 genCentered e nam = do
@@ -431,9 +464,23 @@ genFocusGroup e nam = do
                   Nothing -> error $ "Focus group error: widget name "
                              ++ show registeredName
                              ++ " not found in document"
-                  Just valName -> append $ text "addToFocusGroup "
-                                  <> toDoc nam
-                                  <> text " "
-                                  <> toDoc valName
+                  Just valName -> do
+                              -- Get the focus method for this value.
+                              m <- lookupFocusMethod valName
+                              case m of
+                                Just (Merge fgName) -> do
+                                       append $ text "appendFocusGroup "
+                                                  <> toDoc nam
+                                                  <> text " "
+                                                  <> toDoc fgName
+                                -- Covers the Just Direct and Nothing
+                                -- cases (default is Direct so
+                                -- handlers don't have to register
+                                -- focus method unless it's Merge)
+                                _ -> do
+                                    append $ text "addToFocusGroup "
+                                               <> toDoc nam
+                                               <> text " "
+                                               <> toDoc valName
 
   return nam
