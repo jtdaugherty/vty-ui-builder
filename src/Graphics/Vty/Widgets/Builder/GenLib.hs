@@ -92,7 +92,8 @@ getStateType valueName = do
   case lookup valueName vts of
     Nothing -> error $ "BUG: request for state type for value "
                ++ show valueName
-               ++ " impossible"
+               ++ " impossible; did the element handler forget"
+               ++ " to register the type?"
     -- XXX: report this error in a better way.
     Just (Custom _) -> error $ "Error: request for widget state " ++
                        "type of non-widget value"

@@ -12,12 +12,15 @@
   </interface>
 
   <interface name="other">
-    <hBox>
-      <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
-      <edit fieldName="edit1"/>
-      <edit fieldName="edit2" contents="flurb"/>
-      <button fieldName="button" label="Press Me"/>
-    </hBox>
+    <vBox>
+      <hBox>
+        <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
+        <edit fieldName="edit1"/>
+        <edit fieldName="edit2" contents="flurb"/>
+        <button fieldName="button" label="Press Me"/>
+      </hBox>
+      <vFill char="y"/>
+    </vBox>
     <focusGroup>
       <entry name="edit1"/>
       <entry name="edit2"/>

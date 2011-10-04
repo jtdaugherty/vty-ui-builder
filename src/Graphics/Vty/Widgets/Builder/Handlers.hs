@@ -31,6 +31,8 @@ elementHandlers = [ ("collection", genCollection)
                   , ("bordered", genBordered)
                   , ("edit", genEdit)
                   , ("button", genButton)
+                  , ("vFill", genVFill)
+                  , ("hFill", genHFill)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -74,6 +76,39 @@ genInterface e nam = do
                              }
   registerInterface ifName vals
 
+  return nam
+
+genVFill :: ElementHandler a
+genVFill e nam = do
+  let Just ch = getAttribute e "char"
+
+  when (null ch) $ error "Error: 'char' for 'vFill' must be non-empty"
+
+  append $ hcat [ toDoc nam
+                , text $ " <- vFill " ++ (show $ head ch)
+                ]
+
+  registerWidgetStateType nam $ TyCon "VFill" []
+  return nam
+
+genHFill :: ElementHandler a
+genHFill e nam = do
+  let Just ch = getAttribute e "char"
+      Just heightStr = getAttribute e "height"
+
+  when (null ch) $ error "Error: 'char' for 'hFill' must be non-empty"
+
+  height <- case reads heightStr of
+              [] -> error "Error: 'height' of 'hFill' must be an integer"
+              ((i,_):_) -> return i
+
+  append $ hcat [ toDoc nam
+                , text $ " <- hFill " ++ (show $ head ch)
+                , text " "
+                , text $ show (height :: Int)
+                ]
+
+  registerWidgetStateType nam $ TyCon "HFill" []
   return nam
 
 genButton :: ElementHandler a

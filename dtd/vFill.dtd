@@ -1,0 +1,2 @@
+<!ELEMENT vFill EMPTY>
+<!ATTLIST vFill char CDATA #REQUIRED>
