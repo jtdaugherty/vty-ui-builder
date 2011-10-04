@@ -33,6 +33,9 @@ elementHandlers = [ ("collection", genCollection)
                   , ("button", genButton)
                   , ("vFill", genVFill)
                   , ("hFill", genHFill)
+                  , ("centered", genCentered)
+                  , ("hCentered", genHCentered)
+                  , ("vCentered", genVCentered)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -75,6 +78,57 @@ genInterface e nam = do
                              , focusGroupName = fgName
                              }
   registerInterface ifName vals
+
+  return nam
+
+genCentered :: ElementHandler a
+genCentered e nam = do
+  let [ch] = elemChildren e
+
+  chNam <- newEntry
+  gen ch chNam
+
+  append $ hcat [ toDoc nam
+                , text " <- centered "
+                , toDoc chNam
+                ]
+
+  chType <- getStateType chNam
+  registerWidgetStateType nam $ TyCon "Centered" [chType]
+
+  return nam
+
+genHCentered :: ElementHandler a
+genHCentered e nam = do
+  let [ch] = elemChildren e
+
+  chNam <- newEntry
+  gen ch chNam
+
+  append $ hcat [ toDoc nam
+                , text " <- hCentered "
+                , toDoc chNam
+                ]
+
+  chType <- getStateType chNam
+  registerWidgetStateType nam $ TyCon "HCentered" [chType]
+
+  return nam
+
+genVCentered :: ElementHandler a
+genVCentered e nam = do
+  let [ch] = elemChildren e
+
+  chNam <- newEntry
+  gen ch chNam
+
+  append $ hcat [ toDoc nam
+                , text " <- vCentered "
+                , toDoc chNam
+                ]
+
+  chType <- getStateType chNam
+  registerWidgetStateType nam $ TyCon "VCentered" [chType]
 
   return nam
 

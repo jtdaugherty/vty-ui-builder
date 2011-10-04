@@ -2,25 +2,31 @@
 <!DOCTYPE interface SYSTEM "test.dtd">
 <collection>
   <interface name="main" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
-    <vBox fieldName="flub">
-      <fText fieldName="username">foo</fText>
-      <fText>bar</fText>
-    </vBox>
+    <vCentered>
+      <hCentered>
+        <vBox fieldName="flub">
+          <fText fieldName="username">foo</fText>
+          <fText>bar</fText>
+        </vBox>
+      </hCentered>
+    </vCentered>
     <focusGroup>
       <entry name="flub"/>
     </focusGroup>
   </interface>
 
   <interface name="other">
-    <vBox>
-      <hBox>
-        <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
-        <edit fieldName="edit1"/>
-        <edit fieldName="edit2" contents="flurb"/>
-        <button fieldName="button" label="Press Me"/>
-      </hBox>
-      <vFill char="y"/>
-    </vBox>
+    <centered>
+      <vBox>
+        <hBox>
+          <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
+          <edit fieldName="edit1"/>
+          <edit fieldName="edit2" contents="flurb"/>
+          <button fieldName="button" label="Press Me"/>
+        </hBox>
+        <vFill char="y"/>
+      </vBox>
+    </centered>
     <focusGroup>
       <entry name="edit1"/>
       <entry name="edit2"/>
