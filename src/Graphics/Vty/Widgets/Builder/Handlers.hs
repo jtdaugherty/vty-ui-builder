@@ -72,10 +72,18 @@ genInterface e nam = do
   registerInterface ifName vals
 
 genEdit :: ElementHandler a
-genEdit _ nam = do
+genEdit e nam = do
   append $ hcat [ toDoc nam
                 , text " <- editWidget"
                 ]
+  case getAttribute e "contents" of
+    Nothing -> return ()
+    Just s -> append $ hcat [ text "setEditText "
+                            , toDoc nam
+                            , text " "
+                            , text $ show s
+                            ]
+
   registerStateType nam $ TyCon "Edit" []
 
 genHBorder :: ElementHandler a

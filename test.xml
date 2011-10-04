@@ -12,9 +12,14 @@
   </interface>
 
   <interface name="other">
-    <edit fieldName="edit"/>
+    <hBox>
+      <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
+      <edit fieldName="edit1"/>
+      <edit fieldName="edit2" contents="flurb"/>
+    </hBox>
     <focusGroup>
-      <entry name="edit"/>
+      <entry name="edit1"/>
+      <entry name="edit2"/>
     </focusGroup>
   </interface>
 </collection>

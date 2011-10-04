@@ -1,1 +1,2 @@
 <!ELEMENT edit EMPTY>
+<!ATTLIST edit contents CDATA #IMPLIED>
