@@ -29,6 +29,7 @@ Data-files:
   dtd/hCentered.dtd
   dtd/progressBar.dtd
   dtd/dialog.dtd
+  dtd/dirBrowser.dtd
 
 Library
   Hs-Source-Dirs:    src

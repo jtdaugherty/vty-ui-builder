@@ -38,6 +38,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("vCentered", genVCentered)
                   , ("progressBar", genProgressBar)
                   , ("dialog", genDialog)
+                  , ("dirBrowser", genDirBrowser)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -82,6 +83,34 @@ genInterface e nam = do
   registerInterface ifName vals
 
   return nam
+
+genDirBrowser :: ElementHandler a
+genDirBrowser e nam = do
+  let skin = case getAttribute e "skin" of
+               Nothing -> "defaultBrowserSkin"
+               Just s -> s
+
+  browserName <- newEntry
+  fgName <- newEntry
+  append $ hcat [ text "("
+                , toDoc browserName
+                , text ", "
+                , toDoc fgName
+                , text ") <- newDirBrowser "
+                , text skin
+                ]
+
+  append $ hcat [ text "let "
+                , toDoc nam
+                , text " = dirBrowserWidget "
+                , toDoc browserName
+                ]
+
+  registerWidgetStateType nam $ TyCon "DirBrowserWidgetType" []
+  registerCustomType browserName "DirBrowser"
+  setFocusMethod nam $ Merge fgName
+
+  return browserName
 
 genDialog :: ElementHandler a
 genDialog e nam = do

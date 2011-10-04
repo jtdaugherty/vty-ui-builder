@@ -47,4 +47,11 @@
       <entry name="dlg"/>
     </focusGroup>
   </interface>
+
+  <interface name="browser">
+    <dirBrowser fieldName="b"/>
+    <focusGroup>
+      <entry name="b"/>
+    </focusGroup>
+  </interface>
 </collection>
