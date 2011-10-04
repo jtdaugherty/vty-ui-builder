@@ -4,6 +4,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , ElementHandler
     , ValueName(..)
     , RegisteredName(..)
+    , Type(..)
     , TyCon(..)
     , ToDoc(..)
     , InterfaceValues(..)
@@ -40,14 +41,17 @@ data GenState a =
     GenState { nameCounter :: Int
              , genDoc :: Doc
              , handlers :: [(String, ElementHandler a)]
-             , namedValues :: [(RegisteredName, ValueName)]
-             , valueTypes :: [(ValueName, TyCon)]
+             , namedValues :: [(RegisteredName, (ValueName, ValueName))]
+             , valueTypes :: [(ValueName, Type)]
              , interfaceNames :: [(String, InterfaceValues)]
              }
 
 type GenM a b = State (GenState a) b
 
-type ElementHandler a = Element a -> ValueName -> GenM a ()
+type ElementHandler a = Element a -> ValueName -> GenM a ValueName
+
+data Type = Widget TyCon
+          | Custom String
 
 data TyCon = TyCon String [TyCon]
 

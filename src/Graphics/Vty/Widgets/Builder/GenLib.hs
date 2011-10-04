@@ -7,11 +7,14 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , newEntry
     , getAttribute
     , attrsToExpr
-    , lookupName
-    , registerStateType
+    , lookupFieldValueName
+    , lookupWidgetValueName
+    , registerWidgetStateType
+    , registerCustomType
     , registerInterface
     , getStateType
     , addCommas
+    , widgetType
     )
 where
 
@@ -30,12 +33,13 @@ gen e@(Elem (N n) _ _) nam = do
   case lookup n hs of
     Nothing -> error $ "No handler for element type " ++ (show n)
     Just h -> do
-      h e nam
+      fieldName <- h e nam
       annotateElement e nam
       append $ text ""
       case getAttribute e "fieldName" of
         Nothing -> return ()
-        Just newName -> registerName (RegisteredName newName) nam
+        Just newName -> registerName (RegisteredName newName) fieldName nam
+      return fieldName
 gen _ _ = error "Got unsupported element structure"
 
 -- Using the registered element names in the input document, generate
@@ -47,12 +51,15 @@ generateTypes st =
         footer = [ text "}"
                  ]
         body = elem_lines ++ if_act_lines ++ if_fg_lines
-        elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
-                     hcat [ text "elem_"
-                          , toDoc fieldName
-                          , text " :: "
-                          , toDoc $ TyCon "Widget" [fromJust $ lookup valName $ valueTypes st]
-                          ]
+        elem_lines = (flip map) (namedValues st) $ \(fieldName, (valName, _)) ->
+                     let typeExpr = case fromJust $ lookup valName $ valueTypes st of
+                                      Custom s -> text s
+                                      Widget t -> toDoc $ TyCon "Widget" [t]
+                     in hcat [ text "elem_"
+                             , toDoc fieldName
+                             , text " :: "
+                             , typeExpr
+                             ]
         if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
                        (text $ "switchTo_" ++ ifName ++ " :: IO ()")
         if_fg_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
@@ -60,15 +67,24 @@ generateTypes st =
 
     in vcat (header ++ [nest 2 $ addCommas body "  "] ++ footer)
 
-registerStateType :: ValueName -> TyCon -> GenM a ()
-registerStateType valueName tyCon = do
+widgetType :: [TyCon] -> TyCon
+widgetType = TyCon "Widget"
+
+registerWidgetStateType :: ValueName -> TyCon -> GenM a ()
+registerWidgetStateType valueName tyCon = registerType' valueName (Widget tyCon)
+
+registerCustomType :: ValueName -> String -> GenM a ()
+registerCustomType valueName s = registerType' valueName (Custom s)
+
+registerType' :: ValueName -> Type -> GenM a ()
+registerType' valueName ty = do
   st <- get
   case lookup valueName (valueTypes st) of
     Just _ -> error $ "BUG: type registration for value "
               ++ show valueName
               ++ " happened already!"
     Nothing -> do
-      put $ st { valueTypes  = (valueName, tyCon) : valueTypes st }
+      put $ st { valueTypes  = (valueName, ty) : valueTypes st }
 
 getStateType :: ValueName -> GenM a TyCon
 getStateType valueName = do
@@ -77,19 +93,29 @@ getStateType valueName = do
     Nothing -> error $ "BUG: request for state type for value "
                ++ show valueName
                ++ " impossible"
-    Just t -> return t
+    -- XXX: report this error in a better way.
+    Just (Custom _) -> error $ "Error: request for widget state " ++
+                       "type of non-widget value"
+    Just (Widget t) -> return t
 
-registerName :: RegisteredName -> ValueName -> GenM a ()
-registerName newName valueName = do
+registerName :: RegisteredName -> ValueName -> ValueName -> GenM a ()
+registerName newName fieldValueName widgetValueName = do
   st <- get
   case lookup newName (namedValues st) of
     Just _ -> error "BUG: DTD should have disallowed multiple\
                     \instances of the same element 'name' attribute"
     Nothing -> do
-      put $ st { namedValues = (newName, valueName) : namedValues st }
+      put $ st { namedValues = (newName, (fieldValueName, widgetValueName)) : namedValues st }
 
-lookupName :: RegisteredName -> GenM a (Maybe ValueName)
-lookupName registeredName = lookup registeredName <$> gets namedValues
+lookupFieldValueName :: RegisteredName -> GenM a (Maybe ValueName)
+lookupFieldValueName registeredName = do
+  val <- lookup registeredName <$> gets namedValues
+  return $ fst <$> val
+
+lookupWidgetValueName :: RegisteredName -> GenM a (Maybe ValueName)
+lookupWidgetValueName registeredName = do
+  val <- lookup registeredName <$> gets namedValues
+  return $ snd <$> val
 
 getAttribute :: Element a -> String -> Maybe String
 getAttribute (Elem _ attrs _) attrName =

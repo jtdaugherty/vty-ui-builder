@@ -38,7 +38,7 @@ elementHandlers = [ ("collection", genCollection)
                   ]
 
 genCollection :: ElementHandler a
-genCollection e _ = do
+genCollection e nam = do
   -- DTD: two children
   let chs = elemChildren e
   append $ text "c <- newCollection"
@@ -47,6 +47,8 @@ genCollection e _ = do
   forM_ chs $ \ch -> do
     nam <- newEntry
     genInterface ch nam
+
+  return nam
 
 genInterface :: ElementHandler a
 genInterface e nam = do
@@ -71,6 +73,8 @@ genInterface e nam = do
                              }
   registerInterface ifName vals
 
+  return nam
+
 genEdit :: ElementHandler a
 genEdit e nam = do
   append $ hcat [ toDoc nam
@@ -84,21 +88,25 @@ genEdit e nam = do
                             , text $ show s
                             ]
 
-  registerStateType nam $ TyCon "Edit" []
+  registerWidgetStateType nam $ TyCon "Edit" []
+
+  return nam
 
 genHBorder :: ElementHandler a
 genHBorder _ nam = do
   append $ hcat [ toDoc nam
                 , text " <- hBorder"
                 ]
-  registerStateType nam $ TyCon "HBorder" []
+  registerWidgetStateType nam $ TyCon "HBorder" []
+  return nam
 
 genVBorder :: ElementHandler a
 genVBorder _ nam = do
   append $ hcat [ toDoc nam
                 , text " <- vBorder"
                 ]
-  registerStateType nam $ TyCon "VBorder" []
+  registerWidgetStateType nam $ TyCon "VBorder" []
+  return nam
 
 genBordered :: ElementHandler a
 genBordered e nam = do
@@ -113,7 +121,8 @@ genBordered e nam = do
                 ]
 
   chType <- getStateType chNam
-  registerStateType nam $ TyCon "Bordered" [chType]
+  registerWidgetStateType nam $ TyCon "Bordered" [chType]
+  return nam
 
 genVBox :: ElementHandler a
 genVBox e nam = do
@@ -138,17 +147,18 @@ genVBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerStateType nextName $ TyCon "Box" [c1Type, c2Type]
+                  registerWidgetStateType nextName $ TyCon "Box" [c1Type, c2Type]
                   buildVBox (nextName:rest)
 
   result <- buildVBox names
-  registerStateType nam =<< getStateType result
+  registerWidgetStateType nam =<< getStateType result
 
   append $ hcat [ text "let "
                 , toDoc nam
                 , text " = "
                 , toDoc result
                 ]
+  return nam
 
 genHBox :: ElementHandler a
 genHBox e nam = do
@@ -173,17 +183,18 @@ genHBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerStateType nextName $ TyCon "Box" [c1Type, c2Type]
+                  registerWidgetStateType nextName $ TyCon "Box" [c1Type, c2Type]
                   buildHBox (nextName:rest)
 
   result <- buildHBox names
-  registerStateType nam =<< getStateType result
+  registerWidgetStateType nam =<< getStateType result
 
   append $ hcat [ text "let "
                 , toDoc nam
                 , text " = "
                 , toDoc result
                 ]
+  return nam
 
 genFormat :: ElementHandler a
 genFormat e nam = do
@@ -201,6 +212,7 @@ genFormat e nam = do
                                 , text formatName
                                 ]
                 ]
+  return nam
 
 genFormattedText :: ElementHandler a
 genFormattedText (Elem _ _ eContents) nam = do
@@ -242,7 +254,7 @@ genFormattedText (Elem _ _ eContents) nam = do
                                          , text expr
                                          ]
 
-  registerStateType nam $ TyCon "FormattedText" []
+  registerWidgetStateType nam $ TyCon "FormattedText" []
 
   append $ toDoc nam <> text " <- plainText \"\""
   append $ hcat [ text "setTextWithAttrs "
@@ -252,6 +264,7 @@ genFormattedText (Elem _ _ eContents) nam = do
                        , text "]"
                        ]
                 ]
+  return nam
 
 genFocusGroup :: ElementHandler a
 genFocusGroup e nam = do
@@ -267,7 +280,7 @@ genFocusGroup e nam = do
                            \DTD should have disallowed this"
           Just registeredName ->
               do
-                result <- lookupName $ RegisteredName registeredName
+                result <- lookupWidgetValueName $ RegisteredName registeredName
                 case result of
                   Nothing -> error $ "Focus group error: widget name "
                              ++ show registeredName
@@ -276,3 +289,5 @@ genFocusGroup e nam = do
                                   <> toDoc nam
                                   <> text " "
                                   <> toDoc valName
+
+  return nam

@@ -115,9 +115,9 @@ mkElementsValue :: GenState a -> Doc
 mkElementsValue st =
     let ls = header ++ [nest 2 $ addCommas body "  "] ++ footer
         body = elem_lines ++ if_act_lines ++ if_fg_lines
-        elem_lines = (flip map) (namedValues st) $ \(fieldName, valName) ->
+        elem_lines = (flip map) (namedValues st) $ \(fieldName, (fieldValName, _)) ->
                      text "elem_" <> toDoc fieldName
-                     <> text " = " <> toDoc valName
+                     <> text " = " <> toDoc fieldValName
         if_act_lines = (flip map) (interfaceNames st) $
                        \(ifName, vals) ->
                            text "switchTo_"
