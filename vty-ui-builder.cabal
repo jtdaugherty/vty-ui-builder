@@ -27,6 +27,7 @@ Data-files:
   dtd/centered.dtd
   dtd/vCentered.dtd
   dtd/hCentered.dtd
+  dtd/progressBar.dtd
 
 Library
   Hs-Source-Dirs:    src

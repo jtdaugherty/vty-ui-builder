@@ -23,6 +23,7 @@
           <edit fieldName="edit1"/>
           <edit fieldName="edit2" contents="flurb"/>
           <button fieldName="button" label="Press Me"/>
+          <progressBar completeColor="cyan" incompleteColor="white"/>
         </hBox>
         <vFill char="y"/>
       </vBox>

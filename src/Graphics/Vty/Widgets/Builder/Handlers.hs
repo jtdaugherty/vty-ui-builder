@@ -36,6 +36,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("centered", genCentered)
                   , ("hCentered", genHCentered)
                   , ("vCentered", genVCentered)
+                  , ("progressBar", genProgressBar)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -164,6 +165,36 @@ genHFill e nam = do
 
   registerWidgetStateType nam $ TyCon "HFill" []
   return nam
+
+genProgressBar :: ElementHandler a
+genProgressBar e nam = do
+  let Just compColor = getAttribute e "completeColor"
+      Just incompColor = getAttribute e "incompleteColor"
+
+  barName <- newEntry
+
+  append $ hcat [ toDoc barName
+                , text " <- newProgressBar "
+                , text compColor
+                , text " "
+                , text incompColor
+                ]
+
+  append $ hcat [ text "let "
+                , toDoc nam
+                , text " = progressBarWidget "
+                , toDoc barName
+                ]
+
+  -- The state type is 'Padded' because buttons are implemented as
+  -- composite widgets; see the 'Button' type in
+  -- Graphics.Vty.Widgets.Button.
+  registerCustomType barName "ProgressBar"
+  registerWidgetStateType nam $ TyCon "Box" [ TyCon "HFill" []
+                                            , TyCon "HFill" []
+                                            ]
+
+  return barName
 
 genButton :: ElementHandler a
 genButton e nam = do

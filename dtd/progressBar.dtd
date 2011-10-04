@@ -1,0 +1,5 @@
+<!ELEMENT progressBar EMPTY>
+<!ATTLIST progressBar
+  completeColor (%bgcolor;) #REQUIRED
+  incompleteColor (%bgcolor;) #REQUIRED
+>
