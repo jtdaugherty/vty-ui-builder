@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE interface SYSTEM "test.dtd">
 <collection>
-  <interface name="main" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
+  <interface name="main">
     <vCentered>
       <hCentered>
         <vBox id="flub">
@@ -35,7 +35,7 @@
     </focusGroup>
   </interface>
 
-  <interface name="dlgIf" normalFg="blue" normalBg="black" focusFg="white" focusBg="blue">
+  <interface name="dlgIf">
     <dialog id="dlg" title="A dialog!">
       <vBox>
         <fText>Some text in the dialog.</fText>
