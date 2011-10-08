@@ -1,0 +1,4 @@
+<!ELEMENT checkBox EMPTY>
+<!ATTLIST checkBox
+          label CDATA #REQUIRED
+>
