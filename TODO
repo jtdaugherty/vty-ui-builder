@@ -77,3 +77,5 @@ Add support for:
 
 - think about ways to unify the API for specifying element source
   generation handlers and validators
+
+- add support for multiple DTD paths
