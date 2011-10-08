@@ -45,6 +45,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("dirBrowser", genDirBrowser)
                   , ("pad", genPad)
                   , ("ref", genRef)
+                  , ("checkBox", genCheckBox)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -96,6 +97,15 @@ genInterface e nam = do
   registerInterface ifName vals
 
   return Nothing
+
+genCheckBox :: ElementHandler
+genCheckBox e nam = do
+  let Just label = getAttribute e "label"
+  append $ hcat [ toDoc nam
+                , text " <- newCheckbox "
+                , text $ show label
+                ]
+  return $ declareWidget nam (TyCon "CheckBox" [TyCon "Bool" []])
 
 genRef :: ElementHandler
 genRef e nam = do

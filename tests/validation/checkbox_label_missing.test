@@ -1,0 +1,13 @@
+vFill with empty fill char
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <checkBox id="t"/>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+Element <checkBox> requires the attribute "label" but it is missing.

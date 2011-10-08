@@ -32,7 +32,7 @@ Add support for:
       elements of a <list>.
 
   * Table
-  * CheckBox (and radio buttons)
+  * Radio buttons
   * Limits
   * Fixed
   * Group
