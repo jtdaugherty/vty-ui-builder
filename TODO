@@ -74,6 +74,3 @@ Add support for:
   many 'error' calls)
 
 - make vty-ui-builder support loading extra DTDs?
-
-- vty-ui-builder: make generated main start out on an interface which
-  tells the user how to use the test program?
