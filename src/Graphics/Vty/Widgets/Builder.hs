@@ -52,26 +52,23 @@ blk ls = nest 2 $ vcat ls
 
 fullModuleSource :: BuilderConfig -> GenState -> Doc
 fullModuleSource config st =
-    let typeDoc = generateTypes st
-        preamble = if generateModulePreamble config
-                   then if generateMain config
-                        then [ text "module Main where"
-                             ]
-                        else [ text $ "module " ++ moduleName config
-                             , nest 3 $ vcat [ text "( buildCollection"
-                                             , text ", InterfaceElements(..)"
-                                             , text ")"
-                                             ]
-                             , text "where"
-                             ]
-                   else []
-        imports = if generateImports config
-                  then [ text ""
-                       , text "import Graphics.Vty hiding (Button)"
-                       , text "import Graphics.Vty.Widgets.All"
-                       ]
-                  else []
-
+    let typeDoc = [ text ""
+                  , generateTypes st
+                  ]
+        preamble = if generateMain config
+                   then [ text "module Main where"
+                        ]
+                   else [ text $ "module " ++ moduleName config
+                        , nest 3 $ vcat [ text "( buildCollection"
+                                        , text ", InterfaceElements(..)"
+                                        , text ")"
+                                        ]
+                        , text "where"
+                        ]
+        imports = [ text ""
+                  , text "import Graphics.Vty hiding (Button)"
+                  , text "import Graphics.Vty.Widgets.All"
+                  ]
         lastIf = (length $ interfaceNames st) - 1
         keyHandlers = (flip map) (zip [0..] $ interfaceNames st) $
                        \(i, (nam, _)) ->
@@ -89,32 +86,31 @@ fullModuleSource config st =
                                          ]
                                    ]
 
-        main = if generateMain config
-               then [ text ""
-                    , text "main :: IO ()"
-                    , text "main = do"
-                    , blk ([ text "(c, values) <- buildCollection"
-                           ]
-                           ++ keyHandlers
-                           ++ [ text ""
-                              , text "runUi c defaultContext"
-                              ]
-                          )
-                    ]
-               else []
-    in vcat $ preamble
-           ++ imports
-           ++ [ text ""
-              , typeDoc
-              , text ""
-              , text $ "buildCollection :: IO (Collection, InterfaceElements)"
-              , text "buildCollection = do"
-              , nest 2 $ vcat [ genDoc st
-                              , mkElementsValue st
-                              , text "return (c, elems)"
-                              ]
-              ]
-           ++ main
+        builderDoc = [ text ""
+                     , text $ "buildCollection :: IO (Collection, InterfaceElements)"
+                     , text "buildCollection = do"
+                     , nest 2 $ vcat [ genDoc st
+                                     , mkElementsValue st
+                                     , text "return (c, elems)"
+                                     ]
+                     ]
+
+        main = [ text ""
+               , text "main :: IO ()"
+               , text "main = do"
+               , blk [ text "(c, values) <- buildCollection"
+                     , vcat keyHandlers
+                     , text ""
+                     , text "runUi c defaultContext"
+                     ]
+               ]
+        sections = [ (generateModulePreamble, preamble)
+                   , (generateImports, imports)
+                   , (generateInterfaceType, typeDoc)
+                   , (generateInterfaceBuilder, builderDoc)
+                   , (generateMain, main)
+                   ]
+    in vcat $ map (\(f, docLines) -> if f config then vcat docLines else empty) sections
 
 mkElementsValue :: GenState -> Doc
 mkElementsValue st =

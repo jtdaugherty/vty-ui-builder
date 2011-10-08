@@ -9,6 +9,8 @@ data BuilderConfig =
                   , generateImports :: Bool
                   , generateModulePreamble :: Bool
                   , generateMain :: Bool
+                  , generateInterfaceType :: Bool
+                  , generateInterfaceBuilder :: Bool
                   }
     deriving (Eq, Show)
 
@@ -17,4 +19,6 @@ defaultConfig = BuilderConfig { moduleName = "Interface"
                               , generateImports = True
                               , generateModulePreamble = True
                               , generateMain = False
+                              , generateInterfaceType = True
+                              , generateInterfaceBuilder = True
                               }
