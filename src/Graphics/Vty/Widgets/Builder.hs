@@ -1,5 +1,5 @@
 module Graphics.Vty.Widgets.Builder
-    ( generateModuleSource
+    ( generateSource
     , validateAgainstDTD
     )
 where
@@ -17,14 +17,14 @@ import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 
-generateModuleSource :: BuilderConfig
-                     -> ValidatedElement
-                     -> [(String, ElementHandler)]
-                     -> IO String
-generateModuleSource config (Validated e) theHandlers = do
+generateSource :: BuilderConfig
+               -> ValidatedElement
+               -> [(String, ElementHandler)]
+               -> IO String
+generateSource config (Validated e) theHandlers = do
   let (_, finalState) = runState (gen e $ ValueName "root") initialState
       initialState = GenState 0 empty theHandlers [] [] [] []
-  return $ render $ fullModuleSource config finalState
+  return $ render $ generateSourceDoc config finalState
 
 validateAgainstDTD :: Handle
                    -> FilePath
@@ -50,8 +50,8 @@ validateAgainstDTD inputXmlHandle inputXmlPath dtdPath elementNames = do
 blk :: [Doc] -> Doc
 blk ls = nest 2 $ vcat ls
 
-fullModuleSource :: BuilderConfig -> GenState -> Doc
-fullModuleSource config st =
+generateSourceDoc :: BuilderConfig -> GenState -> Doc
+generateSourceDoc config st =
     let typeDoc = [ text ""
                   , generateTypes st
                   ]

@@ -156,5 +156,5 @@ main = do
     Right e -> do
          when (not (ValidateOnly `elem` opts)) $
               do
-                output <- generateModuleSource config e handlers
+                output <- generateSource config e handlers
                 saveOutput opts output
