@@ -1,0 +1,13 @@
+Interface with no name attribute
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface>
+    <fText id="t">test</fText>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+Element <interface> requires the attribute "name" but it is missing.

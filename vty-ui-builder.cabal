@@ -55,3 +55,11 @@ Executable vty-ui-builder
     directory >= 1.0 && < 1.1,
     base >= 4 && < 5,
     haskell98
+
+Executable vty-ui-builder-tests
+  Hs-Source-Dirs:    src tests
+  Main-is:           TestDriver.hs
+  GHC-Options:       -Wall
+  Build-Depends:
+    HaXml >= 1.22 && < 1.23,
+    base >= 4 && < 5

@@ -2,16 +2,14 @@ module Main where
 
 import System
 import System.IO
-import System.FilePath
-import System.Directory
 import Control.Monad
 
 import System.Exit
 import System.Console.GetOpt
 
-import Paths_vty_ui_builder
 import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Config
+import Graphics.Vty.Widgets.Builder.DTDGenerator
 import Graphics.Vty.Widgets.Builder.Handlers
 
 data BuilderOpt = Help
@@ -25,11 +23,6 @@ data BuilderOpt = Help
                 | GenerateInterfaceType Bool
                 | GenerateInterfaceBuilder Bool
                   deriving (Show, Eq)
-
-getDTDDir :: IO FilePath
-getDTDDir = do
-  dataDir <- getDataDir
-  canonicalizePath $ dataDir </> "dtd"
 
 options :: [OptDescr BuilderOpt]
 options = [ Option "h" ["help"] (NoArg Help) "This help output"

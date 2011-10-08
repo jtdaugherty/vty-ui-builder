@@ -1,12 +1,18 @@
 module Graphics.Vty.Widgets.Builder.DTDGenerator
     ( generateMasterDTD
+    , getDTDDir
     )
 where
 
+import System.Directory
 import System.FilePath ((</>))
 import Data.List (intercalate)
+import Paths_vty_ui_builder
 
-import Graphics.Vty.Widgets.Builder.Types
+getDTDDir :: IO FilePath
+getDTDDir = do
+  dataDir <- getDataDir
+  canonicalizePath $ dataDir </> "dtd"
 
 mkAttList :: String -> String
 mkAttList nam = concat [ "<!ATTLIST "

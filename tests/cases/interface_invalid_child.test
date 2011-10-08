@@ -1,0 +1,17 @@
+Interface with an unknown child element
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <invalid/>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+# For invalid element
+^Element <interface> should contain
+Element <interface> should contain focusGroup but does not.
+Element <interface> contains extra elements beyond its content spec.
+Element <invalid> not known.
