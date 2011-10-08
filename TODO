@@ -73,4 +73,8 @@ Add support for:
 
 - make vty-ui-builder support loading extra DTDs?
 
-- make vty-ui-builder support validation only (no source generation)
+- vty-ui-builder: make generated main start out on an interface which
+  tells the user how to use the test program?
+
+- vty-ui-builder: allow override of DTD load path (but show
+  compiled-in default)

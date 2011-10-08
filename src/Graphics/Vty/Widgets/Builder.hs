@@ -1,5 +1,6 @@
 module Graphics.Vty.Widgets.Builder
     ( generateModuleSource
+    , validateAgainstDTD
     )
 where
 
@@ -14,17 +15,24 @@ import Text.XML.HaXml.Types
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
-import Graphics.Vty.Widgets.Builder.Handlers
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 
 generateModuleSource :: BuilderConfig
-                     -> Handle
-                     -> FilePath
-                     -> FilePath
-                     -> [(String, ElementHandler a)]
+                     -> ValidatedElement
+                     -> [(String, ElementHandler)]
                      -> IO String
-generateModuleSource config inputXmlHandle inputXmlPath dtdPath extraHandlers = do
-  masterDTD <- generateMasterDTD (elementHandlers ++ extraHandlers) dtdPath
+generateModuleSource config (Validated e) theHandlers = do
+  let (_, finalState) = runState (gen e $ ValueName "root") initialState
+      initialState = GenState 0 empty theHandlers [] [] [] []
+  return $ render $ fullModuleSource config finalState
+
+validateAgainstDTD :: Handle
+                   -> FilePath
+                   -> FilePath
+                   -> [String]
+                   -> IO (Either [String] ValidatedElement)
+validateAgainstDTD inputXmlHandle inputXmlPath dtdPath elementNames = do
+  masterDTD <- generateMasterDTD elementNames dtdPath
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"
@@ -36,18 +44,13 @@ generateModuleSource config inputXmlHandle inputXmlPath dtdPath extraHandlers = 
               ++ (show inputXmlPath) ++ ": " ++ e
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
-           [] -> do
-             let (_, finalState) = runState (gen e $ ValueName "root") initialState
-                 initialState = GenState 0 empty elementHandlers [] [] [] []
-             return $ render $ fullModuleSource config finalState
-           es -> do
-             mapM_ putStrLn es
-             error $ "Error validating " ++ (show inputXmlPath)
+           [] -> return $ Right $ Validated e
+           es -> return $ Left es
 
 blk :: [Doc] -> Doc
 blk ls = nest 2 $ vcat ls
 
-fullModuleSource :: BuilderConfig -> GenState a -> Doc
+fullModuleSource :: BuilderConfig -> GenState -> Doc
 fullModuleSource config st =
     let typeDoc = generateTypes st
         preamble = if generateModulePreamble config
@@ -113,7 +116,7 @@ fullModuleSource config st =
               ]
            ++ main
 
-mkElementsValue :: GenState a -> Doc
+mkElementsValue :: GenState -> Doc
 mkElementsValue st =
     let ls = header ++ [nest 2 $ addCommas body "  "] ++ footer
         body = elem_lines ++ if_act_lines ++ if_fg_lines

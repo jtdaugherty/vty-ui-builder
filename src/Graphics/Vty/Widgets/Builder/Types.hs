@@ -9,12 +9,14 @@ module Graphics.Vty.Widgets.Builder.Types
     , ToDoc(..)
     , InterfaceValues(..)
     , FocusMethod(..)
+    , ValidatedElement(..)
     )
 where
 
 import Control.Monad.State
 import Data.List (intersperse)
 import Text.XML.HaXml.Types
+import Text.XML.HaXml.Posn
 import Text.PrettyPrint.HughesPJ
 
 newtype RegisteredName = RegisteredName String
@@ -32,16 +34,18 @@ instance ToDoc RegisteredName where
 instance ToDoc ValueName where
     toDoc (ValueName s) = text s
 
+data ValidatedElement = Validated (Element Posn)
+
 data InterfaceValues =
     InterfaceValues { topLevelWidgetName :: ValueName
                     , switchActionName :: ValueName
                     , focusGroupName :: ValueName
                     }
 
-data GenState a =
+data GenState =
     GenState { nameCounter :: Int
              , genDoc :: Doc
-             , handlers :: [(String, ElementHandler a)]
+             , handlers :: [(String, ElementHandler)]
              , namedValues :: [(RegisteredName, (ValueName, ValueName))]
              , valueTypes :: [(ValueName, Type)]
              , interfaceNames :: [(String, InterfaceValues)]
@@ -50,9 +54,9 @@ data GenState a =
 
 data FocusMethod = Direct | Merge ValueName
 
-type GenM a b = State (GenState a) b
+type GenM a = State GenState a
 
-type ElementHandler a = Element a -> ValueName -> GenM a ValueName
+type ElementHandler = Element Posn -> ValueName -> GenM ValueName
 
 data Type = Widget TyCon
           | Custom String

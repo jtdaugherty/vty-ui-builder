@@ -11,6 +11,7 @@ import System.Console.GetOpt
 import Paths_vty_ui_builder
 import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Config
+import Graphics.Vty.Widgets.Builder.Handlers
 
 data BuilderOpt = Help
                 | ModuleName String
@@ -18,6 +19,7 @@ data BuilderOpt = Help
                 | GenerateMain Bool
                 | GenerateImports Bool
                 | OutputFilename String
+                | ValidateOnly
                   deriving (Show, Eq)
 
 options :: [OptDescr BuilderOpt]
@@ -34,10 +36,14 @@ options = [ Option "h" ["help"] (NoArg Help) "This help output"
                        "Do not generate vty-ui library imports"
 
           , Option "m" ["main"] (NoArg (GenerateMain True))
-                       "Generate a \"main\" function for testing"
+                       ("Generate a \"main\" function for testing (implies "
+                        ++ "-n \"Main\")")
 
           , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
                        "The output filename (default: standard output)"
+
+          , Option "v" ["validate-only"] (NoArg ValidateOnly)
+                       "Validate the input XML but do not generate any output"
           ]
 
 usage :: [String] -> IO ()
@@ -110,5 +116,18 @@ main = do
                    print e
                    exitFailure
 
-  output <- generateModuleSource config inputHandle xmlFilename dtdPath []
-  saveOutput opts output
+  let elementNames = map fst elementHandlers
+      handlers = elementHandlers
+
+  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementNames
+
+  case validationResult of
+    Left es -> do
+         putStrLn $ "Error validating " ++ (show xmlFilename) ++ ":"
+         mapM_ putStrLn es
+         exitFailure
+    Right e -> do
+         when (not (ValidateOnly `elem` opts)) $
+              do
+                output <- generateModuleSource config e handlers
+                saveOutput opts output

@@ -15,7 +15,7 @@ import Text.XML.HaXml.Types
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 
-elementHandlers :: [(String, ElementHandler a)]
+elementHandlers :: [(String, ElementHandler)]
 elementHandlers = [ ("collection", genCollection)
                   -- Since the 'collection' DTD specifies some global
                   -- entities for the other DTDs, it MUST come first
@@ -46,7 +46,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("focusGroup", genFocusGroup)
                   ]
 
-genCollection :: ElementHandler a
+genCollection :: ElementHandler
 genCollection e nam = do
   -- DTD: two children
   let chs = elemChildren e
@@ -60,7 +60,7 @@ genCollection e nam = do
 
   return nam
 
-genInterface :: ElementHandler a
+genInterface :: ElementHandler
 genInterface e nam = do
   -- DTD: two children
   let [ch, fg] = elemChildren e
@@ -85,7 +85,7 @@ genInterface e nam = do
 
   return nam
 
-genDirBrowser :: ElementHandler a
+genDirBrowser :: ElementHandler
 genDirBrowser e nam = do
   let skin = case getAttribute e "skin" of
                Nothing -> "defaultBrowserSkin"
@@ -113,7 +113,7 @@ genDirBrowser e nam = do
 
   return browserName
 
-genDialog :: ElementHandler a
+genDialog :: ElementHandler
 genDialog e nam = do
   let [ch] = elemChildren e
       Just title = getAttribute e "title"
@@ -145,7 +145,7 @@ genDialog e nam = do
 
   return dlgName
 
-genCentered :: ElementHandler a
+genCentered :: ElementHandler
 genCentered e nam = do
   let [ch] = elemChildren e
 
@@ -162,7 +162,7 @@ genCentered e nam = do
 
   return nam
 
-genHCentered :: ElementHandler a
+genHCentered :: ElementHandler
 genHCentered e nam = do
   let [ch] = elemChildren e
 
@@ -179,7 +179,7 @@ genHCentered e nam = do
 
   return nam
 
-genVCentered :: ElementHandler a
+genVCentered :: ElementHandler
 genVCentered e nam = do
   let [ch] = elemChildren e
 
@@ -196,7 +196,7 @@ genVCentered e nam = do
 
   return nam
 
-genVFill :: ElementHandler a
+genVFill :: ElementHandler
 genVFill e nam = do
   let Just ch = getAttribute e "char"
 
@@ -209,7 +209,7 @@ genVFill e nam = do
   registerWidgetStateType nam $ TyCon "VFill" []
   return nam
 
-genHFill :: ElementHandler a
+genHFill :: ElementHandler
 genHFill e nam = do
   let Just ch = getAttribute e "char"
       Just heightStr = getAttribute e "height"
@@ -229,7 +229,7 @@ genHFill e nam = do
   registerWidgetStateType nam $ TyCon "HFill" []
   return nam
 
-genProgressBar :: ElementHandler a
+genProgressBar :: ElementHandler
 genProgressBar e nam = do
   let Just compColor = getAttribute e "completeColor"
       Just incompColor = getAttribute e "incompleteColor"
@@ -259,7 +259,7 @@ genProgressBar e nam = do
 
   return barName
 
-genButton :: ElementHandler a
+genButton :: ElementHandler
 genButton e nam = do
   let Just label = getAttribute e "label"
 
@@ -284,7 +284,7 @@ genButton e nam = do
 
   return buttonName
 
-genEdit :: ElementHandler a
+genEdit :: ElementHandler
 genEdit e nam = do
   append $ hcat [ toDoc nam
                 , text " <- editWidget"
@@ -301,7 +301,7 @@ genEdit e nam = do
 
   return nam
 
-genHBorder :: ElementHandler a
+genHBorder :: ElementHandler
 genHBorder _ nam = do
   append $ hcat [ toDoc nam
                 , text " <- hBorder"
@@ -309,7 +309,7 @@ genHBorder _ nam = do
   registerWidgetStateType nam $ TyCon "HBorder" []
   return nam
 
-genVBorder :: ElementHandler a
+genVBorder :: ElementHandler
 genVBorder _ nam = do
   append $ hcat [ toDoc nam
                 , text " <- vBorder"
@@ -317,7 +317,7 @@ genVBorder _ nam = do
   registerWidgetStateType nam $ TyCon "VBorder" []
   return nam
 
-genBordered :: ElementHandler a
+genBordered :: ElementHandler
 genBordered e nam = do
   let [ch] = elemChildren e
 
@@ -333,7 +333,7 @@ genBordered e nam = do
   registerWidgetStateType nam $ TyCon "Bordered" [chType]
   return nam
 
-genVBox :: ElementHandler a
+genVBox :: ElementHandler
 genVBox e nam = do
   -- DTD: >= 2 children
   names <- forM (elemChildren e) $
@@ -369,7 +369,7 @@ genVBox e nam = do
                 ]
   return nam
 
-genHBox :: ElementHandler a
+genHBox :: ElementHandler
 genHBox e nam = do
   -- DTD: >= 2 children
   names <- forM (elemChildren e) $
@@ -405,7 +405,7 @@ genHBox e nam = do
                 ]
   return nam
 
-genFormat :: ElementHandler a
+genFormat :: ElementHandler
 genFormat e nam = do
   let [ch] = elemChildren e
       Just formatName = getAttribute e "name"
@@ -423,7 +423,7 @@ genFormat e nam = do
                 ]
   return nam
 
-genFormattedText :: ElementHandler a
+genFormattedText :: ElementHandler
 genFormattedText (Elem _ _ eContents) nam = do
   -- For each entry in the contents list: If it is a string, give it
   -- the default attribute and put it in a list.  If it is an Attr
@@ -475,7 +475,7 @@ genFormattedText (Elem _ _ eContents) nam = do
                 ]
   return nam
 
-genFocusGroup :: ElementHandler a
+genFocusGroup :: ElementHandler
 genFocusGroup e nam = do
   append $ toDoc nam <> text " <- newFocusGroup"
 

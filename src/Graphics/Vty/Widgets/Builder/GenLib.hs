@@ -31,7 +31,7 @@ import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
 
-gen :: ElementHandler a
+gen :: ElementHandler
 gen e@(Elem (N n) _ _) nam = do
   hs <- gets handlers
   case lookup n hs of
@@ -48,7 +48,7 @@ gen _ _ = error "Got unsupported element structure"
 
 -- Using the registered element names in the input document, generate
 -- a type with fields for each of the named elements.
-generateTypes :: GenState a -> Doc
+generateTypes :: GenState -> Doc
 generateTypes st =
     let header = [ text "data InterfaceElements = InterfaceElements {"
                  ]
@@ -74,23 +74,23 @@ generateTypes st =
 widgetType :: [TyCon] -> TyCon
 widgetType = TyCon "Widget"
 
-registerWidgetStateType :: ValueName -> TyCon -> GenM a ()
+registerWidgetStateType :: ValueName -> TyCon -> GenM ()
 registerWidgetStateType valueName tyCon = registerType' valueName (Widget tyCon)
 
-registerCustomType :: ValueName -> String -> GenM a ()
+registerCustomType :: ValueName -> String -> GenM ()
 registerCustomType valueName s = registerType' valueName (Custom s)
 
-setFocusMethod :: ValueName -> FocusMethod -> GenM a ()
+setFocusMethod :: ValueName -> FocusMethod -> GenM ()
 setFocusMethod valueName m = do
   st <- get
   put $ st { focusMethods = (valueName, m) : focusMethods st }
 
-lookupFocusMethod :: ValueName -> GenM a (Maybe FocusMethod)
+lookupFocusMethod :: ValueName -> GenM (Maybe FocusMethod)
 lookupFocusMethod valueName = do
   st <- get
   return $ lookup valueName (focusMethods st)
 
-registerType' :: ValueName -> Type -> GenM a ()
+registerType' :: ValueName -> Type -> GenM ()
 registerType' valueName ty = do
   st <- get
   case lookup valueName (valueTypes st) of
@@ -103,7 +103,7 @@ registerType' valueName ty = do
 valNameStr :: ValueName -> String
 valNameStr (ValueName s) = s
 
-getStateType :: ValueName -> GenM a TyCon
+getStateType :: ValueName -> GenM TyCon
 getStateType valueName = do
   vts <- gets valueTypes
   case lookup valueName vts of
@@ -116,7 +116,7 @@ getStateType valueName = do
                        "type of non-widget value"
     Just (Widget t) -> return t
 
-registerName :: RegisteredName -> ValueName -> ValueName -> GenM a ()
+registerName :: RegisteredName -> ValueName -> ValueName -> GenM ()
 registerName newName fieldValueName widgetValueName = do
   st <- get
   case lookup newName (namedValues st) of
@@ -125,12 +125,12 @@ registerName newName fieldValueName widgetValueName = do
     Nothing -> do
       put $ st { namedValues = (newName, (fieldValueName, widgetValueName)) : namedValues st }
 
-lookupFieldValueName :: RegisteredName -> GenM a (Maybe ValueName)
+lookupFieldValueName :: RegisteredName -> GenM (Maybe ValueName)
 lookupFieldValueName registeredName = do
   val <- lookup registeredName <$> gets namedValues
   return $ fst <$> val
 
-lookupWidgetValueName :: RegisteredName -> GenM a (Maybe ValueName)
+lookupWidgetValueName :: RegisteredName -> GenM (Maybe ValueName)
 lookupWidgetValueName registeredName = do
   val <- lookup registeredName <$> gets namedValues
   return $ snd <$> val
@@ -147,13 +147,13 @@ attrsToExpr (Just fg, Nothing) = Just $ "fgColor " ++ fg
 attrsToExpr (Nothing, Just bg) = Just $ "bgColor " ++ bg
 attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
 
-registerInterface :: String -> InterfaceValues -> GenM a ()
+registerInterface :: String -> InterfaceValues -> GenM ()
 registerInterface ifName vals = do
   st <- get
   put $ st { interfaceNames = (ifName, vals)
                               : interfaceNames st }
 
-annotateElement :: Element a -> ValueName -> GenM a ()
+annotateElement :: Element a -> ValueName -> GenM ()
 annotateElement e nam = do
   -- Normal attribute override
   let normalResult = ( getAttribute e "normalFg"
@@ -192,12 +192,12 @@ getString :: Content i -> String
 getString (CString _ s _) = s
 getString _ = error "Cannot get string from non-CString content"
 
-append :: Doc -> GenM a ()
+append :: Doc -> GenM ()
 append d = do
   st <- get
   put $ st { genDoc = (genDoc st) $$ d }
 
-newEntry :: GenM a ValueName
+newEntry :: GenM ValueName
 newEntry = do
   st <- get
   put $ st { nameCounter = (nameCounter st) + 1

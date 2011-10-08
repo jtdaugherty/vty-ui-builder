@@ -25,10 +25,9 @@ mkLoadFragment n path = concat [ "<!ENTITY % load" ++ n
                                , "%load" ++ n ++ ";\n"
                                ]
 
-generateMasterDTD :: [(String, ElementHandler a)] -> FilePath -> IO String
-generateMasterDTD hs dtdPath = do
-  let names = map fst hs
-      attLists = map mkAttList names
+generateMasterDTD :: [String] -> FilePath -> IO String
+generateMasterDTD names dtdPath = do
+  let attLists = map mkAttList names
       allEntity = "<!ENTITY % all \"" ++ (intercalate "|" names) ++ "\">\n"
       dtdLines = [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                  , allEntity
