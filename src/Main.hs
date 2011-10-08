@@ -97,19 +97,18 @@ main = do
          usage []
          exitSuccess
 
-  case rest of
-    [xmlFilename] -> do
-              dataDir <- getDataDir
-              let dtdPath = dataDir </> "dtd"
-                  config = configFromOptions opts
+  when (length rest /= 1) $ usage [] >> exitFailure
+  let [xmlFilename] = rest
 
-              inputHandle <- openFile xmlFilename ReadMode `catch`
-                             \e -> do
-                               putStrLn $ "Error opening " ++ xmlFilename ++ ":"
-                               print e
-                               exitFailure
+  dataDir <- getDataDir
+  let dtdPath = dataDir </> "dtd"
+      config = configFromOptions opts
 
-              output <- generateModuleSource config inputHandle xmlFilename dtdPath []
-              saveOutput opts output
+  inputHandle <- openFile xmlFilename ReadMode `catch`
+                 \e -> do
+                   putStrLn $ "Error opening " ++ xmlFilename ++ ":"
+                   print e
+                   exitFailure
 
-    _ -> usage [] >> exitFailure
+  output <- generateModuleSource config inputHandle xmlFilename dtdPath []
+  saveOutput opts output
