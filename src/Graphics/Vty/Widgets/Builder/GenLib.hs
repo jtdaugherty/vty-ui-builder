@@ -150,8 +150,11 @@ attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
 registerInterface :: String -> InterfaceValues -> GenM ()
 registerInterface ifName vals = do
   st <- get
-  put $ st { interfaceNames = (ifName, vals)
-                              : interfaceNames st }
+  -- It's important to append the interface information so that the
+  -- order of the interfaces in the XML is preserved in the generated
+  -- code.
+  put $ st { interfaceNames = interfaceNames st ++ [(ifName, vals)]
+           }
 
 annotateElement :: Element a -> ValueName -> GenM ()
 annotateElement e nam = do
