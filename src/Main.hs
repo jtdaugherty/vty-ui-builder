@@ -2,7 +2,7 @@ module Main where
 
 import System
 import System.IO
-import System.FilePath ((</>))
+import System.FilePath
 import Control.Monad
 
 import System.Exit
@@ -20,36 +20,50 @@ data BuilderOpt = Help
                 | GenerateImports Bool
                 | OutputFilename String
                 | ValidateOnly
+                | DTDPath FilePath
                   deriving (Show, Eq)
 
-options :: [OptDescr BuilderOpt]
-options = [ Option "h" ["help"] (NoArg Help) "This help output"
+getDTDDir :: IO FilePath
+getDTDDir = do
+  dataDir <- getDataDir
+  return $ dataDir </> "dtd"
 
-          , Option "n" ["module-name"] (ReqArg ModuleName "NAME")
-                       ("The name of the generated module (default: "
-                        ++ (show $ moduleName defaultConfig) ++ ")")
+mkOptions :: IO [OptDescr BuilderOpt]
+mkOptions = do
+  defaultDTDDir <- getDTDDir
 
-          , Option "p" ["no-preamble"] (NoArg (GeneratePreamble False))
-                       "Do not generate a module preamble"
+  return [ Option "h" ["help"] (NoArg Help) "This help output"
 
-          , Option "i" ["no-imports"] (NoArg (GenerateImports False))
-                       "Do not generate vty-ui library imports"
+         , Option "n" ["module-name"] (ReqArg ModuleName "NAME")
+                      ("The name of the generated module (default: "
+                       ++ (show $ moduleName defaultConfig) ++ ")")
 
-          , Option "m" ["main"] (NoArg (GenerateMain True))
-                       ("Generate a \"main\" function for testing (implies "
-                        ++ "-n \"Main\")")
+         , Option "p" ["no-preamble"] (NoArg (GeneratePreamble False))
+                      "Do not generate a module preamble"
 
-          , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
-                       "The output filename (default: standard output)"
+         , Option "i" ["no-imports"] (NoArg (GenerateImports False))
+                      "Do not generate vty-ui library imports"
 
-          , Option "v" ["validate-only"] (NoArg ValidateOnly)
-                       "Validate the input XML but do not generate any output"
-          ]
+         , Option "m" ["main"] (NoArg (GenerateMain True))
+                      ("Generate a \"main\" function for testing (implies "
+                       ++ "-n \"Main\")")
+
+         , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
+                      "The output filename (default: standard output)"
+
+         , Option "v" ["validate-only"] (NoArg ValidateOnly)
+                      "Validate the input XML but do not generate any output"
+
+         , Option "d" ["dtd-dir"] (ReqArg DTDPath "DIR")
+                      ("Path to the directory containing element DTD files\n"
+                       ++ "(default: " ++ defaultDTDDir ++ ")")
+         ]
 
 usage :: [String] -> IO ()
 usage errs = do
   uh <- usageHeader
-  putStrLn $ usageInfo uh options
+  opts <- mkOptions
+  putStrLn $ usageInfo uh opts
   mapM_ (putStrLn . ("Error: " ++)) errs
 
 usageHeader :: IO String
@@ -93,6 +107,8 @@ saveOutput opts output = do
 main :: IO ()
 main = do
   args <- getArgs
+  options <- mkOptions
+
   let (opts, rest, errors) = getOpt Permute options args
 
   when (not $ null errors) $ do
@@ -105,9 +121,6 @@ main = do
 
   when (length rest /= 1) $ usage [] >> exitFailure
   let [xmlFilename] = rest
-
-  dataDir <- getDataDir
-  let dtdPath = dataDir </> "dtd"
       config = configFromOptions opts
 
   inputHandle <- openFile xmlFilename ReadMode `catch`
@@ -119,6 +132,7 @@ main = do
   let elementNames = map fst elementHandlers
       handlers = elementHandlers
 
+  dtdPath <- getDTDDir
   validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementNames
 
   case validationResult of
