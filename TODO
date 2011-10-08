@@ -79,14 +79,27 @@ Add support for:
   not yet been processed! (i.e., whole-document validation in addition
   to per-element validation)
 
-  Ideas:
+  Probably the best way to do this is to specify redundant elements
+  first, outside of all interfaces, and then just reference them
+  everywhere, e.g.,
 
-  * scan the document before processing to collect all of the name
-    declarations
-  * use this list of "valid names" to look up values
-  * may need to split up code generation into two phases: process the
-    XML completely, then resolve references to values (and types)
-    before serializing to code
+  <collection>
+    <referenced>
+      <vBox id="theBox">
+        ...
+      </vBox>
+    </referenced>
+
+    <interface name="stuff">
+      <ref target="theBox"/>
+      ...
+    </interface>
+
+    <interface name="things">
+      <ref target="theBox"/>
+      ...
+    </interface>
+  </collection>
 
 - figure out how to resolve whitespace handling in fText and attr
   elements so it is clear what the semantics will be
