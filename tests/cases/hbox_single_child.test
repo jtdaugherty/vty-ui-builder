@@ -1,0 +1,15 @@
+hBox has only one child
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <hBox>
+      <fText id="t">stuff</fText>
+    </hBox>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+^Element <hBox> should contain
