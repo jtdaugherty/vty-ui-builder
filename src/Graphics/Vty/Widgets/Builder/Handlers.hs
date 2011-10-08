@@ -54,7 +54,7 @@ genCollection e nam = do
   append $ text ""
 
   forM_ chs $ \ch -> do
-    nam <- newEntry
+    nam <- newEntry $ elemName ch
     genInterface ch nam
     annotateElement ch nam
 
@@ -67,8 +67,8 @@ genInterface e nam = do
       Just ifName = getAttribute e "name"
 
   gen ch nam
-  actName <- newEntry
-  fgName <- newEntry
+  actName <- newEntry "act"
+  fgName <- newEntry $ elemName e
   genFocusGroup fg fgName
   append $ hcat [ toDoc actName
                 , text " <- addToCollection c "
@@ -91,8 +91,8 @@ genDirBrowser e nam = do
                Nothing -> "defaultBrowserSkin"
                Just s -> s
 
-  browserName <- newEntry
-  fgName <- newEntry
+  browserName <- newEntry "browser"
+  fgName <- newEntry "focusGroup"
   append $ hcat [ text "("
                 , toDoc browserName
                 , text ", "
@@ -118,11 +118,11 @@ genDialog e nam = do
   let [ch] = elemChildren e
       Just title = getAttribute e "title"
 
-  chNam <- newEntry
+  chNam <- newEntry $ elemName ch
   gen ch chNam
 
-  dlgName <- newEntry
-  fgName <- newEntry
+  dlgName <- newEntry "dialog"
+  fgName <- newEntry "focusGroup"
   append $ hcat [ text "("
                 , toDoc dlgName
                 , text ", "
@@ -149,7 +149,7 @@ genCentered :: ElementHandler
 genCentered e nam = do
   let [ch] = elemChildren e
 
-  chNam <- newEntry
+  chNam <- newEntry $ elemName ch
   gen ch chNam
 
   append $ hcat [ toDoc nam
@@ -166,7 +166,7 @@ genHCentered :: ElementHandler
 genHCentered e nam = do
   let [ch] = elemChildren e
 
-  chNam <- newEntry
+  chNam <- newEntry $ elemName ch
   gen ch chNam
 
   append $ hcat [ toDoc nam
@@ -183,7 +183,7 @@ genVCentered :: ElementHandler
 genVCentered e nam = do
   let [ch] = elemChildren e
 
-  chNam <- newEntry
+  chNam <- newEntry $ elemName ch
   gen ch chNam
 
   append $ hcat [ toDoc nam
@@ -234,7 +234,7 @@ genProgressBar e nam = do
   let Just compColor = getAttribute e "completeColor"
       Just incompColor = getAttribute e "incompleteColor"
 
-  barName <- newEntry
+  barName <- newEntry "progressBar"
 
   append $ hcat [ toDoc barName
                 , text " <- newProgressBar "
@@ -263,7 +263,7 @@ genButton :: ElementHandler
 genButton e nam = do
   let Just label = getAttribute e "label"
 
-  buttonName <- newEntry
+  buttonName <- newEntry "button"
 
   append $ hcat [ toDoc buttonName
                 , text " <- newButton "
@@ -321,7 +321,7 @@ genBordered :: ElementHandler
 genBordered e nam = do
   let [ch] = elemChildren e
 
-  chNam <- newEntry
+  chNam <- newEntry $ elemName ch
   gen ch chNam
 
   append $ hcat [ toDoc nam
@@ -338,14 +338,14 @@ genVBox e nam = do
   -- DTD: >= 2 children
   names <- forM (elemChildren e) $
            \child -> do
-                  chname <- newEntry
+                  chname <- newEntry $ elemName child
                   gen child chname
                   return chname
 
   let buildVBox [] = error "BUG: vBox cannot be built from zero children"
       buildVBox [c] = return c
       buildVBox (c1:c2:rest) = do
-                  nextName <- newEntry
+                  nextName <- newEntry "vBox"
                   append $ hcat [ toDoc nextName
                                 , text " <- vBox "
                                 , toDoc c1
@@ -374,14 +374,14 @@ genHBox e nam = do
   -- DTD: >= 2 children
   names <- forM (elemChildren e) $
            \child -> do
-                  chname <- newEntry
+                  chname <- newEntry $ elemName child
                   gen child chname
                   return chname
 
   let buildHBox [] = error "BUG: hBox cannot be built from zero children"
       buildHBox [c] = return c
       buildHBox (c1:c2:rest) = do
-                  nextName <- newEntry
+                  nextName <- newEntry "hBox"
                   append $ hcat [ toDoc nextName
                                 , text " <- hBox "
                                 , toDoc c1
@@ -411,7 +411,7 @@ genFormat e nam = do
       Just formatName = getAttribute e "name"
 
   gen ch nam
-  tempNam <- newEntry
+  tempNam <- newEntry "formattedText"
   append $ toDoc tempNam <> text " <- getTextFormatter " <> toDoc nam
   append $ hcat [ text "setTextFormatter "
                 , toDoc nam

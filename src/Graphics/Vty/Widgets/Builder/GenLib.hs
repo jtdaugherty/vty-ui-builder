@@ -19,12 +19,14 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , lookupFocusMethod
     , valNameStr
     , annotateElement
+    , elemName
     )
 where
 
 import Control.Applicative
 import Control.Monad.State
 import Data.Maybe (fromJust)
+import qualified Data.Map as Map
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Combinators
 import Text.PrettyPrint.HughesPJ
@@ -200,14 +202,24 @@ append d = do
   st <- get
   put $ st { genDoc = (genDoc st) $$ d }
 
-newEntry :: GenM ValueName
-newEntry = do
+newEntry :: String -> GenM ValueName
+newEntry n = do
   st <- get
-  put $ st { nameCounter = (nameCounter st) + 1
-           }
-  return $ ValueName $ "val" ++ show (nameCounter st)
+
+  let val = case Map.lookup n (nameCounters st) of
+              Just nextVal -> nextVal
+              Nothing -> 1
+
+  let newMap = Map.insert n (val + 1) (nameCounters st)
+  put $ st { nameCounters = newMap }
+
+  return $ ValueName $ n ++ show val
 
 addCommas :: [Doc] -> String -> Doc
 addCommas [] _ = text ""
 addCommas (l:ls) s =
     text s <> l $$ (vcat $ map (text ", " <>) ls)
+
+elemName :: Element a -> String
+elemName (Elem (N s) _ _) = s
+elemName _ = error "elemName does not support qualified names"

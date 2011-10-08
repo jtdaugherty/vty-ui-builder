@@ -57,10 +57,6 @@ Add support for:
   list, give it two representations as its surrounding interfaces
   change)
 
-- code generation: make generated value names reflect the kind of
-  element which caused them to be generated, rather than 'val' for
-  everything.  E.g., dialog1, dialog2, vBox1, vBox2, etc.
-
 - figure out why DTD validation isn't catching some of the attribute
   mistakes I've seen (#REQUIRED attributes are missing and the
   validator does not complain).  HaXml bug?

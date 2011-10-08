@@ -15,6 +15,7 @@ where
 
 import Control.Monad.State
 import Data.List (intersperse)
+import qualified Data.Map as Map
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Posn
 import Text.PrettyPrint.HughesPJ
@@ -43,7 +44,7 @@ data InterfaceValues =
                     }
 
 data GenState =
-    GenState { nameCounter :: Int
+    GenState { nameCounters :: Map.Map String Int
              , genDoc :: Doc
              , handlers :: [(String, ElementHandler)]
              , namedValues :: [(RegisteredName, (ValueName, ValueName))]

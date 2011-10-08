@@ -5,6 +5,7 @@ module Graphics.Vty.Widgets.Builder
 where
 
 import System.IO
+import qualified Data.Map as Map
 import Control.Monad.State
 import Text.PrettyPrint.HughesPJ
 
@@ -23,7 +24,7 @@ generateSource :: BuilderConfig
                -> IO String
 generateSource config (Validated e) theHandlers = do
   let (_, finalState) = runState (gen e $ ValueName "root") initialState
-      initialState = GenState 0 empty theHandlers [] [] [] []
+      initialState = GenState (Map.empty) empty theHandlers [] [] [] []
   return $ render $ generateSourceDoc config finalState
 
 validateAgainstDTD :: Handle
