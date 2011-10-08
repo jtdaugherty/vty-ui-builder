@@ -111,7 +111,7 @@ runValidationTest tc = do
                                  ]
     (Right _, Failure es) ->
         do
-          assertFailure $ concat [ "validation succeeded but should have failed.  Expected errors were:\n"
+          assertFailure $ concat [ "validation succeeded but should have failed with the following errors:\n"
                                  , intercalate "\n" es
                                  ]
     (Left actualEs, Failure expectedEs) ->
