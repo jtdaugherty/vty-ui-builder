@@ -1,0 +1,28 @@
+
+vty-ui Builder
+--------------
+
+This package provides a utility which reads XML descriptions of
+'vty-ui' interfaces and generates Haskell module source code to
+generate the described interface.  The generated source includes a
+function to build the interface and a record type used to hold
+references to widgets of interest.  The XML files read by the tool are
+validated against a collection of DTDs, each of which defines the DTD
+for a single widget type.  In addition, the tool provides options to
+inhibit the generation of various elements of the output source so
+that the output can be used in various settings (module with only a
+type declaration, test program with a built-in "main", etc.)
+
+Usage: vty-ui-builder [options] <XML filename>
+
+  -h           --help              This help output
+  -n NAME      --module-name=NAME  The name of the generated module (default: "Interface")
+  -p           --no-preamble       Do not generate a module preamble
+  -i           --no-imports        Do not generate vty-ui library imports
+  -t           --no-type           Do not generate the interface type used to return
+                                   interface elements
+  -f           --no-function       Do not generate the function which builds the interface
+  -m           --main              Generate a "main" function for testing (implies -n "Main")
+  -o FILENAME  --output=FILENAME   The output filename (default: standard output)
+  -v           --validate-only     Validate the input XML but do not generate any output
+  -d DIR       --dtd-dir=DIR       Path to the directory containing element DTD files
