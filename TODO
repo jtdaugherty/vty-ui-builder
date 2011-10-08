@@ -75,6 +75,3 @@ Add support for:
 
 - vty-ui-builder: make generated main start out on an interface which
   tells the user how to use the test program?
-
-- vty-ui-builder: support generating ONLY the element record type,
-  support generating ONLY the collection builder function

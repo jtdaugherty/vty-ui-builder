@@ -21,6 +21,8 @@ data BuilderOpt = Help
                 | OutputFilename String
                 | ValidateOnly
                 | DTDPath FilePath
+                | GenerateInterfaceType Bool
+                | GenerateInterfaceBuilder Bool
                   deriving (Show, Eq)
 
 getDTDDir :: IO FilePath
@@ -43,6 +45,13 @@ mkOptions = do
 
          , Option "i" ["no-imports"] (NoArg (GenerateImports False))
                       "Do not generate vty-ui library imports"
+
+         , Option "t" ["no-type"] (NoArg (GenerateInterfaceType False))
+                      ("Do not generate the interface type used to return\n"
+                       ++ "interface elements")
+
+         , Option "f" ["no-function"] (NoArg (GenerateInterfaceBuilder False))
+                      "Do not generate the function which builds the interface"
 
          , Option "m" ["main"] (NoArg (GenerateMain True))
                       ("Generate a \"main\" function for testing (implies "
@@ -83,6 +92,8 @@ configFromOptions (o:os) =
          GeneratePreamble val -> config { generateModulePreamble = val }
          GenerateImports val -> config { generateImports = val }
          GenerateMain val -> config { generateMain = val }
+         GenerateInterfaceType val -> config { generateInterfaceType = val }
+         GenerateInterfaceBuilder val -> config { generateInterfaceBuilder = val }
          _ -> config
 
 getOutputFilename :: [BuilderOpt] -> Maybe String
