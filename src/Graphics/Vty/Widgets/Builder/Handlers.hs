@@ -46,19 +46,23 @@ elementHandlers = [ ("collection", genCollection)
                   , ("focusGroup", genFocusGroup)
                   ]
 
+collectionName :: ValueName
+collectionName = ValueName "c"
+
 genCollection :: ElementHandler
 genCollection e nam = do
   -- DTD: two children
   let chs = elemChildren e
-  append $ text "c <- newCollection"
+  append $ hcat [ toDoc collectionName
+                , text " <- newCollection"
+                ]
   append $ text ""
 
   forM_ chs $ \ch -> do
     nam <- newEntry $ elemName ch
-    genInterface ch nam
-    annotateElement ch nam
+    gen ch nam
 
-  return nam
+  return Nothing
 
 genInterface :: ElementHandler
 genInterface e nam = do
@@ -71,7 +75,9 @@ genInterface e nam = do
   fgName <- newEntry $ elemName e
   genFocusGroup fg fgName
   append $ hcat [ toDoc actName
-                , text " <- addToCollection c "
+                , text " <- addToCollection "
+                , toDoc collectionName
+                , text " "
                 , toDoc nam
                 , text " "
                 , toDoc fgName
@@ -83,7 +89,7 @@ genInterface e nam = do
                              }
   registerInterface ifName vals
 
-  return nam
+  return Nothing
 
 genDirBrowser :: ElementHandler
 genDirBrowser e nam = do
@@ -107,11 +113,10 @@ genDirBrowser e nam = do
                 , toDoc browserName
                 ]
 
-  registerWidgetStateType nam $ TyCon "DirBrowserWidgetType" []
-  registerCustomType browserName "DirBrowser"
   setFocusMethod nam $ Merge fgName
 
-  return browserName
+  return $ declareWidget nam (TyCon "DirBrowserWidgetType" [])
+             `withField` (browserName, "DirBrowser")
 
 genDialog :: ElementHandler
 genDialog e nam = do
@@ -139,11 +144,10 @@ genDialog e nam = do
                 , toDoc dlgName
                 ]
 
-  registerWidgetStateType nam $ TyCon "Padded" []
-  registerCustomType dlgName "Dialog"
   setFocusMethod nam $ Merge fgName
 
-  return dlgName
+  return $ declareWidget nam (TyCon "Padded" [])
+             `withField` (dlgName, "Dialog")
 
 genCentered :: ElementHandler
 genCentered e nam = do
@@ -158,9 +162,7 @@ genCentered e nam = do
                 ]
 
   chType <- getStateType chNam
-  registerWidgetStateType nam $ TyCon "Centered" [chType]
-
-  return nam
+  return $ declareWidget nam (TyCon "Centered" [chType])
 
 genHCentered :: ElementHandler
 genHCentered e nam = do
@@ -175,9 +177,7 @@ genHCentered e nam = do
                 ]
 
   chType <- getStateType chNam
-  registerWidgetStateType nam $ TyCon "HCentered" [chType]
-
-  return nam
+  return $ declareWidget nam (TyCon "HCentered" [chType])
 
 genVCentered :: ElementHandler
 genVCentered e nam = do
@@ -192,9 +192,7 @@ genVCentered e nam = do
                 ]
 
   chType <- getStateType chNam
-  registerWidgetStateType nam $ TyCon "VCentered" [chType]
-
-  return nam
+  return $ declareWidget nam (TyCon "VCentered" [chType])
 
 genVFill :: ElementHandler
 genVFill e nam = do
@@ -206,8 +204,7 @@ genVFill e nam = do
                 , text $ " <- vFill " ++ (show $ head ch)
                 ]
 
-  registerWidgetStateType nam $ TyCon "VFill" []
-  return nam
+  return $ declareWidget nam (TyCon "VFill" [])
 
 genHFill :: ElementHandler
 genHFill e nam = do
@@ -226,8 +223,7 @@ genHFill e nam = do
                 , text $ show (height :: Int)
                 ]
 
-  registerWidgetStateType nam $ TyCon "HFill" []
-  return nam
+  return $ declareWidget nam (TyCon "HFill" [])
 
 genProgressBar :: ElementHandler
 genProgressBar e nam = do
@@ -252,12 +248,10 @@ genProgressBar e nam = do
   -- The state type is 'Padded' because buttons are implemented as
   -- composite widgets; see the 'Button' type in
   -- Graphics.Vty.Widgets.Button.
-  registerCustomType barName "ProgressBar"
-  registerWidgetStateType nam $ TyCon "Box" [ TyCon "HFill" []
-                                            , TyCon "HFill" []
-                                            ]
-
-  return barName
+  return $ declareWidget nam (TyCon "Box" [ TyCon "HFill" []
+                                          , TyCon "HFill" []
+                                          ])
+             `withField` (barName, "ProgressBar")
 
 genButton :: ElementHandler
 genButton e nam = do
@@ -279,10 +273,8 @@ genButton e nam = do
   -- The state type is 'Padded' because buttons are implemented as
   -- composite widgets; see the 'Button' type in
   -- Graphics.Vty.Widgets.Button.
-  registerCustomType buttonName "Button"
-  registerWidgetStateType nam $ TyCon "Padded" []
-
-  return buttonName
+  return $ declareWidget nam (TyCon "Padded" [])
+             `withField` (buttonName, "Button")
 
 genEdit :: ElementHandler
 genEdit e nam = do
@@ -297,25 +289,21 @@ genEdit e nam = do
                             , text $ show s
                             ]
 
-  registerWidgetStateType nam $ TyCon "Edit" []
-
-  return nam
+  return $ declareWidget nam (TyCon "Edit" [])
 
 genHBorder :: ElementHandler
 genHBorder _ nam = do
   append $ hcat [ toDoc nam
                 , text " <- hBorder"
                 ]
-  registerWidgetStateType nam $ TyCon "HBorder" []
-  return nam
+  return $ declareWidget nam (TyCon "HBorder" [])
 
 genVBorder :: ElementHandler
 genVBorder _ nam = do
   append $ hcat [ toDoc nam
                 , text " <- vBorder"
                 ]
-  registerWidgetStateType nam $ TyCon "VBorder" []
-  return nam
+  return $ declareWidget nam (TyCon "VBorder" [])
 
 genBordered :: ElementHandler
 genBordered e nam = do
@@ -330,8 +318,7 @@ genBordered e nam = do
                 ]
 
   chType <- getStateType chNam
-  registerWidgetStateType nam $ TyCon "Bordered" [chType]
-  return nam
+  return $ declareWidget nam (TyCon "Bordered" [chType])
 
 genVBox :: ElementHandler
 genVBox e nam = do
@@ -356,18 +343,19 @@ genVBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerWidgetStateType nextName $ TyCon "Box" [c1Type, c2Type]
+                  registerType nextName (Widget (TyCon "Box" [c1Type, c2Type]))
                   buildVBox (nextName:rest)
 
   result <- buildVBox names
-  registerWidgetStateType nam =<< getStateType result
 
   append $ hcat [ text "let "
                 , toDoc nam
                 , text " = "
                 , toDoc result
                 ]
-  return nam
+
+  ty <- getStateType result
+  return $ declareWidget nam ty
 
 genHBox :: ElementHandler
 genHBox e nam = do
@@ -392,18 +380,19 @@ genHBox e nam = do
                   c1Type <- getStateType c1
                   c2Type <- getStateType c2
 
-                  registerWidgetStateType nextName $ TyCon "Box" [c1Type, c2Type]
+                  registerType nextName (Widget (TyCon "Box" [c1Type, c2Type]))
                   buildHBox (nextName:rest)
 
   result <- buildHBox names
-  registerWidgetStateType nam =<< getStateType result
 
   append $ hcat [ text "let "
                 , toDoc nam
                 , text " = "
                 , toDoc result
                 ]
-  return nam
+
+  ty <- getStateType result
+  return $ declareWidget nam ty
 
 genFormat :: ElementHandler
 genFormat e nam = do
@@ -421,7 +410,7 @@ genFormat e nam = do
                                 , text formatName
                                 ]
                 ]
-  return nam
+  return Nothing
 
 genFormattedText :: ElementHandler
 genFormattedText (Elem _ _ eContents) nam = do
@@ -463,8 +452,6 @@ genFormattedText (Elem _ _ eContents) nam = do
                                          , text expr
                                          ]
 
-  registerWidgetStateType nam $ TyCon "FormattedText" []
-
   append $ toDoc nam <> text " <- plainText \"\""
   append $ hcat [ text "setTextWithAttrs "
                 , toDoc nam
@@ -473,7 +460,8 @@ genFormattedText (Elem _ _ eContents) nam = do
                        , text "]"
                        ]
                 ]
-  return nam
+
+  return $ declareWidget nam (TyCon "FormattedText" [])
 
 genFocusGroup :: ElementHandler
 genFocusGroup e nam = do
@@ -513,4 +501,4 @@ genFocusGroup e nam = do
                                                <> text " "
                                                <> toDoc valName
 
-  return nam
+  return Nothing

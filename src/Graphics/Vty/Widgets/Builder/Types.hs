@@ -10,6 +10,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , InterfaceValues(..)
     , FocusMethod(..)
     , ValidatedElement(..)
+    , HandlerResult(..)
     )
 where
 
@@ -57,7 +58,12 @@ data FocusMethod = Direct | Merge ValueName
 
 type GenM a = State GenState a
 
-type ElementHandler = Element Posn -> ValueName -> GenM ValueName
+type ElementHandler = Element Posn -> ValueName -> GenM (Maybe HandlerResult)
+
+data HandlerResult =
+    HandlerResult { widgetValue :: (ValueName, Type)
+                  , fieldValue :: Maybe (ValueName, Type)
+                  }
 
 data Type = Widget TyCon
           | Custom String

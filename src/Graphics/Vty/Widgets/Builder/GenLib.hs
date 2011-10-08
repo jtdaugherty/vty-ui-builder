@@ -9,9 +9,8 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , attrsToExpr
     , lookupFieldValueName
     , lookupWidgetValueName
-    , registerWidgetStateType
-    , registerCustomType
     , registerInterface
+    , registerType
     , getStateType
     , addCommas
     , widgetType
@@ -20,15 +19,17 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , valNameStr
     , annotateElement
     , elemName
+    , declareWidget
+    , withField
     )
 where
 
 import Control.Applicative
 import Control.Monad.State
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as Map
 import Text.XML.HaXml.Types
-import Text.XML.HaXml.Combinators
+import Text.XML.HaXml.Combinators hiding (when)
 import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
@@ -39,13 +40,43 @@ gen e@(Elem (N n) _ _) nam = do
   case lookup n hs of
     Nothing -> error $ "No handler for element type " ++ (show n)
     Just h -> do
-      fieldName <- h e nam
+      maybeHr <- h e nam
+
+      when (isJust maybeHr) $
+           do
+             let Just hr = maybeHr
+
+             -- Always register the name and type of the widget
+             -- created by the handler.
+             let (wName, wType) = widgetValue hr
+             registerType wName wType
+
+             -- If the handler declared a specific name and type for
+             -- the a field referencing its value, then register the
+             -- name and value.
+             when (isJust $ fieldValue hr) $
+                  do
+                    let Just (fName, fType) = fieldValue hr
+                    registerType fName fType
+
+             -- If the element has an ID, use that to set up field
+             -- information so we know how to assign the widget to the
+             -- field.
+             case getAttribute e "id" of
+               Nothing -> return ()
+               Just newName -> do
+                               -- If the handler result contains a
+                               -- specific field value name, use that;
+                               -- otherwise, fall back to the widget
+                               -- value's name.
+                               let fieldName = maybe (fst $ widgetValue hr) id (fst <$> fieldValue hr)
+                               registerName (RegisteredName newName) fieldName (fst $ widgetValue hr)
+
+      -- Use common attributes on the element to annotate it with
+      -- widget-agnostic properties.
       annotateElement e nam
       append $ text ""
-      case getAttribute e "id" of
-        Nothing -> return ()
-        Just newName -> registerName (RegisteredName newName) fieldName nam
-      return fieldName
+      return Nothing
 gen _ _ = error "Got unsupported element structure"
 
 -- Using the registered element names in the input document, generate
@@ -76,12 +107,6 @@ generateTypes st =
 widgetType :: [TyCon] -> TyCon
 widgetType = TyCon "Widget"
 
-registerWidgetStateType :: ValueName -> TyCon -> GenM ()
-registerWidgetStateType valueName tyCon = registerType' valueName (Widget tyCon)
-
-registerCustomType :: ValueName -> String -> GenM ()
-registerCustomType valueName s = registerType' valueName (Custom s)
-
 setFocusMethod :: ValueName -> FocusMethod -> GenM ()
 setFocusMethod valueName m = do
   st <- get
@@ -92,8 +117,8 @@ lookupFocusMethod valueName = do
   st <- get
   return $ lookup valueName (focusMethods st)
 
-registerType' :: ValueName -> Type -> GenM ()
-registerType' valueName ty = do
+registerType :: ValueName -> Type -> GenM ()
+registerType valueName ty = do
   st <- get
   case lookup valueName (valueTypes st) of
     Just _ -> error $ "BUG: type registration for value "
@@ -223,3 +248,13 @@ addCommas (l:ls) s =
 elemName :: Element a -> String
 elemName (Elem (N s) _ _) = s
 elemName _ = error "elemName does not support qualified names"
+
+declareWidget :: ValueName -> TyCon -> Maybe HandlerResult
+declareWidget val tyCon =
+    Just $ HandlerResult { widgetValue = (val, Widget tyCon)
+                         , fieldValue = Nothing
+                         }
+
+withField :: Maybe HandlerResult -> (ValueName, String) -> Maybe HandlerResult
+withField mh (val, ty) =
+    mh >>= \h -> return $ h { fieldValue = Just (val, Custom ty) }
