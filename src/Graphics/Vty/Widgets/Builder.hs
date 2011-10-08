@@ -24,7 +24,15 @@ generateSource :: BuilderConfig
                -> IO String
 generateSource config (Validated e) theHandlers = do
   let (_, finalState) = runState (gen e $ ValueName "root") initialState
-      initialState = GenState (Map.empty) empty theHandlers [] [] [] []
+      initialState = GenState { nameCounters = Map.empty
+                              , genDoc = empty
+                              , handlers = theHandlers
+                              , namedValues = []
+                              , valueTypes = []
+                              , interfaceNames = []
+                              , focusMethods = []
+                              }
+
   return $ render $ generateSourceDoc config finalState
 
 validateAgainstDTD :: Handle
