@@ -26,3 +26,20 @@ Usage: vty-ui-builder [options] <XML filename>
   -o FILENAME  --output=FILENAME   The output filename (default: standard output)
   -v           --validate-only     Validate the input XML but do not generate any output
   -d DIR       --dtd-dir=DIR       Path to the directory containing element DTD files
+
+Example generation of a Haskell module with a 'main' to use for
+testing your interfaces:
+
+  $ vty-ui-builder test.xml -m -o test.hs
+  Output written to "test.hs"
+  $ runghc test.hs
+
+The generated 'main' will:
+
+ * invoke the generated UI builder function to construct the
+   interfaces
+
+ * add a key event handler to each interface binding:
+   - 'Esc' to application exit
+   - 'n' to switch to the next interface in the sequence (depending on
+     the interface ordering in the XML)
