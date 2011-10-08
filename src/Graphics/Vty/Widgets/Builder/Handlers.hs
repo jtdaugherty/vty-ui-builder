@@ -44,6 +44,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("dialog", genDialog)
                   , ("dirBrowser", genDirBrowser)
                   , ("pad", genPad)
+                  , ("ref", genRef)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -95,6 +96,21 @@ genInterface e nam = do
   registerInterface ifName vals
 
   return Nothing
+
+genRef :: ElementHandler
+genRef e nam = do
+  let Just target = getAttribute e "target"
+  val <- lookupWidgetValueName $ RegisteredName target
+
+  case val of
+    Nothing -> error $ "ref: target '" ++ target ++ "' invalid"
+    Just valName -> do
+                 append $ hcat [ text "let "
+                               , toDoc nam
+                               , text " = "
+                               , toDoc valName
+                               ]
+                 (return . declareWidget nam) =<< getStateType valName
 
 genPad :: ElementHandler
 genPad e nam = do

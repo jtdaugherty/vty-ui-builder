@@ -37,24 +37,17 @@ Add support for:
   * Fixed
   * Group
 
-- improvements for field naming API (returning a different name from
-  element handlers is a terrible API)
-
-- improvements to make handler implementation easier (and hard or
-  impossible to get wrong).  Having to register types explicitly is
-  hard to get right, and having the name generation and field name
-  registration for the element be external to the handler also makes
-  things hard to think about.
-
-- improve element code generation so attribution doesn't have any
-  special cases (e.g., some things call a gen* function directly
-  rather than calling gen, thus side-stepping gen's element-generic
-  attribute handling)
-
 - make it possible to define user interface elements once and refer to
   them in multiple places in multiple interfaces (use case: define one
   list, give it two representations as its surrounding interfaces
   change)
+
+- make it impossible to reference focus group entry names which are
+  not in the interface corresponding to a focus group
+
+- make refs able to refer to any name in the document even if it has
+  not yet been processed! (i.e., whole-document validation in addition
+  to per-element validation)
 
 - figure out why DTD validation isn't catching some of the attribute
   mistakes I've seen (#REQUIRED attributes are missing and the
