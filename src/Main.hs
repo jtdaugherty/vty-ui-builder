@@ -90,6 +90,11 @@ getOutputFilename [] = Nothing
 getOutputFilename ((OutputFilename s):_) = Just s
 getOutputFilename (_:os) = getOutputFilename os
 
+dtdDirFromOpts :: [BuilderOpt] -> IO FilePath
+dtdDirFromOpts [] = getDTDDir
+dtdDirFromOpts ((DTDPath s):_) = return s
+dtdDirFromOpts (_:os) = dtdDirFromOpts os
+
 saveOutput :: [BuilderOpt] -> String -> IO ()
 saveOutput opts output = do
   case getOutputFilename opts of
@@ -132,7 +137,7 @@ main = do
   let elementNames = map fst elementHandlers
       handlers = elementHandlers
 
-  dtdPath <- getDTDDir
+  dtdPath <- dtdDirFromOpts opts
   validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementNames
 
   case validationResult of
