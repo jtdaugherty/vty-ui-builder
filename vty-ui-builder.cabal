@@ -7,29 +7,14 @@ Author:              Jonathan Daugherty <drcygnus@gmail.com>
 Maintainer:          Jonathan Daugherty <drcygnus@gmail.com>
 Category:            Graphics
 Build-type:          Simple
-Cabal-version:       >=1.2
+Cabal-version:       >=1.6
 
 Data-files:
-  dtd/hBox.dtd
-  dtd/vBox.dtd
-  dtd/fText.dtd
-  dtd/interface.dtd
-  dtd/focusGroup.dtd
-  dtd/collection.dtd
-  dtd/format.dtd
-  dtd/hBorder.dtd
-  dtd/vBorder.dtd
-  dtd/bordered.dtd
-  dtd/edit.dtd
-  dtd/button.dtd
-  dtd/hFill.dtd
-  dtd/vFill.dtd
-  dtd/centered.dtd
-  dtd/vCentered.dtd
-  dtd/hCentered.dtd
-  dtd/progressBar.dtd
-  dtd/dialog.dtd
-  dtd/dirBrowser.dtd
+  dtd/*.dtd
+  tests/validation/*.test
+
+Extra-source-files:
+  tests/Validation.hs
 
 Library
   Hs-Source-Dirs:    src
