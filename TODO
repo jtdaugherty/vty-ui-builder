@@ -49,6 +49,18 @@ Add support for:
   not yet been processed! (i.e., whole-document validation in addition
   to per-element validation)
 
+  Ideas:
+
+  * scan the document before processing to collect all of the name
+    declarations
+  * use this list of "valid names" to look up values
+  * may need to split up code generation into two phases: process the
+    XML completely, then resolve references to values (and types)
+    before serializing to code
+
+- figure out how to resolve whitespace handling in fText and attr
+  elements so it is clear what the semantics will be
+
 - figure out why DTD validation isn't catching some of the attribute
   mistakes I've seen (#REQUIRED attributes are missing and the
   validator does not complain).  HaXml bug?
