@@ -8,12 +8,16 @@ module Graphics.Vty.Widgets.Builder.Handlers
     )
 where
 
+import Control.Applicative
 import Control.Monad
+import Data.List (intercalate)
+import Data.Maybe
 import Text.PrettyPrint.HughesPJ
 import Text.XML.HaXml.Types
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
+import Graphics.Vty.Widgets.Builder.Util
 
 elementHandlers :: [(String, ElementHandler)]
 elementHandlers = [ ("collection", genCollection)
@@ -39,6 +43,7 @@ elementHandlers = [ ("collection", genCollection)
                   , ("progressBar", genProgressBar)
                   , ("dialog", genDialog)
                   , ("dirBrowser", genDirBrowser)
+                  , ("pad", genPad)
                   -- This should never be invoked by 'gen', but should
                   -- instead be invoked directly by genInterface.
                   -- It's only here so that the DTD loader loads the
@@ -90,6 +95,48 @@ genInterface e nam = do
   registerInterface ifName vals
 
   return Nothing
+
+genPad :: ElementHandler
+genPad e nam = do
+  let [ch] = elemChildren e
+
+  chNam <- newEntry (elemName e)
+  gen ch chNam
+
+  chType <- getStateType chNam
+
+  let padFunctions = [ ("top", "padTop")
+                     , ("bottom", "padBottom")
+                     , ("left", "padLeft")
+                     , ("right", "padRight")
+                     ]
+
+      attrNames = fst <$> padFunctions
+
+      -- Get padding attribute values
+      paddingValues = foreach attrNames $ \name ->
+                      (name, getIntAttribute e name)
+
+      -- For set padding attributes, extract padding expressions
+      paddingExprs :: [String]
+      paddingExprs = catMaybes $ foreach padFunctions $ \(attrName, func) -> do
+                       val <- lookup attrName paddingValues
+                       return $ func ++ " " ++ (show val)
+
+  when (null paddingExprs) $
+       error "'pad' element requires at least one padding attribute"
+
+  -- Construct padding expression from values
+  let expr = intercalate " `pad` " paddingExprs
+
+  append $ hcat [ toDoc nam
+                , text " <- padded "
+                , parens $ text expr
+                , text " "
+                , toDoc chNam
+                ]
+
+  return $ declareWidget nam (TyCon "Padded" [chType])
 
 genDirBrowser :: ElementHandler
 genDirBrowser e nam = do

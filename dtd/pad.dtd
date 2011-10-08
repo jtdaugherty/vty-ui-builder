@@ -1,0 +1,7 @@
+<!ELEMENT pad (%all;)>
+<!ATTLIST pad
+          top CDATA #IMPLIED
+          bottom CDATA #IMPLIED
+          left CDATA #IMPLIED
+          right CDATA #IMPLIED
+>

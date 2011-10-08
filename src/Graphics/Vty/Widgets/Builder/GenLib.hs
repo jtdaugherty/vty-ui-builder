@@ -6,6 +6,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , append
     , newEntry
     , getAttribute
+    , getIntAttribute
     , attrsToExpr
     , lookupFieldValueName
     , lookupWidgetValueName
@@ -167,6 +168,15 @@ getAttribute (Elem _ attrs _) attrName =
     case lookup (N attrName) attrs of
       Just (AttValue ((Left s):_)) -> Just s
       _ -> Nothing
+
+getIntAttribute :: Element a -> String -> Maybe Int
+getIntAttribute e attrName = do
+  attrVal <- getAttribute e attrName
+  case reads attrVal of
+    [] -> error $ "Error: '" ++ attrName
+          ++ "' of '" ++ elemName e
+          ++ "' must be an integer"
+    ((i,_):_) -> return i
 
 attrsToExpr :: (Maybe String, Maybe String) -> Maybe String
 attrsToExpr (Nothing, Nothing) = Nothing
