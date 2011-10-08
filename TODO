@@ -70,3 +70,7 @@ Add support for:
 - improve error reporting and reduce number of pathological error
   cases by performing up-front validation and by using more types (too
   many 'error' calls)
+
+- make vty-ui-builder support loading extra DTDs?
+
+- make vty-ui-builder support validation only (no source generation)
