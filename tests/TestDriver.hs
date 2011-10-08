@@ -1,11 +1,15 @@
 module Main where
 
 import System.IO
-import System.Exit
 import System.FilePath
 import System.Directory
 import Control.Monad
 import Data.List
+
+import Test.Framework (defaultMain)
+import Test.Framework.Providers.API
+import Test.Framework.Providers.HUnit
+import Test.HUnit hiding (Test)
 
 import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Handlers
@@ -15,25 +19,25 @@ data ExpectedResult = Failure [String]
                     | Success
                       deriving (Eq, Show)
 
-data TestCase =
-    TestCase { inputDocument :: String
-             , description :: String
-             , expectedResult :: ExpectedResult
-             , testFilename :: FilePath
-             }
+data ValidationTest =
+    ValidationTest { inputDocument :: String
+                   , description :: String
+                   , expectedResult :: ExpectedResult
+                   , testFilename :: FilePath
+                   }
     deriving (Eq, Show)
 
 testCaseDelim :: String
 testCaseDelim = "---"
 
-getTestCaseDir :: IO FilePath
-getTestCaseDir = do
+getValidationTestDir :: IO FilePath
+getValidationTestDir = do
   cur <- getCurrentDirectory
   canonicalizePath $ cur </> "tests" </> "cases"
 
-getTestCaseFilenames :: IO [FilePath]
-getTestCaseFilenames = do
-  files <- getDirectoryContents =<< getTestCaseDir
+getValidationTestFilenames :: IO [FilePath]
+getValidationTestFilenames = do
+  files <- getDirectoryContents =<< getValidationTestDir
   return [ f | f <- files, ".test" `isSuffixOf` f ]
 
 partitionBy :: (Eq a) => [a] -> a -> [[a]]
@@ -55,25 +59,25 @@ parseExpectedResult [] = Nothing
 parseExpectedResult ["success"] = Just Success
 parseExpectedResult ls = Just $ Failure ls
 
-parseTestCase :: FilePath -> String -> Maybe TestCase
-parseTestCase filename input = do
+parseValidationTest :: FilePath -> String -> Maybe ValidationTest
+parseValidationTest filename input = do
   let theLines = lines input
       sections = partitionBy (cleanup theLines) testCaseDelim
   case sections of
     [desc, inputDoc, expected] ->
         do
           r <- parseExpectedResult expected
-          return $ TestCase { description = intercalate " " desc
-                            , inputDocument = unlines inputDoc
-                            , expectedResult = r
-                            , testFilename = filename
-                            }
+          return $ ValidationTest { description = intercalate " " desc
+                                  , inputDocument = unlines inputDoc
+                                  , expectedResult = r
+                                  , testFilename = filename
+                                  }
     _ -> Nothing
 
-readTestCase :: FilePath -> IO TestCase
-readTestCase filename = do
+readValidationTest :: FilePath -> IO ValidationTest
+readValidationTest filename = do
   contents <- readFile filename
-  case parseTestCase filename contents of
+  case parseValidationTest filename contents of
     Nothing -> error $ "Cannot parse test case " ++ filename
     Just t -> return t
 
@@ -84,14 +88,11 @@ matchingFailures expectedEs actualEs =
           checkActual ('^':expected) = or $ map (expected `isPrefixOf`) actualEs
           checkActual expected = expected `elem` actualEs
 
-runTestCase :: TestCase -> IO ()
-runTestCase testCase = do
-  let shortName = takeFileName $ testFilename testCase
-  putStrLn $ shortName ++ " (" ++ (description testCase) ++ ")"
-
+runValidationTest :: ValidationTest -> IO ()
+runValidationTest tc = do
   tmpdir <- getTemporaryDirectory
   (filename, handle) <- openTempFile tmpdir "testcase.tmp"
-  hPutStrLn handle (inputDocument testCase)
+  hPutStrLn handle (inputDocument tc)
   hClose handle
 
   let elementNames = map fst elementHandlers
@@ -100,34 +101,38 @@ runTestCase testCase = do
   h <- openFile filename ReadMode
   result <- validateAgainstDTD h filename dtdPath elementNames
 
-  case (result, expectedResult testCase) of
+  case (result, expectedResult tc) of
     (Left es, Success) ->
         do
-          putStrLn "Error: validation failed but should have succeeded.  Errors were:"
-          mapM_ putStrLn es
-          exitFailure
+          assertFailure $ concat [ "validation failed but should have succeeded.\n"
+                                 , intercalate "\n" es
+                                 ]
     (Right _, Failure es) ->
         do
-          putStrLn "Error: validation succeeded but should have failed.  Expected errors were:"
-          mapM_ putStrLn es
-          exitFailure
+          assertFailure $ concat [ "validation succeeded but should have failed.  Expected errors were:\n"
+                                 , intercalate "\n" es
+                                 ]
     (Left actualEs, Failure expectedEs) ->
         do
           when (not $ matchingFailures expectedEs actualEs) $
-               do
-                 putStrLn "Error: validation failed as expected, but with the wrong specifics."
-                 putStrLn "Expected:"
-                 mapM_ putStrLn expectedEs
-                 putStrLn "Actual:"
-                 mapM_ putStrLn actualEs
-                 exitFailure
+               assertFailure $ concat [ "Error: validation failed as expected, but with the wrong specifics.\n"
+                                      , "Expected:\n"
+                                      , intercalate "\n" expectedEs
+                                      , "Actual:\n"
+                                      , intercalate "\n" actualEs
+                                      ]
     (Right _, Success) -> return ()
 
-main :: IO ()
-main = do
-  base <- getTestCaseDir
-  cases <- getTestCaseFilenames
+getValidationTests :: IO Test
+getValidationTests = do
+  base <- getValidationTestDir
+  caseFiles <- getValidationTestFilenames
+  tests <- forM caseFiles $
+           \filename -> readValidationTest (base </> filename)
 
-  forM_ cases $ \filename -> do
-         testCase <- readTestCase (base </> filename)
-         runTestCase testCase
+  let mkTestCase tc = testCase (description tc) (runValidationTest tc)
+
+  return $ testGroup "dtd-validation" (map mkTestCase tests)
+
+main :: IO ()
+main = defaultMain [buildTest getValidationTests]
