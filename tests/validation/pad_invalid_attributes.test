@@ -1,0 +1,15 @@
+pad element with invalid attribute
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <pad top="foo">
+      <fText id="t">stuff</fText>
+    </pad>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+pad: attribute 'top' must be an integer

@@ -11,6 +11,9 @@ module Graphics.Vty.Widgets.Builder.Types
     , FocusMethod(..)
     , ValidatedElement(..)
     , HandlerResult(..)
+    , ElementValidator
+    , ValidationState(..)
+    , ValidateM
     )
 where
 
@@ -59,6 +62,15 @@ data FocusMethod = Direct | Merge ValueName
 type GenM a = State GenState a
 
 type ElementHandler = Element Posn -> ValueName -> GenM (Maybe HandlerResult)
+
+data ValidationState =
+    ValidationState { errors :: [String]
+                    , theValidators :: [(String, ElementValidator)]
+                    }
+
+type ValidateM a = StateT ValidationState IO a
+
+type ElementValidator = Element Posn -> ValidateM ()
 
 data HandlerResult =
     HandlerResult { widgetValue :: (ValueName, Type)

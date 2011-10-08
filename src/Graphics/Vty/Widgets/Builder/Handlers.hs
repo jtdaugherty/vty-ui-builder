@@ -115,7 +115,7 @@ genPad e nam = do
 
       -- Get padding attribute values
       paddingValues = foreach attrNames $ \name ->
-                      (name, getIntAttribute e name)
+                      (name, getAttribute e name >>= getIntAttributeValue)
 
       -- For set padding attributes, extract padding expressions
       paddingExprs :: [String]

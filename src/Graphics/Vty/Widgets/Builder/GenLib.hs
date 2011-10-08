@@ -6,7 +6,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , append
     , newEntry
     , getAttribute
-    , getIntAttribute
+    , getIntAttributeValue
     , attrsToExpr
     , lookupFieldValueName
     , lookupWidgetValueName
@@ -19,7 +19,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , lookupFocusMethod
     , valNameStr
     , annotateElement
-    , elemName
     , declareWidget
     , withField
     )
@@ -169,13 +168,10 @@ getAttribute (Elem _ attrs _) attrName =
       Just (AttValue ((Left s):_)) -> Just s
       _ -> Nothing
 
-getIntAttribute :: Element a -> String -> Maybe Int
-getIntAttribute e attrName = do
-  attrVal <- getAttribute e attrName
-  case reads attrVal of
-    [] -> error $ "Error: '" ++ attrName
-          ++ "' of '" ++ elemName e
-          ++ "' must be an integer"
+getIntAttributeValue :: String -> Maybe Int
+getIntAttributeValue s = do
+  case reads s of
+    [] -> Nothing
     ((i,_):_) -> return i
 
 attrsToExpr :: (Maybe String, Maybe String) -> Maybe String
@@ -254,10 +250,6 @@ addCommas :: [Doc] -> String -> Doc
 addCommas [] _ = text ""
 addCommas (l:ls) s =
     text s <> l $$ (vcat $ map (text ", " <>) ls)
-
-elemName :: Element a -> String
-elemName (Elem (N s) _ _) = s
-elemName _ = error "elemName does not support qualified names"
 
 declareWidget :: ValueName -> TyCon -> Maybe HandlerResult
 declareWidget val tyCon =

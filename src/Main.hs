@@ -11,6 +11,7 @@ import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 import Graphics.Vty.Widgets.Builder.Handlers
+import Graphics.Vty.Widgets.Builder.Validators
 
 data BuilderOpt = Help
                 | ModuleName String
@@ -139,7 +140,7 @@ main = do
       handlers = elementHandlers
 
   dtdPath <- dtdDirFromOpts opts
-  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementNames
+  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementNames validators
 
   case validationResult of
     Left es -> do

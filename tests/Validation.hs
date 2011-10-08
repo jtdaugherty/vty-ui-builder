@@ -16,6 +16,7 @@ import Test.HUnit hiding (Test)
 import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Handlers
 import Graphics.Vty.Widgets.Builder.DTDGenerator
+import Graphics.Vty.Widgets.Builder.Validators
 
 data ExpectedResult = Failure [String]
                     | Success
@@ -101,7 +102,7 @@ runValidationTest tc = do
   dtdPath <- getDTDDir
 
   h <- openFile filename ReadMode
-  result <- validateAgainstDTD h filename dtdPath elementNames
+  result <- validateAgainstDTD h filename dtdPath elementNames validators
 
   case (result, expectedResult tc) of
     (Left es, Success) ->
@@ -120,7 +121,7 @@ runValidationTest tc = do
                assertFailure $ concat [ "Error: validation failed as expected, but with the wrong specifics.\n"
                                       , "Expected:\n"
                                       , intercalate "\n" expectedEs
-                                      , "Actual:\n"
+                                      , "\nActual:\n"
                                       , intercalate "\n" actualEs
                                       ]
     (Right _, Success) -> return ()

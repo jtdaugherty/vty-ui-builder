@@ -1,0 +1,15 @@
+pad element missing attributes
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <pad>
+      <fText id="t">stuff</fText>
+    </pad>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+pad: at least one padding attribute must be specified

@@ -17,6 +17,7 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.DTDGenerator
+import Graphics.Vty.Widgets.Builder.ValidateLib
 
 generateSource :: BuilderConfig
                -> ValidatedElement
@@ -39,8 +40,9 @@ validateAgainstDTD :: Handle
                    -> FilePath
                    -> FilePath
                    -> [String]
+                   -> [(String, ElementValidator)]
                    -> IO (Either [String] ValidatedElement)
-validateAgainstDTD inputXmlHandle inputXmlPath dtdPath elementNames = do
+validateAgainstDTD inputXmlHandle inputXmlPath dtdPath elementNames validators = do
   masterDTD <- generateMasterDTD elementNames dtdPath
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
@@ -53,7 +55,11 @@ validateAgainstDTD inputXmlHandle inputXmlPath dtdPath elementNames = do
               ++ (show inputXmlPath) ++ ": " ++ e
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
-           [] -> return $ Right $ Validated e
+           [] -> do
+             result <- doValidation e validators
+             case result of
+               [] -> return $ Right $ Validated e
+               es -> return $ Left es
            es -> return $ Left es
 
 blk :: [Doc] -> Doc
