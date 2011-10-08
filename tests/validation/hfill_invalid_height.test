@@ -1,0 +1,13 @@
+hFill with invalid height
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <hFill id="t" char="x" height="foo"/>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+hFill: attribute 'height' must be an integer

@@ -1,0 +1,13 @@
+hFill with empty fill char
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <hFill id="t" char="" height="123"/>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+hFill: attribute 'char' must be non-empty

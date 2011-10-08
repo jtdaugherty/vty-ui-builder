@@ -1,0 +1,14 @@
+Empty focus group
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <pad>
+      <fText id="t">stuff</fText>
+    </pad>
+    <focusGroup>
+    </focusGroup>
+  </interface>
+</collection>
+---
+Element <focusGroup> should contain (entry+) but does not.

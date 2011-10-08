@@ -12,6 +12,8 @@ import Graphics.Vty.Widgets.Builder.ValidateLib
 
 validators :: [(String, ElementValidator)]
 validators = [ ("pad", validatePad)
+             , ("hFill", validateHFill)
+             , ("vFill", validateVFill)
              ]
 
 validatePad :: ElementValidator
@@ -27,3 +29,20 @@ validatePad e@(Elem _ attrs _) = do
       (Just _, Nothing) ->
           putError e $ "attribute '" ++ attr ++ "' must be an integer"
       _ -> return ()
+
+validateHFill :: ElementValidator
+validateHFill e = do
+  let Just ch = getAttribute e "char"
+      Just h = getAttribute e "height"
+
+  when (null ch) $ putError e "attribute 'char' must be non-empty"
+
+  case getIntAttributeValue h of
+    Nothing -> putError e "attribute 'height' must be an integer"
+    Just _ -> return ()
+
+validateVFill :: ElementValidator
+validateVFill e = do
+  let Just ch = getAttribute e "char"
+
+  when (null ch) $ putError e "attribute 'char' must be non-empty"

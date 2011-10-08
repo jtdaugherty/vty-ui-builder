@@ -1,0 +1,14 @@
+fText with invalid colors
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <fText id="t"><attr fg="invalid" bg="invalid">stuff</attr></fText>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+^Value "invalid" of attribute "fg" in element <attr> is not in the required enumeration range
+^Value "invalid" of attribute "bg" in element <attr> is not in the required enumeration range

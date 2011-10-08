@@ -1,0 +1,13 @@
+Complete fText example
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <fText id="t">stuff <attr fg="blue">blue <attr bg="green">text</attr> <br/></attr><br/></fText>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+success

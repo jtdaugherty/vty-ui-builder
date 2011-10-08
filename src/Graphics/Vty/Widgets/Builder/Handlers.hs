@@ -260,9 +260,9 @@ genHFill e nam = do
 
   when (null ch) $ error "Error: 'char' for 'hFill' must be non-empty"
 
-  height <- case reads heightStr of
-              [] -> error "Error: 'height' of 'hFill' must be an integer"
-              ((i,_):_) -> return i
+  height <- case getIntAttributeValue heightStr of
+              Nothing -> error "Error: 'height' of 'hFill' must be an integer"
+              Just i -> return i
 
   append $ hcat [ toDoc nam
                 , text $ " <- hFill " ++ (show $ head ch)
