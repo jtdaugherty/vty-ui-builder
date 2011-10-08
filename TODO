@@ -65,6 +65,12 @@ Add support for:
   mistakes I've seen (#REQUIRED attributes are missing and the
   validator does not complain).  HaXml bug?
 
+  Yep, HaXml bug.  Patch submitted.  Turns out multiple attribute
+  lists weren't being merged as per the spec, and only the last one
+  declared took precedence.  And the last one declared has no required
+  attributes, since it's the auto-generated one (all #IMPLIED).
+  Whoops!
+
 - support setting render context information: skin, default attributes
 
 - improve error reporting and reduce number of pathological error
