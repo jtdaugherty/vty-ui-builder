@@ -83,8 +83,8 @@ readValidationTest filename = do
     Nothing -> error $ "Cannot parse test case " ++ filename
     Just t -> return t
 
-matchingFailures :: [String] -> [String] -> Bool
-matchingFailures expectedEs actualEs =
+matchingFailureMessages :: [String] -> [String] -> Bool
+matchingFailureMessages expectedEs actualEs =
     and $ map checkActual expectedEs
         where
           checkActual ('^':expected) = or $ map (expected `isPrefixOf`) actualEs
@@ -116,7 +116,7 @@ runValidationTest tc = do
                                  ]
     (Left actualEs, Failure expectedEs) ->
         do
-          when (not $ matchingFailures expectedEs actualEs) $
+          when (not $ matchingFailureMessages expectedEs actualEs) $
                assertFailure $ concat [ "Error: validation failed as expected, but with the wrong specifics.\n"
                                       , "Expected:\n"
                                       , intercalate "\n" expectedEs
