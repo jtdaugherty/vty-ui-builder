@@ -23,11 +23,53 @@ vBox/hBox
 Add support for:
 
   * List
+
+    - User needs to specify internal value and widget types for the
+      list (annoying)
+
+    - Specifying initial list contents could get ugly, since we can't
+      necessarily type-check the values resulting from the child
+      elements of a <list>.
+
   * Table
-  * CheckBox
+  * CheckBox (and radio buttons)
   * Padding
   * Limits
   * Fixed
   * Group
 
-  * Skinning configuration
+- improvements for field naming API (returning a different name from
+  element handlers is a terrible API)
+
+- improvements to make handler implementation easier (and hard or
+  impossible to get wrong).  Having to register types explicitly is
+  hard to get right, and having the name generation and field name
+  registration for the element be external to the handler also makes
+  things hard to think about.
+
+- improve element code generation so attribution doesn't have any
+  special cases (e.g., some things call a gen* function directly
+  rather than calling gen, thus side-stepping gen's element-generic
+  attribute handling)
+
+- make it possible to define user interface elements once and refer to
+  them in multiple places in multiple interfaces (use case: define one
+  list, give it two representations as its surrounding interfaces
+  change)
+
+- code generation: make generated value names reflect the kind of
+  element which caused them to be generated, rather than 'val' for
+  everything.  E.g., dialog1, dialog2, vBox1, vBox2, etc.
+
+- figure out why DTD validation isn't catching some of the attribute
+  mistakes I've seen (#REQUIRED attributes are missing and the
+  validator does not complain).  HaXml bug?
+
+- support setting render context information: skin, default attributes
+
+- improve error reporting and reduce number of pathological error
+  cases by performing up-front validation and by using more types (too
+  many 'error' calls)
+
+- add command-line usage and options processing to the builder
+  program, and rename it
