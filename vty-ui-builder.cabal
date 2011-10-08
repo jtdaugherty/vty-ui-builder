@@ -1,6 +1,10 @@
 Name:                vty-ui-builder
 Version:             0.1
 Synopsis:            A user interface code generator for vty-ui
+Description:         A user interface code generator for vty-ui which
+                     converts XML descriptions of vty-ui interfaces
+                     into Haskell code capable of constructing the
+                     described interfaces.
 License:             BSD3
 License-file:        LICENSE
 Author:              Jonathan Daugherty <drcygnus@gmail.com>
@@ -15,6 +19,10 @@ Data-files:
 
 Extra-source-files:
   tests/Validation.hs
+
+Source-Repository head
+  type:     git
+  location: https://github.com/jtdaugherty/vty-ui-builder
 
 Library
   Hs-Source-Dirs:    src
