@@ -75,7 +75,5 @@ Add support for:
 
 - make vty-ui-builder support loading extra DTDs?
 
-- implement supplemental validation routines so we don't have to throw
-  runtime errors in the middle of code generation (e.g., element
-  attribute format requirements, etc.).  Should support providing
-  multiple validation errors (instead of aborting on the first one)
+- think about ways to unify the API for specifying element source
+  generation handlers and validators
