@@ -78,3 +78,6 @@ Add support for:
 
 - vty-ui-builder: allow override of DTD load path (but show
   compiled-in default)
+
+- vty-ui-builder: support generating ONLY the element record type,
+  support generating ONLY the collection builder function
