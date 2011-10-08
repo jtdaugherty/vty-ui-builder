@@ -10,6 +10,7 @@ data BuilderConfig =
                   , generateModulePreamble :: Bool
                   , generateMain :: Bool
                   }
+    deriving (Eq, Show)
 
 defaultConfig :: BuilderConfig
 defaultConfig = BuilderConfig { moduleName = "Interface"

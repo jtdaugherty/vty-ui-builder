@@ -3,6 +3,7 @@ module Graphics.Vty.Widgets.Builder
     )
 where
 
+import System.IO
 import Control.Monad.State
 import Text.PrettyPrint.HughesPJ
 
@@ -17,18 +18,19 @@ import Graphics.Vty.Widgets.Builder.Handlers
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 
 generateModuleSource :: BuilderConfig
+                     -> Handle
                      -> FilePath
                      -> FilePath
                      -> [(String, ElementHandler a)]
                      -> IO String
-generateModuleSource config inputXmlPath dtdPath extraHandlers = do
+generateModuleSource config inputXmlHandle inputXmlPath dtdPath extraHandlers = do
   masterDTD <- generateMasterDTD (elementHandlers ++ extraHandlers) dtdPath
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"
            Left e -> error $ "Error parsing generated DTD: " ++ e
 
-  xmlContents <- readFile inputXmlPath
+  xmlContents <- hGetContents inputXmlHandle
   case xmlParse' inputXmlPath xmlContents of
     Left e -> error $ "Error parsing input XML "
               ++ (show inputXmlPath) ++ ": " ++ e
