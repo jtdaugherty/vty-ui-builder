@@ -74,3 +74,8 @@ Add support for:
   many 'error' calls)
 
 - make vty-ui-builder support loading extra DTDs?
+
+- implement supplemental validation routines so we don't have to throw
+  runtime errors in the middle of code generation (e.g., element
+  attribute format requirements, etc.).  Should support providing
+  multiple validation errors (instead of aborting on the first one)
