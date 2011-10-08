@@ -3,6 +3,7 @@ module Main where
 import System
 import System.IO
 import System.FilePath
+import System.Directory
 import Control.Monad
 
 import System.Exit
@@ -28,51 +29,49 @@ data BuilderOpt = Help
 getDTDDir :: IO FilePath
 getDTDDir = do
   dataDir <- getDataDir
-  return $ dataDir </> "dtd"
+  canonicalizePath $ dataDir </> "dtd"
 
-mkOptions :: IO [OptDescr BuilderOpt]
-mkOptions = do
-  defaultDTDDir <- getDTDDir
+options :: [OptDescr BuilderOpt]
+options = [ Option "h" ["help"] (NoArg Help) "This help output"
 
-  return [ Option "h" ["help"] (NoArg Help) "This help output"
+          , Option "n" ["module-name"] (ReqArg ModuleName "NAME")
+                       ("The name of the generated module (default: "
+                        ++ (show $ moduleName defaultConfig) ++ ")")
 
-         , Option "n" ["module-name"] (ReqArg ModuleName "NAME")
-                      ("The name of the generated module (default: "
-                       ++ (show $ moduleName defaultConfig) ++ ")")
+          , Option "p" ["no-preamble"] (NoArg (GeneratePreamble False))
+                       "Do not generate a module preamble"
 
-         , Option "p" ["no-preamble"] (NoArg (GeneratePreamble False))
-                      "Do not generate a module preamble"
+          , Option "i" ["no-imports"] (NoArg (GenerateImports False))
+                       "Do not generate vty-ui library imports"
 
-         , Option "i" ["no-imports"] (NoArg (GenerateImports False))
-                      "Do not generate vty-ui library imports"
+          , Option "t" ["no-type"] (NoArg (GenerateInterfaceType False))
+                       ("Do not generate the interface type used to return\n"
+                        ++ "interface elements")
 
-         , Option "t" ["no-type"] (NoArg (GenerateInterfaceType False))
-                      ("Do not generate the interface type used to return\n"
-                       ++ "interface elements")
+          , Option "f" ["no-function"] (NoArg (GenerateInterfaceBuilder False))
+                       "Do not generate the function which builds the interface"
 
-         , Option "f" ["no-function"] (NoArg (GenerateInterfaceBuilder False))
-                      "Do not generate the function which builds the interface"
+          , Option "m" ["main"] (NoArg (GenerateMain True))
+                       ("Generate a \"main\" function for testing (implies "
+                        ++ "-n \"Main\")")
 
-         , Option "m" ["main"] (NoArg (GenerateMain True))
-                      ("Generate a \"main\" function for testing (implies "
-                       ++ "-n \"Main\")")
+          , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
+                       "The output filename (default: standard output)"
 
-         , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
-                      "The output filename (default: standard output)"
+          , Option "v" ["validate-only"] (NoArg ValidateOnly)
+                       "Validate the input XML but do not generate any output"
 
-         , Option "v" ["validate-only"] (NoArg ValidateOnly)
-                      "Validate the input XML but do not generate any output"
-
-         , Option "d" ["dtd-dir"] (ReqArg DTDPath "DIR")
-                      ("Path to the directory containing element DTD files\n"
-                       ++ "(default: " ++ defaultDTDDir ++ ")")
-         ]
+          , Option "d" ["dtd-dir"] (ReqArg DTDPath "DIR")
+                       "Path to the directory containing element DTD files"
+          ]
 
 usage :: [String] -> IO ()
 usage errs = do
   uh <- usageHeader
-  opts <- mkOptions
-  putStrLn $ usageInfo uh opts
+  putStrLn $ usageInfo uh options
+  dtdDir <- getDTDDir
+  putStrLn $ "Default DTD dir: " ++ dtdDir
+
   mapM_ (putStrLn . ("Error: " ++)) errs
 
 usageHeader :: IO String
@@ -123,8 +122,6 @@ saveOutput opts output = do
 main :: IO ()
 main = do
   args <- getArgs
-  options <- mkOptions
-
   let (opts, rest, errors) = getOpt Permute options args
 
   when (not $ null errors) $ do
