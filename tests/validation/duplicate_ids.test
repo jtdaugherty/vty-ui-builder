@@ -1,0 +1,16 @@
+Duplicate IDs not permitted
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <vBox>
+      <fText id="testing"></fText>
+      <fText id="testing"></fText>
+    </vBox>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+These attribute values of type ID are not unique: testing.
