@@ -67,11 +67,6 @@ Add support for:
   type (e.g., Dialog) which has a projection to extract the
   underlyling widget value.)
 
-- make it possible to define user interface elements once and refer to
-  them in multiple places in multiple interfaces (use case: define one
-  list, give it two representations as its surrounding interfaces
-  change)
-
 - make it impossible to reference focus group entry names which are
   not in the interface corresponding to a focus group
 
