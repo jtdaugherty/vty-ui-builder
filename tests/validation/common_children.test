@@ -1,0 +1,18 @@
+Children of 'common' need 'id' attributes
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <common>
+    <edit/>
+    <fText></fText>
+  </common>
+  <interface name="i">
+    <checkBox label="test" id="t"/>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+common: element 'edit' missing 'id' attribute
+common: element 'fText' missing 'id' attribute

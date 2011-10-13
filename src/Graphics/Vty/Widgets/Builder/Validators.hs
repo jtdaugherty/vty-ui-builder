@@ -4,16 +4,19 @@ module Graphics.Vty.Widgets.Builder.Validators
 where
 
 import Control.Monad
+import Data.Maybe
 import Text.XML.HaXml.Types
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.ValidateLib
+import Graphics.Vty.Widgets.Builder.Util
 
 validators :: [(String, ElementValidator)]
 validators = [ ("pad", validatePad)
              , ("hFill", validateHFill)
              , ("vFill", validateVFill)
+             , ("common", validateCommon)
              ]
 
 validatePad :: ElementValidator
@@ -46,3 +49,10 @@ validateVFill e = do
   let Just ch = getAttribute e "char"
 
   when (null ch) $ putError e "attribute 'char' must be non-empty"
+
+validateCommon :: ElementValidator
+validateCommon e =
+    forM_ (elemChildren e) $ \ch -> do
+      when (isNothing $ getAttribute ch "id") $
+           putError e $ "element '" ++ elemName ch
+                        ++ "' missing 'id' attribute"

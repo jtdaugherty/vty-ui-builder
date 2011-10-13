@@ -26,6 +26,7 @@ elementHandlers = [ ("collection", genCollection)
                   -- since those entities are *parsed* entities.  See
                   -- also http://www.w3.org/TR/xml/#dt-parsedent
                   , ("interface", genInterface)
+                  , ("common", genCommon)
                   , ("format", genFormat)
                   , ("fText", genFormattedText)
                   , ("vBox", genVBox)
@@ -95,6 +96,15 @@ genInterface e nam = do
                              , focusGroupName = fgName
                              }
   registerInterface ifName vals
+
+  return Nothing
+
+genCommon :: ElementHandler
+genCommon e _ = do
+  forM_ (elemChildren e) $ \ch ->
+      do
+        chNam <- newEntry $ elemName ch
+        gen ch chNam
 
   return Nothing
 
