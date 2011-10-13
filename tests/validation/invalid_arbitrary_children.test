@@ -1,0 +1,25 @@
+# This test checks that validation is not too loose in what it permits
+# in arbitrary widget element positions.  This stems from an early DTD
+# generation bug in which too many element types were included in
+# %all;, resulting in document validation successes for documents like
+# this one which don't actually describe anything meaningful.
+Arbitrary elements not permitted as widgets
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <collection>
+      <interface name="i">
+        <checkBox id="t"/>
+        <focusGroup>
+          <entry name="t"/>
+        </focusGroup>
+      </interface>
+    </collection>
+    <focusGroup>
+      <entry name="t"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+^Element <interface> should contain

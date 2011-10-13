@@ -126,3 +126,10 @@ Add support for:
   generation handlers and validators
 
 - add support for multiple DTD paths
+
+- critical: right now any known element name is valid anywhere, even
+  though that should not be true (i.e., everything is part of %all;).
+  Element names should be divided up into those which describe widgets
+  (i.e., those from which %all; is build) and the other more
+  structural document elements.  (Added test for this; now, need to
+  make it pass.)
