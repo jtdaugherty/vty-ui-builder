@@ -80,7 +80,7 @@ genInterface e nam = do
 
   gen ch nam
   actName <- newEntry "act"
-  fgName <- newEntry $ elemName e
+  fgName <- newEntry "focusGroup"
   genFocusGroup fg fgName
   append $ hcat [ toDoc actName
                 , text " <- addToCollection "
