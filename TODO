@@ -100,5 +100,3 @@ Add support for:
   cases by performing up-front validation and by using more types (too
   many 'error' calls)
 
-- implement support for whole-document validation in addition to just
-  per-element validation (specific use cases?)
