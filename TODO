@@ -67,8 +67,19 @@ Add support for:
   type (e.g., Dialog) which has a projection to extract the
   underlyling widget value.)
 
+  Another option for this is to create a new widget type called a
+  "slot" which delegates all focus/keyboard events to a child, except
+  the child's type is hidden by an existential type and can be set at
+  runtime.  This is ugly in some ways but makes this whole problem
+  basically go away because it means that widgets of arbitrary type
+  can be generated at a later time.  It won't work in the case where
+  the thing someone wants to put in the slot is a composite widget
+  (e.g., a dialog) where it has its own focus group, so that is
+  annoying.
+
 - make it impossible to reference focus group entry names which are
-  not in the interface corresponding to a focus group
+  not in the interface corresponding to a focus group (unless they are
+  refs in 'common', in which case that is okay!)
 
 - figure out how to resolve whitespace handling in fText and attr
   elements so it is clear what the semantics will be
@@ -96,9 +107,9 @@ Add support for:
 
 - add support for multiple DTD paths
 
-- critical: right now any known element name is valid anywhere, even
-  though that should not be true (i.e., everything is part of %all;).
-  Element names should be divided up into those which describe widgets
-  (i.e., those from which %all; is build) and the other more
-  structural document elements.  (Added test for this; now, need to
-  make it pass.)
+- the API for specifying which structural/widget names and handlers
+  should be used for the DTD generation, validation, and source code
+  generation is pretty awful.
+
+- implement support for whole-document validation in addition to just
+  per-element validation (specific use cases?)
