@@ -11,7 +11,6 @@ import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 import Graphics.Vty.Widgets.Builder.Handlers
-import Graphics.Vty.Widgets.Builder.Validators
 
 data BuilderOpt = Help
                 | ModuleName String
@@ -137,12 +136,8 @@ main = do
                    print e
                    exitFailure
 
-  let widgetElementNames = map fst widgetElementHandlers
-      structuralElementNames = map fst structuralElementHandlers
-      handlers = widgetElementHandlers ++ structuralElementHandlers
-
   dtdPath <- dtdDirFromOpts opts
-  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath structuralElementNames widgetElementNames validators
+  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementHandlers
 
   case validationResult of
     Left es -> do
@@ -152,5 +147,5 @@ main = do
     Right e -> do
          when (not (ValidateOnly `elem` opts)) $
               do
-                output <- generateSource config e handlers
+                output <- generateSourceForDocument config e elementHandlers
                 saveOutput opts output

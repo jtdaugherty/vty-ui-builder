@@ -16,7 +16,6 @@ import Test.HUnit hiding (Test)
 import Graphics.Vty.Widgets.Builder
 import Graphics.Vty.Widgets.Builder.Handlers
 import Graphics.Vty.Widgets.Builder.DTDGenerator
-import Graphics.Vty.Widgets.Builder.Validators
 
 data ExpectedResult = Failure [String]
                     | Success
@@ -98,13 +97,10 @@ runValidationTest tc = do
   hPutStrLn handle (inputDocument tc)
   hClose handle
 
-  let widgetElementNames = map fst widgetElementHandlers
-      structuralElementNames = map fst structuralElementHandlers
-
   dtdPath <- getDTDDir
 
   h <- openFile filename ReadMode
-  result <- validateAgainstDTD h filename dtdPath structuralElementNames widgetElementNames validators
+  result <- validateAgainstDTD h filename dtdPath elementHandlers
 
   case (result, expectedResult tc) of
     (Left es, Success) ->

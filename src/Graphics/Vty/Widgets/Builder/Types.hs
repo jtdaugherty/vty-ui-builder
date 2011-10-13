@@ -1,7 +1,7 @@
 module Graphics.Vty.Widgets.Builder.Types
     ( GenState(..)
     , GenM
-    , ElementHandler
+    , ElementHandler(..)
     , ValueName(..)
     , RegisteredName(..)
     , Type(..)
@@ -14,6 +14,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , ElementValidator
     , ValidationState(..)
     , ValidateM
+    , ElementSourceGenerator
     )
 where
 
@@ -50,7 +51,7 @@ data InterfaceValues =
 data GenState =
     GenState { nameCounters :: Map.Map String Int
              , genDoc :: Doc
-             , handlers :: [(String, ElementHandler)]
+             , handlers :: [(String, ElementSourceGenerator)]
              , namedValues :: [(RegisteredName, (ValueName, ValueName))]
              , valueTypes :: [(ValueName, Type)]
              , interfaceNames :: [(String, InterfaceValues)]
@@ -59,9 +60,16 @@ data GenState =
 
 data FocusMethod = Direct | Merge ValueName
 
+data ElementHandler =
+    ElementHandler { generateSource :: ElementSourceGenerator
+                   , isWidgetElement :: Bool
+                   , validator :: Maybe ElementValidator
+                   , elementName :: String
+                   }
+
 type GenM a = State GenState a
 
-type ElementHandler = Element Posn -> ValueName -> GenM (Maybe HandlerResult)
+type ElementSourceGenerator = Element Posn -> ValueName -> GenM (Maybe HandlerResult)
 
 data ValidationState =
     ValidationState { errors :: [String]

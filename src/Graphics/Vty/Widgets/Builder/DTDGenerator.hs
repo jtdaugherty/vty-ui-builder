@@ -9,10 +9,36 @@ import System.FilePath ((</>))
 import Data.List (intercalate)
 import Paths_vty_ui_builder
 
+import Graphics.Vty.Widgets.Builder.Types
+
 getDTDDir :: IO FilePath
 getDTDDir = do
   dataDir <- getDataDir
   canonicalizePath $ dataDir </> "dtd"
+
+colorNames :: [String]
+colorNames = [ "red"
+             , "green"
+             , "yellow"
+             , "blue"
+             , "magenta"
+             , "cyan"
+             , "white"
+             , "black"
+             , "bright_red"
+             , "bright_green"
+             , "bright_yellow"
+             , "bright_black"
+             , "bright_magenta"
+             , "bright_cyan"
+             , "bright_white"
+             , "bright_blue"
+             ]
+
+commonEntities :: String
+commonEntities = concat [ "<!ENTITY % fgcolor \"" ++ (intercalate "|" colorNames) ++ "\">\n"
+                        , "<!ENTITY % bgcolor \"" ++ (intercalate "|" colorNames) ++ "\">\n"
+                        ]
 
 mkAttList :: String -> String
 mkAttList nam = concat [ "<!ATTLIST "
@@ -31,16 +57,14 @@ mkLoadFragment n path = concat [ "<!ENTITY % load" ++ n
                                , "%load" ++ n ++ ";\n"
                                ]
 
-generateMasterDTD :: [String] -> [String] -> FilePath -> IO String
-generateMasterDTD structuralNames widgetNames dtdPath = do
+generateMasterDTD :: (FilePath, [ElementHandler]) -> IO String
+generateMasterDTD (dtdPath, elemHandlers) = do
   let attLists = map mkAttList widgetNames
-      -- NB: the load order of the DTDs matters due to parameter
-      -- entity parsing.
-      allNames = concat [ structuralNames
-                        , widgetNames
-                        ]
+      widgetNames = map elementName $ filter isWidgetElement elemHandlers
+      allNames = map elementName elemHandlers
       allEntity = "<!ENTITY % all \"" ++ (intercalate "|" widgetNames) ++ "\">\n"
       dtdLines = [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+                 , commonEntities
                  , allEntity
                  ]
                  ++ map (\n -> mkLoadFragment n (dtdPath </> n ++ ".dtd")) allNames

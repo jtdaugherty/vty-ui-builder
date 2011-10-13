@@ -7,6 +7,7 @@ module Graphics.Vty.Widgets.Builder.ValidateLib
 where
 
 import Control.Monad.State
+import Data.Maybe
 
 import Text.XML.HaXml.Posn
 import Text.XML.HaXml.Types
@@ -16,9 +17,12 @@ import Text.XML.HaXml.Util
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Util
 
-doValidation :: Element Posn -> [(String, ElementValidator)] -> IO [String]
-doValidation e validators = do
+doValidation :: Element Posn -> [ElementHandler] -> IO [String]
+doValidation e hs = do
   let initState = ValidationState [] validators
+      handlersWithValidators = filter (isJust . validator) hs
+      validators = map (\h -> (elementName h, fromJust $ validator h))
+                   handlersWithValidators
       elements = map contentElem $ (multi elm) (CElem e noPos)
   (_, st) <- runStateT (mapM validate elements) initState
   return $ errors st

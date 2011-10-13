@@ -102,14 +102,7 @@ Add support for:
 
 - make vty-ui-builder support loading extra DTDs?
 
-- think about ways to unify the API for specifying element source
-  generation handlers and validators
-
 - add support for multiple DTD paths
-
-- the API for specifying which structural/widget names and handlers
-  should be used for the DTD generation, validation, and source code
-  generation is pretty awful.
 
 - implement support for whole-document validation in addition to just
   per-element validation (specific use cases?)

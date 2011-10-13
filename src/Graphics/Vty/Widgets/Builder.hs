@@ -1,5 +1,5 @@
 module Graphics.Vty.Widgets.Builder
-    ( generateSource
+    ( generateSourceForDocument
     , validateAgainstDTD
     )
 where
@@ -19,15 +19,15 @@ import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 import Graphics.Vty.Widgets.Builder.ValidateLib
 
-generateSource :: BuilderConfig
-               -> ValidatedElement
-               -> [(String, ElementHandler)]
-               -> IO String
-generateSource config (Validated e) theHandlers = do
+generateSourceForDocument :: BuilderConfig
+                          -> ValidatedElement
+                          -> [ElementHandler]
+                          -> IO String
+generateSourceForDocument config (Validated e) theHandlers = do
   let (_, finalState) = runState (gen e $ ValueName "root") initialState
       initialState = GenState { nameCounters = Map.empty
                               , genDoc = empty
-                              , handlers = theHandlers
+                              , handlers = map (\h -> (elementName h, generateSource h)) theHandlers
                               , namedValues = []
                               , valueTypes = []
                               , interfaceNames = []
@@ -39,12 +39,10 @@ generateSource config (Validated e) theHandlers = do
 validateAgainstDTD :: Handle
                    -> FilePath
                    -> FilePath
-                   -> [String]
-                   -> [String]
-                   -> [(String, ElementValidator)]
+                   -> [ElementHandler]
                    -> IO (Either [String] ValidatedElement)
-validateAgainstDTD inputXmlHandle inputXmlPath dtdPath structuralElementNames widgetElementNames validators = do
-  masterDTD <- generateMasterDTD structuralElementNames widgetElementNames dtdPath
+validateAgainstDTD inputXmlHandle inputXmlPath dtdPath handlers = do
+  masterDTD <- generateMasterDTD (dtdPath, handlers)
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"
@@ -57,7 +55,7 @@ validateAgainstDTD inputXmlHandle inputXmlPath dtdPath structuralElementNames wi
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             result <- doValidation e validators
+             result <- doValidation e handlers
              case result of
                [] -> return $ Right $ Validated e
                es -> return $ Left es
