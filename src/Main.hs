@@ -53,7 +53,8 @@ options = [ Option "h" ["help"] (NoArg Help) "This help output"
                        "The output filename (default: standard output)"
 
           , Option "v" ["validate-only"] (NoArg ValidateOnly)
-                       "Validate the input XML but do not generate any output"
+                       ("Validate the input XML but do not generate any source\n"
+                        ++ "code")
 
           , Option "d" ["dtd-dir"] (ReqArg DTDPath "DIR")
                        "Path to the directory containing element DTD files"

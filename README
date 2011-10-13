@@ -24,7 +24,8 @@ Usage: vty-ui-builder [options] <XML filename>
   -f           --no-function       Do not generate the function which builds the interface
   -m           --main              Generate a "main" function for testing (implies -n "Main")
   -o FILENAME  --output=FILENAME   The output filename (default: standard output)
-  -v           --validate-only     Validate the input XML but do not generate any output
+  -v           --validate-only     Validate the input XML but do not generate any source
+                                   code
   -d DIR       --dtd-dir=DIR       Path to the directory containing element DTD files
 
 Example generation of a Haskell module with a 'main' to use for
