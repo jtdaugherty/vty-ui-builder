@@ -100,9 +100,5 @@ Add support for:
   cases by performing up-front validation and by using more types (too
   many 'error' calls)
 
-- make vty-ui-builder support loading extra DTDs?
-
-- add support for multiple DTD paths
-
 - implement support for whole-document validation in addition to just
   per-element validation (specific use cases?)

@@ -38,11 +38,10 @@ generateSourceForDocument config (Validated e) theHandlers = do
 
 validateAgainstDTD :: Handle
                    -> FilePath
-                   -> FilePath
-                   -> [ElementHandler]
+                   -> [(FilePath, [ElementHandler])]
                    -> IO (Either [String] ValidatedElement)
-validateAgainstDTD inputXmlHandle inputXmlPath dtdPath handlers = do
-  masterDTD <- generateMasterDTD (dtdPath, handlers)
+validateAgainstDTD inputXmlHandle inputXmlPath elemInfo = do
+  masterDTD <- generateMasterDTD elemInfo
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"
@@ -55,6 +54,7 @@ validateAgainstDTD inputXmlHandle inputXmlPath dtdPath handlers = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
+             let handlers = concat $ map snd elemInfo
              result <- doValidation e handlers
              case result of
                [] -> return $ Right $ Validated e

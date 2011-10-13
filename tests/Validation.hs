@@ -100,7 +100,7 @@ runValidationTest tc = do
   dtdPath <- getDTDDir
 
   h <- openFile filename ReadMode
-  result <- validateAgainstDTD h filename dtdPath elementHandlers
+  result <- validateAgainstDTD h filename [(dtdPath, elementHandlers)]
 
   case (result, expectedResult tc) of
     (Left es, Success) ->

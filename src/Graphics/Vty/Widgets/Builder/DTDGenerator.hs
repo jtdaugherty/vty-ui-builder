@@ -57,17 +57,25 @@ mkLoadFragment n path = concat [ "<!ENTITY % load" ++ n
                                , "%load" ++ n ++ ";\n"
                                ]
 
-generateMasterDTD :: (FilePath, [ElementHandler]) -> IO String
-generateMasterDTD (dtdPath, elemHandlers) = do
+generateMasterDTD :: [(FilePath, [ElementHandler])] -> IO String
+generateMasterDTD elementInfo = do
   let attLists = map mkAttList widgetNames
-      widgetNames = map elementName $ filter isWidgetElement elemHandlers
-      allNames = map elementName elemHandlers
+      widgetNames = map elementName $ filter isWidgetElement allHandlers
+      allHandlers = concat $ map snd elementInfo
+
+      loadFragments = concat $ map mkLoadFragments elementInfo
+
+      mkLoadFragments (dtdPath, elemHandlers) =
+          let names = map elementName elemHandlers
+          in map (\n -> mkLoadFragment n (dtdPath </> n ++ ".dtd")) names
+
+      allNames = map elementName allHandlers
       allEntity = "<!ENTITY % all \"" ++ (intercalate "|" widgetNames) ++ "\">\n"
       dtdLines = [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                  , commonEntities
                  , allEntity
                  ]
-                 ++ map (\n -> mkLoadFragment n (dtdPath </> n ++ ".dtd")) allNames
+                 ++ loadFragments
                  ++ attLists
 
   return $ concat dtdLines

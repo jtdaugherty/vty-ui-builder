@@ -137,7 +137,15 @@ main = do
                    exitFailure
 
   dtdPath <- dtdDirFromOpts opts
-  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementHandlers
+
+  -- The validator supports multiple DTD path + handler mappings, but
+  -- we only know about element handlers provided by the library so we
+  -- don't let the user specify other DTD paths because we don't know
+  -- enough about how to validate elements for which we have no
+  -- haskell handler code.
+  let handlers = [(dtdPath, elementHandlers)]
+
+  validationResult <- validateAgainstDTD inputHandle xmlFilename handlers
 
   case validationResult of
     Left es -> do
