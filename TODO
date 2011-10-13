@@ -75,32 +75,6 @@ Add support for:
 - make it impossible to reference focus group entry names which are
   not in the interface corresponding to a focus group
 
-- make refs able to refer to any name in the document even if it has
-  not yet been processed! (i.e., whole-document validation in addition
-  to per-element validation)
-
-  Probably the best way to do this is to specify redundant elements
-  first, outside of all interfaces, and then just reference them
-  everywhere, e.g.,
-
-  <collection>
-    <referenced>
-      <vBox id="theBox">
-        ...
-      </vBox>
-    </referenced>
-
-    <interface name="stuff">
-      <ref target="theBox"/>
-      ...
-    </interface>
-
-    <interface name="things">
-      <ref target="theBox"/>
-      ...
-    </interface>
-  </collection>
-
 - figure out how to resolve whitespace handling in fText and attr
   elements so it is clear what the semantics will be
 
