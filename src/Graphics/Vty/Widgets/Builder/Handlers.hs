@@ -1,10 +1,6 @@
 module Graphics.Vty.Widgets.Builder.Handlers
-    ( elementHandlers
-
-    , genInterface
-    , genVBox
-    , genHBox
-    , genFormattedText
+    ( structuralElementHandlers
+    , widgetElementHandlers
     )
 where
 
@@ -19,40 +15,53 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util
 
-elementHandlers :: [(String, ElementHandler)]
-elementHandlers = [ ("collection", genCollection)
-                  -- Since the 'collection' DTD specifies some global
-                  -- entities for the other DTDs, it MUST come first
-                  -- since those entities are *parsed* entities.  See
-                  -- also http://www.w3.org/TR/xml/#dt-parsedent
-                  , ("interface", genInterface)
-                  , ("common", genCommon)
-                  , ("format", genFormat)
-                  , ("fText", genFormattedText)
-                  , ("vBox", genVBox)
-                  , ("hBox", genHBox)
-                  , ("hBorder", genHBorder)
-                  , ("vBorder", genVBorder)
-                  , ("bordered", genBordered)
-                  , ("edit", genEdit)
-                  , ("button", genButton)
-                  , ("vFill", genVFill)
-                  , ("hFill", genHFill)
-                  , ("centered", genCentered)
-                  , ("hCentered", genHCentered)
-                  , ("vCentered", genVCentered)
-                  , ("progressBar", genProgressBar)
-                  , ("dialog", genDialog)
-                  , ("dirBrowser", genDirBrowser)
-                  , ("pad", genPad)
-                  , ("ref", genRef)
-                  , ("checkBox", genCheckBox)
-                  -- This should never be invoked by 'gen', but should
-                  -- instead be invoked directly by genInterface.
-                  -- It's only here so that the DTD loader loads the
-                  -- DTD fragment for this tag.
-                  , ("focusGroup", genFocusGroup)
-                  ]
+-- | Structural element handlers are used to handle elements of the
+-- document which do not represent single widgets.  The element names
+-- for the elements handled by these handlers do not get included in
+-- the global list of valid widget element names.
+structuralElementHandlers :: [(String, ElementHandler)]
+structuralElementHandlers =
+    [ ("collection", genCollection)
+    -- Since the 'collection' DTD specifies some global entities for
+    -- the other DTDs, it MUST come first since those entities are
+    -- *parsed* entities.  See also
+    -- http://www.w3.org/TR/xml/#dt-parsedent
+    , ("interface", genInterface)
+    , ("common", genCommon)
+    ]
+
+-- | Widget element handlers are used to handle elements which
+-- generate source for a single widget value.  The names of the
+-- elements handled by these handlers, in addition to other
+-- user-supplied handlers, get used to build the complete list of
+-- valid widget elements for validation purposes.
+widgetElementHandlers :: [(String, ElementHandler)]
+widgetElementHandlers =
+    [ ("format", genFormat)
+    , ("fText", genFormattedText)
+    , ("vBox", genVBox)
+    , ("hBox", genHBox)
+    , ("hBorder", genHBorder)
+    , ("vBorder", genVBorder)
+    , ("bordered", genBordered)
+    , ("edit", genEdit)
+    , ("button", genButton)
+    , ("vFill", genVFill)
+    , ("hFill", genHFill)
+    , ("centered", genCentered)
+    , ("hCentered", genHCentered)
+    , ("vCentered", genVCentered)
+    , ("progressBar", genProgressBar)
+    , ("dialog", genDialog)
+    , ("dirBrowser", genDirBrowser)
+    , ("pad", genPad)
+    , ("ref", genRef)
+    , ("checkBox", genCheckBox)
+    -- This should never be invoked by 'gen', but should instead be
+    -- invoked directly by genInterface.  It's only here so that the
+    -- DTD loader loads the DTD fragment for this tag.
+    , ("focusGroup", genFocusGroup)
+    ]
 
 collectionName :: ValueName
 collectionName = ValueName "c"

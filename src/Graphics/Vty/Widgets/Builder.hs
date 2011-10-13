@@ -40,10 +40,11 @@ validateAgainstDTD :: Handle
                    -> FilePath
                    -> FilePath
                    -> [String]
+                   -> [String]
                    -> [(String, ElementValidator)]
                    -> IO (Either [String] ValidatedElement)
-validateAgainstDTD inputXmlHandle inputXmlPath dtdPath elementNames validators = do
-  masterDTD <- generateMasterDTD elementNames dtdPath
+validateAgainstDTD inputXmlHandle inputXmlPath dtdPath structuralElementNames widgetElementNames validators = do
+  masterDTD <- generateMasterDTD structuralElementNames widgetElementNames dtdPath
   dtd <- case dtdParse' "<generated>" masterDTD of
            Right (Just dtd) -> return dtd
            Right Nothing -> error "No DTD found in generated DTD text!"

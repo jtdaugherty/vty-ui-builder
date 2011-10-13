@@ -98,11 +98,13 @@ runValidationTest tc = do
   hPutStrLn handle (inputDocument tc)
   hClose handle
 
-  let elementNames = map fst elementHandlers
+  let widgetElementNames = map fst widgetElementHandlers
+      structuralElementNames = map fst structuralElementHandlers
+
   dtdPath <- getDTDDir
 
   h <- openFile filename ReadMode
-  result <- validateAgainstDTD h filename dtdPath elementNames validators
+  result <- validateAgainstDTD h filename dtdPath structuralElementNames widgetElementNames validators
 
   case (result, expectedResult tc) of
     (Left es, Success) ->

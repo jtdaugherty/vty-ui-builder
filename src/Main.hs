@@ -137,11 +137,12 @@ main = do
                    print e
                    exitFailure
 
-  let elementNames = map fst elementHandlers
-      handlers = elementHandlers
+  let widgetElementNames = map fst widgetElementHandlers
+      structuralElementNames = map fst structuralElementHandlers
+      handlers = widgetElementHandlers ++ structuralElementHandlers
 
   dtdPath <- dtdDirFromOpts opts
-  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath elementNames validators
+  validationResult <- validateAgainstDTD inputHandle xmlFilename dtdPath structuralElementNames widgetElementNames validators
 
   case validationResult of
     Left es -> do

@@ -31,14 +31,19 @@ mkLoadFragment n path = concat [ "<!ENTITY % load" ++ n
                                , "%load" ++ n ++ ";\n"
                                ]
 
-generateMasterDTD :: [String] -> FilePath -> IO String
-generateMasterDTD names dtdPath = do
-  let attLists = map mkAttList names
-      allEntity = "<!ENTITY % all \"" ++ (intercalate "|" names) ++ "\">\n"
+generateMasterDTD :: [String] -> [String] -> FilePath -> IO String
+generateMasterDTD structuralNames widgetNames dtdPath = do
+  let attLists = map mkAttList widgetNames
+      -- NB: the load order of the DTDs matters due to parameter
+      -- entity parsing.
+      allNames = concat [ structuralNames
+                        , widgetNames
+                        ]
+      allEntity = "<!ENTITY % all \"" ++ (intercalate "|" widgetNames) ++ "\">\n"
       dtdLines = [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                  , allEntity
                  ]
-                 ++ map (\n -> mkLoadFragment n (dtdPath </> n ++ ".dtd")) names
+                 ++ map (\n -> mkLoadFragment n (dtdPath </> n ++ ".dtd")) allNames
                  ++ attLists
 
   return $ concat dtdLines
