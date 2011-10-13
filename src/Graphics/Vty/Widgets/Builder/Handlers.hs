@@ -58,7 +58,7 @@ collectionName :: ValueName
 collectionName = ValueName "c"
 
 genCollection :: ElementHandler
-genCollection e nam = do
+genCollection e _ = do
   -- DTD: two children
   let chs = elemChildren e
   append $ hcat [ toDoc collectionName
@@ -81,7 +81,7 @@ genInterface e nam = do
   gen ch nam
   actName <- newEntry "act"
   fgName <- newEntry "focusGroup"
-  genFocusGroup fg fgName
+  gen fg fgName
   append $ hcat [ toDoc actName
                 , text " <- addToCollection "
                 , toDoc collectionName

@@ -29,12 +29,13 @@ import Control.Monad.State
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as Map
 import Text.XML.HaXml.Types
+import Text.XML.HaXml.Posn
 import Text.XML.HaXml.Combinators hiding (when)
 import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
 
-gen :: ElementHandler
+gen :: Element Posn -> ValueName -> GenM ()
 gen e@(Elem (N n) _ _) nam = do
   hs <- gets handlers
   case lookup n hs of
@@ -76,7 +77,6 @@ gen e@(Elem (N n) _ _) nam = do
       -- widget-agnostic properties.
       annotateElement e nam
       append $ text ""
-      return Nothing
 gen _ _ = error "Got unsupported element structure"
 
 -- Using the registered element names in the input document, generate
