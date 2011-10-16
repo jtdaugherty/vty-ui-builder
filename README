@@ -44,3 +44,25 @@ The generated 'main' will:
    - 'Esc' to application exit
    - 'n' to switch to the next interface in the sequence (depending on
      the interface ordering in the XML)
+
+Extending vty-ui-builder
+------------------------
+
+If you want to extend vty-ui-builder to support your own element types:
+
+ * Build your own tool using
+   Graphics.Vty.Widgets.Builder.Tool.mkBuilderToolMain by passing it a
+   list of ElementHandlers and the filesystem path where their element
+   DTDs can be found
+
+ * Write an ElementHandler for each element type you want to support.
+   This entails:
+
+   - (optionally) writing a validation routine (to be run in addition
+     to DTD validation)
+
+   - writing a source generation routine to generate Haskell source
+     from the element's contents and its children (if any)
+
+For examples of ElementHandler validation and source generation
+routines, see Graphics.Vty.Widgets.Builder.Handlers.
