@@ -26,7 +26,7 @@ Usage: vty-ui-builder [options] <XML filename>
   -o FILENAME  --output=FILENAME   The output filename (default: standard output)
   -v           --validate-only     Validate the input XML but do not generate any source
                                    code
-  -d DIR       --dtd-dir=DIR       Path to the directory containing element DTD files
+  -l           --list              List the DTDs of the element types handled by this tool
 
 Example generation of a Haskell module with a 'main' to use for
 testing your interfaces:
