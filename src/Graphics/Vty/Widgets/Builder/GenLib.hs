@@ -21,6 +21,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , annotateElement
     , declareWidget
     , withField
+    , addImport
     )
 where
 
@@ -260,3 +261,8 @@ declareWidget val tyCon =
 withField :: Maybe HandlerResult -> (ValueName, String) -> Maybe HandlerResult
 withField mh (val, ty) =
     mh >>= \h -> return $ h { fieldValue = Just (val, Custom ty) }
+
+addImport :: String -> GenM ()
+addImport s = do
+  st <- get
+  put $ st { imports = imports st ++ [s] }

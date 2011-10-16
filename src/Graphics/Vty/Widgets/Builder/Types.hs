@@ -56,6 +56,7 @@ data GenState =
              , valueTypes :: [(ValueName, Type)]
              , interfaceNames :: [(String, InterfaceValues)]
              , focusMethods :: [(ValueName, FocusMethod)]
+             , imports :: [String]
              }
 
 data FocusMethod = Direct | Merge ValueName

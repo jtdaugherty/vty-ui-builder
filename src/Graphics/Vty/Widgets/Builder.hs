@@ -32,6 +32,7 @@ generateSourceForDocument config (Validated e) theHandlers = do
                               , valueTypes = []
                               , interfaceNames = []
                               , focusMethods = []
+                              , imports = []
                               }
 
   return $ render $ generateSourceDoc config finalState
@@ -79,10 +80,11 @@ generateSourceDoc config st =
                                         ]
                         , text "where"
                         ]
-        imports = [ text ""
-                  , text "import Graphics.Vty hiding (Button)"
-                  , text "import Graphics.Vty.Widgets.All"
-                  ]
+        vtyImports = [ text ""
+                     , text "import Graphics.Vty hiding (Button)"
+                     , text "import Graphics.Vty.Widgets.All"
+                     ]
+        customImports = map (text . ("import " ++)) (imports st)
         lastIf = (length $ interfaceNames st) - 1
         keyHandlers = (flip map) (zip [0..] $ interfaceNames st) $
                        \(i, (nam, _)) ->
@@ -119,7 +121,8 @@ generateSourceDoc config st =
                      ]
                ]
         sections = [ (generateModulePreamble, preamble)
-                   , (generateImports, imports)
+                   , (generateImports, vtyImports)
+                   , (const True, customImports)
                    , (generateInterfaceType, typeDoc)
                    , (generateInterfaceBuilder, builderDoc)
                    , (generateMain, main)

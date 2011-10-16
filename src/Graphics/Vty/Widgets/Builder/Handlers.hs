@@ -23,6 +23,7 @@ elementHandlers =
     -- *parsed* entities.  See also
     -- http://www.w3.org/TR/xml/#dt-parsedent
     , handleInterface
+    , handleImport
     , handleCommon
     , handleFormat
     , handleFormattedText
@@ -103,6 +104,19 @@ handleInterface =
                                    }
         registerInterface ifName vals
         return Nothing
+
+handleImport :: ElementHandler
+handleImport =
+    ElementHandler { generateSource = genSrc
+                   , isWidgetElement = False
+                   , elementName = "import"
+                   , validator = Nothing
+                   }
+        where
+          genSrc e nam = do
+            let Just name = getAttribute e "module"
+            addImport name
+            return Nothing
 
 handleCommon :: ElementHandler
 handleCommon =
