@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 module Graphics.Vty.Widgets.Builder.Types
     ( GenState(..)
     , GenM
@@ -17,6 +18,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , WidgetElementSourceGenerator
     , StructureElementSourceGenerator
     , AnyElementSourceGenerator(..)
+    , (>-)
     )
 where
 
@@ -47,6 +49,15 @@ data AnyName = WName WidgetName
 
 class ToDoc a where
     toDoc :: a -> Doc
+
+(>-) :: (ToDoc a, ToDoc b) => a -> b -> Doc
+a >- b = toDoc a <> toDoc b
+
+instance ToDoc Doc where
+    toDoc = id
+
+instance ToDoc String where
+    toDoc = text
 
 instance ToDoc WidgetName where
     toDoc = text . widgetName

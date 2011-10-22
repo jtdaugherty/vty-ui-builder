@@ -98,10 +98,10 @@ generateSourceDoc config st =
                                                                        else i + 1
 
                            in vcat [ text ""
-                                   , text "(fg_" <> text nam <> text " values) `onKeyPressed` \\_ k _ ->"
+                                   , "(fg_" >- nam >- " values) `onKeyPressed` \\_ k _ ->"
                                    , blk [ text "case k of"
                                          , blk [ text "KEsc -> shutdownUi >> return True"
-                                               , text "(KASCII 'n') -> switchTo_" <> text nextIfName <> text " values >> return True"
+                                               , "(KASCII 'n') -> switchTo_" >- nextIfName >- " values >> return True"
                                                , text "_ -> return False"
                                                ]
                                          ]
@@ -142,22 +142,16 @@ mkElementsValue st =
                      let valName = case fieldValName of
                                      WName wName -> widgetName wName
                                      VName vName -> valueName vName
-                     in text "elem_" <> text fieldName
-                            <> text " = " <> text valName
+                     in "elem_" >- fieldName >- " = " >- valName
         if_act_lines = (flip map) (interfaceNames st) $
                        \(ifName, vals) ->
-                           text "switchTo_"
-                                    <> text ifName
-                                    <> text " = "
-                                    <> (text $ switchActionName vals)
+                           "switchTo_" >- ifName >- " = "
+                             >- (switchActionName vals)
         if_fg_lines = (flip map) (interfaceNames st) $
                       \(ifName, vals) ->
-                          text "fg_"
-                                   <> text ifName
-                                   <> text " = "
-                                   <> (text $ focusGroupName vals)
+                          "fg_" >- ifName >- " = " >- (focusGroupName vals)
         header = [ text "InterfaceElements {"
                  ]
         footer = [ text "}"
                  ]
-    in text "let elems = " <> (vcat ls)
+    in "let elems = " >- (vcat ls)

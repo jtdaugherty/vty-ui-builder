@@ -56,7 +56,7 @@ handleCollection =
         where
           genSrc e _ = do
             let chs = elemChildren e
-            append $ text $ collectionName ++ " <- newCollection"
+            append $ collectionName >- " <- newCollection"
             append $ text ""
 
             forM_ chs $ \ch -> do
@@ -80,14 +80,9 @@ handleInterface =
         actName <- newEntry "act"
         fgName <- newEntry "focusGroup"
         gen fg fgName
-        append $ hcat [ text actName
-                      , text " <- addToCollection "
-                      , text collectionName
-                      , text " "
-                      , text nam
-                      , text " "
-                      , text fgName
-                      ]
+        append $ actName >- " <- addToCollection "
+                   >- collectionName >- " " >- nam
+                   >- " " >- fgName
 
         let vals = InterfaceValues { topLevelWidgetName = nam
                                    , switchActionName = actName
@@ -135,10 +130,7 @@ handleCheckBox =
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
-            append $ hcat [ text nam
-                          , text " <- newCheckbox "
-                          , text $ show label
-                          ]
+            append $ nam >- " <- newCheckbox " >- show label
             return $ declareWidget nam (TyCon "CheckBox" [TyCon "Bool" []])
 
 handleRef :: ElementHandler
@@ -155,11 +147,7 @@ handleRef =
             case val of
               Nothing -> error $ "ref: target '" ++ target ++ "' invalid"
               Just valName -> do
-                           append $ hcat [ text "let "
-                                         , text nam
-                                         , text " = "
-                                         , toDoc valName
-                                         ]
+                           append $ "let " >- nam >- " = " >- valName
                            typ <- getWidgetStateType $ widgetName valName
                            return $ declareWidget nam typ
 
@@ -215,12 +203,8 @@ handlePad =
             -- Construct padding expression from values
             let expr = intercalate " `pad` " paddingExprs
 
-            append $ hcat [ text nam
-                          , text " <- padded "
-                          , parens $ text expr
-                          , text " "
-                          , text chNam
-                          ]
+            append $ nam >- " <- padded " >- (parens $ text expr)
+                       >- " " >- chNam
 
             return $ declareWidget nam (TyCon "Padded" [chType])
 
@@ -238,19 +222,11 @@ handleDirBrowser =
 
             browserName <- newEntry "browser"
             fgName <- newEntry "focusGroup"
-            append $ hcat [ text "("
-                          , text browserName
-                          , text ", "
-                          , text fgName
-                          , text ") <- newDirBrowser "
-                          , text skin
-                          ]
+            append $ "(" >- browserName >- ", " >- fgName
+                       >- ") <- newDirBrowser " >- skin
 
-            append $ hcat [ text "let "
-                          , text nam
-                          , text " = dirBrowserWidget "
-                          , text browserName
-                          ]
+            append $ "let " >- nam >- " = dirBrowserWidget "
+                       >- browserName
 
             mergeFocus nam fgName
 
@@ -273,21 +249,10 @@ handleDialog =
 
             dlgName <- newEntry "dialog"
             fgName <- newEntry "focusGroup"
-            append $ hcat [ text "("
-                          , text dlgName
-                          , text ", "
-                          , text fgName
-                          , text ") <- newDialog "
-                          , text chNam
-                          , text " "
-                          , text $ show title
-                          ]
 
-            append $ hcat [ text "let "
-                          , text nam
-                          , text " = dialogWidget "
-                          , text dlgName
-                          ]
+            append $ parens (dlgName >- ", " >- fgName)
+                       >- " <- newDialog " >- chNam >- " " >- show title
+            append $ "let " >- nam >- " = dialogWidget " >- dlgName
 
             mergeFocus nam fgName
 
@@ -307,10 +272,7 @@ handleCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ text nam
-                          , text " <- centered "
-                          , text chNam
-                          ]
+            append $ nam >- " <- centered " >- chNam
 
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "Centered" [chType])
@@ -328,10 +290,7 @@ handleHCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ text nam
-                          , text " <- hCentered "
-                          , text chNam
-                          ]
+            append $ nam >- " <- hCentered " >- chNam
 
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "HCentered" [chType])
@@ -349,10 +308,7 @@ handleVCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ text nam
-                          , text " <- vCentered "
-                          , text chNam
-                          ]
+            append $ nam >- " <- vCentered " >- chNam
 
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "VCentered" [chType])
@@ -373,9 +329,7 @@ handleVFill =
 
             when (null ch) $ error "Error: 'char' for 'vFill' must be non-empty"
 
-            append $ hcat [ text nam
-                          , text $ " <- vFill " ++ (show $ head ch)
-                          ]
+            append $ nam >- " <- vFill " >- (show $ head ch)
 
             return $ declareWidget nam (TyCon "VFill" [])
 
@@ -406,11 +360,8 @@ handleHFill =
                         Nothing -> error "Error: 'height' of 'hFill' must be an integer"
                         Just i -> return i
 
-            append $ hcat [ text nam
-                          , text $ " <- hFill " ++ (show $ head ch)
-                          , text " "
-                          , text $ show (height :: Int)
-                          ]
+            append $ nam >- " <- hFill " >- (show $ head ch)
+                       >- " " >- (show (height :: Int))
 
             return $ declareWidget nam (TyCon "HFill" [])
 
@@ -427,18 +378,9 @@ handleProgressBar =
 
             barName <- newEntry "progressBar"
 
-            append $ hcat [ text barName
-                          , text " <- newProgressBar "
-                          , text compColor
-                          , text " "
-                          , text incompColor
-                          ]
-
-            append $ hcat [ text "let "
-                          , text nam
-                          , text " = progressBarWidget "
-                          , text barName
-                          ]
+            append $ barName >- " <- newProgressBar " >- compColor
+                       >- " " >- incompColor
+            append $ "let " >- nam >- " = progressBarWidget " >- barName
 
             -- The state type is 'Padded' because buttons are
             -- implemented as composite widgets; see the 'Button' type
@@ -460,16 +402,8 @@ handleButton =
 
             buttonName <- newEntry "button"
 
-            append $ hcat [ text buttonName
-                          , text " <- newButton "
-                          , text $ show label
-                          ]
-
-            append $ hcat [ text "let "
-                          , text nam
-                          , text " = buttonWidget "
-                          , text buttonName
-                          ]
+            append $ buttonName >- " <- newButton " >- show label
+            append $ "let " >- nam >- " = buttonWidget " >- buttonName
 
             -- The state type is 'Padded' because buttons are
             -- implemented as composite widgets; see the 'Button' type
@@ -485,16 +419,12 @@ handleEdit =
                          }
         where
           genSrc e nam = do
-            append $ hcat [ text nam
-                          , text " <- editWidget"
-                          ]
+            append $ nam >- " <- editWidget"
+
             case getAttribute e "contents" of
               Nothing -> return ()
-              Just s -> append $ hcat [ text "setEditText "
-                                      , text nam
-                                      , text " "
-                                      , text $ show s
-                                      ]
+              Just s -> append $ "setEditText " >- nam >- " "
+                        >- show s
 
             return $ declareWidget nam (TyCon "Edit" [])
 
@@ -506,9 +436,7 @@ handleHBorder =
                          }
         where
           genSrc _ nam = do
-            append $ hcat [ text nam
-                          , text " <- hBorder"
-                          ]
+            append $ nam >- " <- hBorder"
             return $ declareWidget nam (TyCon "HBorder" [])
 
 handleVBorder :: ElementHandler
@@ -519,9 +447,7 @@ handleVBorder =
                          }
         where
           genSrc _ nam = do
-            append $ hcat [ text nam
-                          , text " <- vBorder"
-                          ]
+            append $ nam >- " <- vBorder"
             return $ declareWidget nam (TyCon "VBorder" [])
 
 handleBordered :: ElementHandler
@@ -537,10 +463,7 @@ handleBordered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ text nam
-                          , text " <- bordered "
-                          , text chNam
-                          ]
+            append $ nam >- " <- bordered " >- chNam
 
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "Bordered" [chType])
@@ -564,12 +487,8 @@ handleVBox =
                 buildVBox [c] = return c
                 buildVBox (c1:c2:rest) = do
                            nextName <- newEntry "vBox"
-                           append $ hcat [ text nextName
-                                         , text " <- vBox "
-                                         , text c1
-                                         , text " "
-                                         , text c2
-                                         ]
+                           append $ nextName >- " <- vBox " >- c1
+                                      >- " " >- c2
 
                            c1Type <- getWidgetStateType c1
                            c2Type <- getWidgetStateType c2
@@ -580,12 +499,7 @@ handleVBox =
                            buildVBox (nextName:rest)
 
             result <- buildVBox names
-
-            append $ hcat [ text "let "
-                          , text nam
-                          , text " = "
-                          , text result
-                          ]
+            append $ "let " >- nam >- " = " >- result
 
             ty <- getWidgetStateType result
             return $ declareWidget nam ty
@@ -609,12 +523,8 @@ handleHBox =
                 buildHBox [c] = return c
                 buildHBox (c1:c2:rest) = do
                            nextName <- newEntry "hBox"
-                           append $ hcat [ text nextName
-                                         , text " <- hBox "
-                                         , text c1
-                                         , text " "
-                                         , text c2
-                                         ]
+                           append $ nextName >- " <- hBox " >- c1
+                                      >- " " >- c2
 
                            c1Type <- getWidgetStateType c1
                            c2Type <- getWidgetStateType c2
@@ -625,12 +535,7 @@ handleHBox =
                            buildHBox (nextName:rest)
 
             result <- buildHBox names
-
-            append $ hcat [ text "let "
-                          , text nam
-                          , text " = "
-                          , text result
-                          ]
+            append $ "let " >- nam >- " = " >- result
 
             ty <- getWidgetStateType result
             return $ declareWidget nam ty
@@ -648,15 +553,9 @@ handleFormat =
 
             gen ch nam
             tempNam <- newEntry "formattedText"
-            append $ text tempNam <> text " <- getTextFormatter " <> text nam
-            append $ hcat [ text "setTextFormatter "
-                          , text nam
-                          , text " "
-                          , parens $ hcat [ text tempNam
-                                          , text " &.& "
-                                          , text formatName
-                                          ]
-                          ]
+            append $ tempNam >- " <- getTextFormatter " >- nam
+            append $ "setTextFormatter " >- nam >- " "
+                       >- parens (tempNam >- " &.& " >- formatName)
 
 handleFormattedText :: ElementHandler
 handleFormattedText =
@@ -699,19 +598,13 @@ handleFormattedText =
 
                 collapsed = collapse pairs
                 pairExprList = map pairExpr collapsed
-                pairExpr (s, expr) = parens $ hcat [ text $ show s
-                                                   , text ", "
-                                                   , text expr
-                                                   ]
+                pairExpr (s, expr) = parens $ (show s) >- ", " >- expr
 
-            append $ text nam <> text " <- plainText \"\""
-            append $ hcat [ text "setTextWithAttrs "
-                          , text nam
-                          , text " "
-                          , vcat [ addCommas pairExprList "[ "
-                                 , text "]"
-                                 ]
-                          ]
+            append $ nam >- " <- plainText \"\""
+            append $ "setTextWithAttrs " >- nam >- " "
+                       >- vcat [ addCommas pairExprList "[ "
+                               , text "]"
+                               ]
 
             return $ declareWidget nam (TyCon "FormattedText" [])
 
@@ -723,7 +616,7 @@ handleFocusGroup =
                             }
         where
           genSrc e nam = do
-            append $ text nam <> text " <- newFocusGroup"
+            append $ nam >- " <- newFocusGroup"
 
             -- For each child element of the focus group, resolve it
             -- to a named value and add the specified widget to the
@@ -745,18 +638,12 @@ handleFocusGroup =
                                         -- Get the focus method for this value.
                                         m <- lookupFocusMethod $ widgetName wName
                                         case m of
-                                          Just (Merge fgName) -> do
-                                                 append $ text "appendFocusGroup "
-                                                            <> text nam
-                                                            <> text " "
-                                                            <> text fgName
+                                          Just (Merge fgName) ->
+                                              append $ "appendFocusGroup " >- nam >- " " >- fgName
                                           -- Covers the Just Direct
                                           -- and Nothing cases
                                           -- (default is Direct so
                                           -- handlers don't have to
                                           -- register focus method
                                           -- unless it's Merge)
-                                          _ -> append $ text "addToFocusGroup "
-                                                 <> text nam
-                                                 <> text " "
-                                                 <> toDoc wName
+                                          _ -> append $ "addToFocusGroup " >- nam >- " " >- wName

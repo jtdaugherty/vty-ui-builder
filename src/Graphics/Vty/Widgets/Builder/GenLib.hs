@@ -104,10 +104,7 @@ generateTypes st =
                      let typeExpr = case valName of
                                       WName wName -> toDoc $ TyCon "Widget" [widgetType wName]
                                       VName vName -> text $ valueType vName
-                     in hcat [ text $ "elem_" ++ fieldName
-                             , text " :: "
-                             , typeExpr
-                             ]
+                     in "elem_" >- fieldName >- " :: " >- typeExpr
         if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
                        (text $ "switchTo_" ++ ifName ++ " :: IO ()")
         if_fg_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
@@ -175,11 +172,7 @@ annotateElement e nam = do
   case attrsToExpr normalResult of
     Nothing -> return ()
     Just expr ->
-        append $ hcat [ text "setNormalAttribute "
-                      , text nam
-                      , text " $ "
-                      , text expr
-                      ]
+        append $ "setNormalAttribute " >- nam >- " $ " >- expr
 
   -- Focus attribute override
   let focusResult = ( getAttribute e "focusFg"
@@ -188,11 +181,7 @@ annotateElement e nam = do
   case attrsToExpr focusResult of
     Nothing -> return ()
     Just expr ->
-        append $ hcat [ text "setFocusAttribute "
-                      , text nam
-                      , text " $ "
-                      , text expr
-                      ]
+        append $ "setFocusAttribute " >- nam >- " $ " >- expr
 
 elemChildren :: Element a -> [Element a]
 elemChildren (Elem _ _ cs) = map getElem contents
