@@ -46,20 +46,27 @@ gen e@(Elem (N n) _ _) nam = do
           -- Register the widget value name.
           registerWidgetName $ resultWidgetName result
 
-          -- If the handler declared a specific value name to be used
-          -- in an elements field, use that instead of the widget
-          -- name.
-          let fieldValName = case fieldValueName result of
-                               Just fValName -> VName fValName
-                               Nothing -> WName $ resultWidgetName result
-
           -- If the element has an ID, use that to set up field
           -- information so we know how to assign the widget to the
           -- field.
           case getAttribute e "id" of
             Nothing -> return ()
             Just newName -> do
+                      let fieldValName = case fieldValueName result of
+                                           Just fValName -> VName fValName
+                                           Nothing -> WName $ resultWidgetName result
+                      -- When determining which value constitutes the
+                      -- type of the interface elements field for this
+                      -- widget, use the custom field value if
+                      -- specified by the handler (which may not have
+                      -- type Widget a), or fall back to the widget
+                      -- value if no custom field value was specified.
                       registerFieldValueName newName fieldValName
+                      -- When setting up the widget value to be added
+                      -- to the focus group for this widget, always
+                      -- use the resultWidgetName name since it will
+                      -- have the right type (Widget a) in the
+                      -- generated source.
                       setFocusValue newName $ resultWidgetName result
 
           -- Use common attributes on the element to annotate it with
