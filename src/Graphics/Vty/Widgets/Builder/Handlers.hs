@@ -18,10 +18,6 @@ import Graphics.Vty.Widgets.Builder.ValidateLib
 elementHandlers :: [ElementHandler]
 elementHandlers =
     [ handleCollection
-    -- Since the 'collection' DTD specifies some global entities for
-    -- the other DTDs, it MUST come first since those entities are
-    -- *parsed* entities.  See also
-    -- http://www.w3.org/TR/xml/#dt-parsedent
     , handleInterface
     , handleImport
     , handleCommon
