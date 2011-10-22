@@ -8,26 +8,22 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getAttribute
     , getIntAttributeValue
     , attrsToExpr
-    , lookupFieldValueName
-    , lookupWidgetValueName
     , registerInterface
-    , registerType
-    , getStateType
     , addCommas
-    , widgetType
-    , setFocusMethod
     , lookupFocusMethod
-    , valNameStr
-    , annotateElement
     , declareWidget
     , withField
     , addImport
+    , mergeFocus
+    , getWidgetStateType
+    , lookupWidgetName
+    , registerWidgetName
+    , lookupFocusValue
     )
 where
 
 import Control.Applicative
 import Control.Monad.State
-import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as Map
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Posn
@@ -36,49 +32,57 @@ import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
 
-gen :: Element Posn -> ValueName -> GenM ()
+gen :: Element Posn -> String -> GenM ()
 gen e@(Elem (N n) _ _) nam = do
   hs <- gets handlers
   case lookup n hs of
     Nothing -> error $ "No handler for element type " ++ (show n)
-    Just h -> do
-      maybeHr <- h e nam
+    Just handler -> do
+      case handler of
+        SSrc h -> h e nam
+        WSrc h -> do
+          result <- h e nam
 
-      when (isJust maybeHr) $
-           do
-             let Just hr = maybeHr
+          -- Register the widget value name.
+          registerWidgetName $ resultWidgetName result
 
-             -- Always register the name and type of the widget
-             -- created by the handler.
-             let (wName, wType) = widgetValue hr
-             registerType wName wType
+          -- If the handler declared a specific value name to be used
+          -- in an elements field, use that instead of the widget
+          -- name.
+          let fieldValName = case fieldValueName result of
+                               Just fValName -> VName fValName
+                               Nothing -> WName $ resultWidgetName result
 
-             -- If the handler declared a specific name and type for
-             -- the a field referencing its value, then register the
-             -- name and value.
-             when (isJust $ fieldValue hr) $
-                  do
-                    let Just (fName, fType) = fieldValue hr
-                    registerType fName fType
+          -- If the element has an ID, use that to set up field
+          -- information so we know how to assign the widget to the
+          -- field.
+          case getAttribute e "id" of
+            Nothing -> return ()
+            Just newName -> do
+                      registerFieldValueName newName fieldValName
+                      setFocusValue newName $ resultWidgetName result
 
-             -- If the element has an ID, use that to set up field
-             -- information so we know how to assign the widget to the
-             -- field.
-             case getAttribute e "id" of
-               Nothing -> return ()
-               Just newName -> do
-                               -- If the handler result contains a
-                               -- specific field value name, use that;
-                               -- otherwise, fall back to the widget
-                               -- value's name.
-                               let fieldName = maybe (fst $ widgetValue hr) id (fst <$> fieldValue hr)
-                               registerName (RegisteredName newName) fieldName (fst $ widgetValue hr)
-
-      -- Use common attributes on the element to annotate it with
-      -- widget-agnostic properties.
-      annotateElement e nam
-      append $ text ""
+          -- Use common attributes on the element to annotate it with
+          -- widget-agnostic properties.
+          annotateElement e nam
+          append $ text ""
 gen _ _ = error "Got unsupported element structure"
+
+lookupWidgetName :: String -> GenM (Maybe WidgetName)
+lookupWidgetName nam = lookup nam <$> allWidgetNames <$> get
+
+registerWidgetName :: WidgetName -> GenM ()
+registerWidgetName wn =
+    modify $ \st ->
+        st { allWidgetNames = allWidgetNames st ++ [(widgetName wn, wn)] }
+
+registerFieldValueName :: String -> AnyName -> GenM ()
+registerFieldValueName fName valName =
+    modify $ \st ->
+        st { registeredFieldNames = registeredFieldNames st ++ [(fName, valName)] }
+
+lookupFocusValue :: String -> GenM (Maybe WidgetName)
+lookupFocusValue s = lookup s <$> focusValues <$> get
 
 -- Using the registered element names in the input document, generate
 -- a type with fields for each of the named elements.
@@ -89,12 +93,11 @@ generateTypes st =
         footer = [ text "}"
                  ]
         body = elem_lines ++ if_act_lines ++ if_fg_lines
-        elem_lines = (flip map) (namedValues st) $ \(fieldName, (valName, _)) ->
-                     let typeExpr = case fromJust $ lookup valName $ valueTypes st of
-                                      Custom s -> text s
-                                      Widget t -> toDoc $ TyCon "Widget" [t]
-                     in hcat [ text "elem_"
-                             , toDoc fieldName
+        elem_lines = (flip map) (registeredFieldNames st) $ \(fieldName, valName) ->
+                     let typeExpr = case valName of
+                                      WName wName -> toDoc $ TyCon "Widget" [widgetType wName]
+                                      VName vName -> text $ valueType vName
+                     in hcat [ text $ "elem_" ++ fieldName
                              , text " :: "
                              , typeExpr
                              ]
@@ -105,63 +108,29 @@ generateTypes st =
 
     in vcat (header ++ [nest 2 $ addCommas body "  "] ++ footer)
 
-widgetType :: [TyCon] -> TyCon
-widgetType = TyCon "Widget"
-
-setFocusMethod :: ValueName -> FocusMethod -> GenM ()
-setFocusMethod valueName m = do
+mergeFocus :: String -> String -> GenM ()
+mergeFocus wName fgName = do
   st <- get
-  put $ st { focusMethods = (valueName, m) : focusMethods st }
+  put $ st { focusMethods = (wName, Merge fgName) : focusMethods st }
 
-lookupFocusMethod :: ValueName -> GenM (Maybe FocusMethod)
-lookupFocusMethod valueName = do
+lookupFocusMethod :: String -> GenM (Maybe FocusMethod)
+lookupFocusMethod valName = do
   st <- get
-  return $ lookup valueName (focusMethods st)
+  return $ lookup valName (focusMethods st)
 
-registerType :: ValueName -> Type -> GenM ()
-registerType valueName ty = do
-  st <- get
-  case lookup valueName (valueTypes st) of
-    Just _ -> error $ "BUG: type registration for value "
-              ++ show valueName
-              ++ " happened already!"
-    Nothing -> do
-      put $ st { valueTypes  = (valueName, ty) : valueTypes st }
+setFocusValue :: String -> WidgetName -> GenM ()
+setFocusValue s wName = do
+  modify $ \st -> st { focusValues = (s, wName) : focusValues st }
 
-valNameStr :: ValueName -> String
-valNameStr (ValueName s) = s
-
-getStateType :: ValueName -> GenM TyCon
-getStateType valueName = do
-  vts <- gets valueTypes
-  case lookup valueName vts of
+getWidgetStateType :: String -> GenM TyCon
+getWidgetStateType nam = do
+  vts <- gets allWidgetNames
+  case lookup nam vts of
     Nothing -> error $ "BUG: request for state type for value "
-               ++ show valueName
+               ++ show nam
                ++ " impossible; did the element handler forget"
                ++ " to register the type?"
-    -- XXX: report this error in a better way.
-    Just (Custom _) -> error $ "Error: request for widget state " ++
-                       "type of non-widget value"
-    Just (Widget t) -> return t
-
-registerName :: RegisteredName -> ValueName -> ValueName -> GenM ()
-registerName newName fieldValueName widgetValueName = do
-  st <- get
-  case lookup newName (namedValues st) of
-    Just _ -> error "BUG: DTD should have disallowed multiple\
-                    \instances of the same element 'name' attribute"
-    Nothing -> do
-      put $ st { namedValues = (newName, (fieldValueName, widgetValueName)) : namedValues st }
-
-lookupFieldValueName :: RegisteredName -> GenM (Maybe ValueName)
-lookupFieldValueName registeredName = do
-  val <- lookup registeredName <$> gets namedValues
-  return $ fst <$> val
-
-lookupWidgetValueName :: RegisteredName -> GenM (Maybe ValueName)
-lookupWidgetValueName registeredName = do
-  val <- lookup registeredName <$> gets namedValues
-  return $ snd <$> val
+    Just wName -> return $ widgetType wName
 
 getAttribute :: Element a -> String -> Maybe String
 getAttribute (Elem _ attrs _) attrName =
@@ -190,7 +159,7 @@ registerInterface ifName vals = do
   put $ st { interfaceNames = interfaceNames st ++ [(ifName, vals)]
            }
 
-annotateElement :: Element a -> ValueName -> GenM ()
+annotateElement :: Element a -> String -> GenM ()
 annotateElement e nam = do
   -- Normal attribute override
   let normalResult = ( getAttribute e "normalFg"
@@ -200,7 +169,7 @@ annotateElement e nam = do
     Nothing -> return ()
     Just expr ->
         append $ hcat [ text "setNormalAttribute "
-                      , toDoc nam
+                      , text nam
                       , text " $ "
                       , text expr
                       ]
@@ -213,7 +182,7 @@ annotateElement e nam = do
     Nothing -> return ()
     Just expr ->
         append $ hcat [ text "setFocusAttribute "
-                      , toDoc nam
+                      , text nam
                       , text " $ "
                       , text expr
                       ]
@@ -234,7 +203,7 @@ append d = do
   st <- get
   put $ st { genDoc = (genDoc st) $$ d }
 
-newEntry :: String -> GenM ValueName
+newEntry :: String -> GenM String
 newEntry n = do
   st <- get
 
@@ -245,22 +214,27 @@ newEntry n = do
   let newMap = Map.insert n (val + 1) (nameCounters st)
   put $ st { nameCounters = newMap }
 
-  return $ ValueName $ n ++ show val
+  return $ n ++ show val
 
 addCommas :: [Doc] -> String -> Doc
 addCommas [] _ = text ""
 addCommas (l:ls) s =
     text s <> l $$ (vcat $ map (text ", " <>) ls)
 
-declareWidget :: ValueName -> TyCon -> Maybe HandlerResult
-declareWidget val tyCon =
-    Just $ HandlerResult { widgetValue = (val, Widget tyCon)
-                         , fieldValue = Nothing
-                         }
+declareWidget :: String -> TyCon -> WidgetHandlerResult
+declareWidget nam tyCon =
+    WidgetHandlerResult { resultWidgetName = WidgetName { widgetName = nam
+                                                        , widgetType = tyCon
+                                                        }
+                        , fieldValueName = Nothing
+                        }
 
-withField :: Maybe HandlerResult -> (ValueName, String) -> Maybe HandlerResult
-withField mh (val, ty) =
-    mh >>= \h -> return $ h { fieldValue = Just (val, Custom ty) }
+withField :: WidgetHandlerResult -> (String, String) -> WidgetHandlerResult
+withField mh (val, typ) =
+    mh { fieldValueName = Just $ ValueName { valueName = val
+                                           , valueType = typ
+                                           }
+       }
 
 addImport :: String -> GenM ()
 addImport s = do

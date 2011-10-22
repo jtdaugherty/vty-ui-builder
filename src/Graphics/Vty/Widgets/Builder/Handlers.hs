@@ -48,37 +48,31 @@ elementHandlers =
     , handleFocusGroup
     ]
 
-collectionName :: ValueName
-collectionName = ValueName "c"
+collectionName :: String
+collectionName = "c"
 
 handleCollection :: ElementHandler
 handleCollection =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = False
-                   , elementName = "collection"
-                   , validator = Nothing
-                   }
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "collection"
+                            , validator = Nothing
+                            }
         where
           genSrc e _ = do
             let chs = elemChildren e
-            append $ hcat [ toDoc collectionName
-                          , text " <- newCollection"
-                          ]
+            append $ text $ collectionName ++ " <- newCollection"
             append $ text ""
 
             forM_ chs $ \ch -> do
                         nam <- newEntry $ elemName ch
                         gen ch nam
 
-            return Nothing
-
 handleInterface :: ElementHandler
 handleInterface =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = False
-                   , elementName = "interface"
-                   , validator = Nothing
-                   }
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "interface"
+                            , validator = Nothing
+                            }
     where
       genSrc e nam = do
         -- DTD: two children
@@ -86,16 +80,17 @@ handleInterface =
             Just ifName = getAttribute e "name"
 
         gen ch nam
+
         actName <- newEntry "act"
         fgName <- newEntry "focusGroup"
         gen fg fgName
-        append $ hcat [ toDoc actName
+        append $ hcat [ text actName
                       , text " <- addToCollection "
-                      , toDoc collectionName
+                      , text collectionName
                       , text " "
-                      , toDoc nam
+                      , text nam
                       , text " "
-                      , toDoc fgName
+                      , text fgName
                       ]
 
         let vals = InterfaceValues { topLevelWidgetName = nam
@@ -103,28 +98,24 @@ handleInterface =
                                    , focusGroupName = fgName
                                    }
         registerInterface ifName vals
-        return Nothing
 
 handleImport :: ElementHandler
 handleImport =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = False
-                   , elementName = "import"
-                   , validator = Nothing
-                   }
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "import"
+                            , validator = Nothing
+                            }
         where
-          genSrc e nam = do
+          genSrc e _ = do
             let Just name = getAttribute e "module"
             addImport name
-            return Nothing
 
 handleCommon :: ElementHandler
 handleCommon =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = False
-                   , elementName = "common"
-                   , validator = Just doValidate
-                   }
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "common"
+                            , validator = Just doValidate
+                            }
         where
           doValidate e = do
             forM_ (elemChildren e) $ \ch ->
@@ -139,19 +130,16 @@ handleCommon =
                   chNam <- newEntry $ elemName ch
                   gen ch chNam
 
-            return Nothing
-
 handleCheckBox :: ElementHandler
 handleCheckBox =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "checkBox"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "checkBox"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- newCheckbox "
                           , text $ show label
                           ]
@@ -159,33 +147,32 @@ handleCheckBox =
 
 handleRef :: ElementHandler
 handleRef =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "ref"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "ref"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let Just target = getAttribute e "target"
-            val <- lookupWidgetValueName $ RegisteredName target
+            val <- lookupWidgetName target
 
             case val of
               Nothing -> error $ "ref: target '" ++ target ++ "' invalid"
               Just valName -> do
                            append $ hcat [ text "let "
-                                         , toDoc nam
+                                         , text nam
                                          , text " = "
                                          , toDoc valName
                                          ]
-                           (return . declareWidget nam) =<< getStateType valName
+                           typ <- getWidgetStateType $ widgetName valName
+                           return $ declareWidget nam typ
 
 handlePad :: ElementHandler
 handlePad =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "pad"
-                   , validator = Just doValidate
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "pad"
+                         , validator = Just doValidate
+                         }
         where
           doValidate e@(Elem _ attrs _) = do
             when (length attrs == 0) $
@@ -206,7 +193,7 @@ handlePad =
             chNam <- newEntry (elemName e)
             gen ch chNam
 
-            chType <- getStateType chNam
+            chType <- getWidgetStateType chNam
 
             let padFunctions = [ ("top", "padTop")
                                , ("bottom", "padBottom")
@@ -232,22 +219,21 @@ handlePad =
             -- Construct padding expression from values
             let expr = intercalate " `pad` " paddingExprs
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- padded "
                           , parens $ text expr
                           , text " "
-                          , toDoc chNam
+                          , text chNam
                           ]
 
             return $ declareWidget nam (TyCon "Padded" [chType])
 
 handleDirBrowser :: ElementHandler
 handleDirBrowser =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "dirBrowser"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "dirBrowser"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let skin = case getAttribute e "skin" of
@@ -257,31 +243,30 @@ handleDirBrowser =
             browserName <- newEntry "browser"
             fgName <- newEntry "focusGroup"
             append $ hcat [ text "("
-                          , toDoc browserName
+                          , text browserName
                           , text ", "
-                          , toDoc fgName
+                          , text fgName
                           , text ") <- newDirBrowser "
                           , text skin
                           ]
 
             append $ hcat [ text "let "
-                          , toDoc nam
+                          , text nam
                           , text " = dirBrowserWidget "
-                          , toDoc browserName
+                          , text browserName
                           ]
 
-            setFocusMethod nam $ Merge fgName
+            mergeFocus nam fgName
 
             return $ declareWidget nam (TyCon "DirBrowserWidgetType" [])
                        `withField` (browserName, "DirBrowser")
 
 handleDialog :: ElementHandler
 handleDialog =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "dialog"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "dialog"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -293,33 +278,32 @@ handleDialog =
             dlgName <- newEntry "dialog"
             fgName <- newEntry "focusGroup"
             append $ hcat [ text "("
-                          , toDoc dlgName
+                          , text dlgName
                           , text ", "
-                          , toDoc fgName
+                          , text fgName
                           , text ") <- newDialog "
-                          , toDoc chNam
+                          , text chNam
                           , text " "
                           , text $ show title
                           ]
 
             append $ hcat [ text "let "
-                          , toDoc nam
+                          , text nam
                           , text " = dialogWidget "
-                          , toDoc dlgName
+                          , text dlgName
                           ]
 
-            setFocusMethod nam $ Merge fgName
+            mergeFocus nam fgName
 
             return $ declareWidget nam (TyCon "Padded" [])
                        `withField` (dlgName, "Dialog")
 
 handleCentered :: ElementHandler
 handleCentered =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "centered"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "centered"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -327,21 +311,20 @@ handleCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- centered "
-                          , toDoc chNam
+                          , text chNam
                           ]
 
-            chType <- getStateType chNam
+            chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "Centered" [chType])
 
 handleHCentered :: ElementHandler
 handleHCentered =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "hCentered"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "hCentered"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -349,21 +332,20 @@ handleHCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- hCentered "
-                          , toDoc chNam
+                          , text chNam
                           ]
 
-            chType <- getStateType chNam
+            chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "HCentered" [chType])
 
 handleVCentered :: ElementHandler
 handleVCentered =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "vCentered"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "vCentered"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -371,21 +353,20 @@ handleVCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- vCentered "
-                          , toDoc chNam
+                          , text chNam
                           ]
 
-            chType <- getStateType chNam
+            chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "VCentered" [chType])
 
 handleVFill :: ElementHandler
 handleVFill =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "vFill"
-                   , validator = Just doValidate
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "vFill"
+                         , validator = Just doValidate
+                         }
         where
           doValidate e = do
             let Just ch = getAttribute e "char"
@@ -396,7 +377,7 @@ handleVFill =
 
             when (null ch) $ error "Error: 'char' for 'vFill' must be non-empty"
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text $ " <- vFill " ++ (show $ head ch)
                           ]
 
@@ -404,11 +385,10 @@ handleVFill =
 
 handleHFill :: ElementHandler
 handleHFill =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "hFill"
-                   , validator = Just doValidate
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "hFill"
+                         , validator = Just doValidate
+                         }
         where
           doValidate e = do
             let Just ch = getAttribute e "char"
@@ -430,7 +410,7 @@ handleHFill =
                         Nothing -> error "Error: 'height' of 'hFill' must be an integer"
                         Just i -> return i
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text $ " <- hFill " ++ (show $ head ch)
                           , text " "
                           , text $ show (height :: Int)
@@ -440,11 +420,10 @@ handleHFill =
 
 handleProgressBar :: ElementHandler
 handleProgressBar =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "progressBar"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "progressBar"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let Just compColor = getAttribute e "completeColor"
@@ -452,7 +431,7 @@ handleProgressBar =
 
             barName <- newEntry "progressBar"
 
-            append $ hcat [ toDoc barName
+            append $ hcat [ text barName
                           , text " <- newProgressBar "
                           , text compColor
                           , text " "
@@ -460,9 +439,9 @@ handleProgressBar =
                           ]
 
             append $ hcat [ text "let "
-                          , toDoc nam
+                          , text nam
                           , text " = progressBarWidget "
-                          , toDoc barName
+                          , text barName
                           ]
 
             -- The state type is 'Padded' because buttons are
@@ -475,26 +454,25 @@ handleProgressBar =
 
 handleButton :: ElementHandler
 handleButton =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "button"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "button"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
 
             buttonName <- newEntry "button"
 
-            append $ hcat [ toDoc buttonName
+            append $ hcat [ text buttonName
                           , text " <- newButton "
                           , text $ show label
                           ]
 
             append $ hcat [ text "let "
-                          , toDoc nam
+                          , text nam
                           , text " = buttonWidget "
-                          , toDoc buttonName
+                          , text buttonName
                           ]
 
             -- The state type is 'Padded' because buttons are
@@ -505,20 +483,19 @@ handleButton =
 
 handleEdit :: ElementHandler
 handleEdit =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "edit"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "edit"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- editWidget"
                           ]
             case getAttribute e "contents" of
               Nothing -> return ()
               Just s -> append $ hcat [ text "setEditText "
-                                      , toDoc nam
+                                      , text nam
                                       , text " "
                                       , text $ show s
                                       ]
@@ -527,39 +504,36 @@ handleEdit =
 
 handleHBorder :: ElementHandler
 handleHBorder =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "hBorder"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "hBorder"
+                         , validator = Nothing
+                         }
         where
           genSrc _ nam = do
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- hBorder"
                           ]
             return $ declareWidget nam (TyCon "HBorder" [])
 
 handleVBorder :: ElementHandler
 handleVBorder =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "vBorder"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "vBorder"
+                         , validator = Nothing
+                         }
         where
           genSrc _ nam = do
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- vBorder"
                           ]
             return $ declareWidget nam (TyCon "VBorder" [])
 
 handleBordered :: ElementHandler
 handleBordered =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "bordered"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "bordered"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -567,21 +541,20 @@ handleBordered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ hcat [ toDoc nam
+            append $ hcat [ text nam
                           , text " <- bordered "
-                          , toDoc chNam
+                          , text chNam
                           ]
 
-            chType <- getStateType chNam
+            chType <- getWidgetStateType chNam
             return $ declareWidget nam (TyCon "Bordered" [chType])
 
 handleVBox :: ElementHandler
 handleVBox =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "vBox"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "vBox"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             -- DTD: >= 2 children
@@ -595,37 +568,38 @@ handleVBox =
                 buildVBox [c] = return c
                 buildVBox (c1:c2:rest) = do
                            nextName <- newEntry "vBox"
-                           append $ hcat [ toDoc nextName
+                           append $ hcat [ text nextName
                                          , text " <- vBox "
-                                         , toDoc c1
+                                         , text c1
                                          , text " "
-                                         , toDoc c2
+                                         , text c2
                                          ]
 
-                           c1Type <- getStateType c1
-                           c2Type <- getStateType c2
+                           c1Type <- getWidgetStateType c1
+                           c2Type <- getWidgetStateType c2
 
-                           registerType nextName (Widget (TyCon "Box" [c1Type, c2Type]))
+                           registerWidgetName $ WidgetName { widgetName = nextName
+                                                           , widgetType = TyCon "Box" [c1Type, c2Type]
+                                                           }
                            buildVBox (nextName:rest)
 
             result <- buildVBox names
 
             append $ hcat [ text "let "
-                          , toDoc nam
+                          , text nam
                           , text " = "
-                          , toDoc result
+                          , text result
                           ]
 
-            ty <- getStateType result
+            ty <- getWidgetStateType result
             return $ declareWidget nam ty
 
 handleHBox :: ElementHandler
 handleHBox =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "hBox"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "hBox"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             -- DTD: >= 2 children
@@ -639,37 +613,38 @@ handleHBox =
                 buildHBox [c] = return c
                 buildHBox (c1:c2:rest) = do
                            nextName <- newEntry "hBox"
-                           append $ hcat [ toDoc nextName
+                           append $ hcat [ text nextName
                                          , text " <- hBox "
-                                         , toDoc c1
+                                         , text c1
                                          , text " "
-                                         , toDoc c2
+                                         , text c2
                                          ]
 
-                           c1Type <- getStateType c1
-                           c2Type <- getStateType c2
+                           c1Type <- getWidgetStateType c1
+                           c2Type <- getWidgetStateType c2
 
-                           registerType nextName (Widget (TyCon "Box" [c1Type, c2Type]))
+                           registerWidgetName $ WidgetName { widgetName = nextName
+                                                           , widgetType = TyCon "Box" [c1Type, c2Type]
+                                                           }
                            buildHBox (nextName:rest)
 
             result <- buildHBox names
 
             append $ hcat [ text "let "
-                          , toDoc nam
+                          , text nam
                           , text " = "
-                          , toDoc result
+                          , text result
                           ]
 
-            ty <- getStateType result
+            ty <- getWidgetStateType result
             return $ declareWidget nam ty
 
 handleFormat :: ElementHandler
 handleFormat =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = False
-                   , elementName = "format"
-                   , validator = Nothing
-                   }
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "format"
+                            , validator = Nothing
+                            }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -677,24 +652,22 @@ handleFormat =
 
             gen ch nam
             tempNam <- newEntry "formattedText"
-            append $ toDoc tempNam <> text " <- getTextFormatter " <> toDoc nam
+            append $ text tempNam <> text " <- getTextFormatter " <> text nam
             append $ hcat [ text "setTextFormatter "
-                          , toDoc nam
+                          , text nam
                           , text " "
-                          , parens $ hcat [ toDoc tempNam
+                          , parens $ hcat [ text tempNam
                                           , text " &.& "
                                           , text formatName
                                           ]
                           ]
-            return Nothing
 
 handleFormattedText :: ElementHandler
 handleFormattedText =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = True
-                   , elementName = "fText"
-                   , validator = Nothing
-                   }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "fText"
+                         , validator = Nothing
+                         }
         where
           genSrc (Elem _ _ eContents) nam = do
             -- For each entry in the contents list: If it is a string,
@@ -735,9 +708,9 @@ handleFormattedText =
                                                    , text expr
                                                    ]
 
-            append $ toDoc nam <> text " <- plainText \"\""
+            append $ text nam <> text " <- plainText \"\""
             append $ hcat [ text "setTextWithAttrs "
-                          , toDoc nam
+                          , text nam
                           , text " "
                           , vcat [ addCommas pairExprList "[ "
                                  , text "]"
@@ -748,14 +721,13 @@ handleFormattedText =
 
 handleFocusGroup :: ElementHandler
 handleFocusGroup =
-    ElementHandler { generateSource = genSrc
-                   , isWidgetElement = False
-                   , elementName = "focusGroup"
-                   , validator = Nothing
-                   }
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "focusGroup"
+                            , validator = Nothing
+                            }
         where
           genSrc e nam = do
-            append $ toDoc nam <> text " <- newFocusGroup"
+            append $ text nam <> text " <- newFocusGroup"
 
             -- For each child element of the focus group, resolve it
             -- to a named value and add the specified widget to the
@@ -766,22 +738,22 @@ handleFocusGroup =
                   case attr of
                     Nothing -> error "BUG: attribute 'name' missing from child of 'focusGroup'; \
                                      \DTD should have disallowed this"
-                    Just registeredName ->
+                    Just entryName ->
                         do
-                          result <- lookupWidgetValueName $ RegisteredName registeredName
+                          result <- lookupFocusValue entryName
                           case result of
                             Nothing -> error $ "Focus group error: widget name "
-                                       ++ show registeredName
+                                       ++ show entryName
                                        ++ " not found in document"
-                            Just valName -> do
+                            Just wName -> do
                                         -- Get the focus method for this value.
-                                        m <- lookupFocusMethod valName
+                                        m <- lookupFocusMethod $ widgetName wName
                                         case m of
                                           Just (Merge fgName) -> do
                                                  append $ text "appendFocusGroup "
-                                                            <> toDoc nam
+                                                            <> text nam
                                                             <> text " "
-                                                            <> toDoc fgName
+                                                            <> text fgName
                                           -- Covers the Just Direct
                                           -- and Nothing cases
                                           -- (default is Direct so
@@ -789,8 +761,6 @@ handleFocusGroup =
                                           -- register focus method
                                           -- unless it's Merge)
                                           _ -> append $ text "addToFocusGroup "
-                                                 <> toDoc nam
+                                                 <> text nam
                                                  <> text " "
-                                                 <> toDoc valName
-
-            return Nothing
+                                                 <> toDoc wName

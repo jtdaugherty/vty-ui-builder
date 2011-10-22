@@ -1,20 +1,22 @@
 module Graphics.Vty.Widgets.Builder.Types
     ( GenState(..)
     , GenM
+    , AnyName(..)
     , ElementHandler(..)
     , ValueName(..)
-    , RegisteredName(..)
-    , Type(..)
+    , WidgetName(..)
     , TyCon(..)
     , ToDoc(..)
     , InterfaceValues(..)
     , FocusMethod(..)
     , ValidatedElement(..)
-    , HandlerResult(..)
+    , WidgetHandlerResult(..)
     , ElementValidator
     , ValidationState(..)
     , ValidateM
-    , ElementSourceGenerator
+    , WidgetElementSourceGenerator
+    , StructureElementSourceGenerator
+    , AnyElementSourceGenerator(..)
     )
 where
 
@@ -25,52 +27,77 @@ import Text.XML.HaXml.Types
 import Text.XML.HaXml.Posn
 import Text.PrettyPrint.HughesPJ
 
-newtype RegisteredName = RegisteredName String
-    deriving (Eq, Show)
+-- Representation of general (non-widget) values with custom types.
+data ValueName = ValueName { valueName :: String
+                           , valueType :: String
+                           }
+                 deriving (Eq, Show)
 
-newtype ValueName = ValueName String
-    deriving (Eq, Show)
+data WidgetName = WidgetName { widgetName :: String
+                             , widgetType :: TyCon
+                             }
+                  deriving (Eq, Show)
+
+-- Sum type of different names to be used when either type of name is
+-- appropriate (focus method instructions, interface element field
+-- types, etc).
+data AnyName = WName WidgetName
+             | VName ValueName
+               deriving (Eq, Show)
 
 class ToDoc a where
     toDoc :: a -> Doc
 
-instance ToDoc RegisteredName where
-    toDoc (RegisteredName s) = text s
+instance ToDoc WidgetName where
+    toDoc = text . widgetName
 
 instance ToDoc ValueName where
-    toDoc (ValueName s) = text s
+    toDoc = text . valueName
 
 data ValidatedElement = Validated (Element Posn)
 
 data InterfaceValues =
-    InterfaceValues { topLevelWidgetName :: ValueName
-                    , switchActionName :: ValueName
-                    , focusGroupName :: ValueName
+    InterfaceValues { topLevelWidgetName :: String
+                    , switchActionName :: String
+                    , focusGroupName :: String
                     }
 
 data GenState =
     GenState { nameCounters :: Map.Map String Int
              , genDoc :: Doc
-             , handlers :: [(String, ElementSourceGenerator)]
-             , namedValues :: [(RegisteredName, (ValueName, ValueName))]
-             , valueTypes :: [(ValueName, Type)]
+             , handlers :: [(String, AnyElementSourceGenerator)]
+             , allWidgetNames :: [(String, WidgetName)]
+             , registeredFieldNames :: [(String, AnyName)]
              , interfaceNames :: [(String, InterfaceValues)]
-             , focusMethods :: [(ValueName, FocusMethod)]
+             , focusMethods :: [(String, FocusMethod)]
+             , focusValues :: [(String, WidgetName)]
              , imports :: [String]
              }
 
-data FocusMethod = Direct | Merge ValueName
+data FocusMethod = Direct WidgetName -- The name of the widget which
+                                     -- should be added to the primary
+                                     -- focus group.
+                 | Merge String -- The name of the focus group value
+                                -- that should be merged into the
+                                -- primary focus group.
 
 data ElementHandler =
-    ElementHandler { generateSource :: ElementSourceGenerator
-                   , isWidgetElement :: Bool
-                   , validator :: Maybe ElementValidator
-                   , elementName :: String
-                   }
+    WidgetElementHandler { generateWidgetSource :: WidgetElementSourceGenerator
+                         , validator :: Maybe ElementValidator
+                         , elementName :: String
+                         }
+        | StructureElementHandler { generateStructureSource :: StructureElementSourceGenerator
+                                  , validator :: Maybe ElementValidator
+                                  , elementName :: String
+                                  }
+
+data AnyElementSourceGenerator = WSrc WidgetElementSourceGenerator
+                               | SSrc StructureElementSourceGenerator
 
 type GenM a = State GenState a
 
-type ElementSourceGenerator = Element Posn -> ValueName -> GenM (Maybe HandlerResult)
+type WidgetElementSourceGenerator = Element Posn -> String -> GenM WidgetHandlerResult
+type StructureElementSourceGenerator = Element Posn -> String -> GenM ()
 
 data ValidationState =
     ValidationState { errors :: [String]
@@ -81,15 +108,13 @@ type ValidateM a = StateT ValidationState IO a
 
 type ElementValidator = Element Posn -> ValidateM ()
 
-data HandlerResult =
-    HandlerResult { widgetValue :: (ValueName, Type)
-                  , fieldValue :: Maybe (ValueName, Type)
-                  }
-
-data Type = Widget TyCon
-          | Custom String
+data WidgetHandlerResult =
+    WidgetHandlerResult { resultWidgetName :: WidgetName
+                        , fieldValueName :: Maybe ValueName
+                        }
 
 data TyCon = TyCon String [TyCon]
+             deriving (Show, Eq)
 
 instance ToDoc TyCon where
     toDoc (TyCon s []) = text s

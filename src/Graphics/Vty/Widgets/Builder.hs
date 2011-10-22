@@ -19,20 +19,25 @@ import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 import Graphics.Vty.Widgets.Builder.ValidateLib
 
+getSourceGenerator :: ElementHandler -> AnyElementSourceGenerator
+getSourceGenerator (WidgetElementHandler h _ _) = WSrc h
+getSourceGenerator (StructureElementHandler h _ _) = SSrc h
+
 generateSourceForDocument :: BuilderConfig
                           -> ValidatedElement
                           -> [ElementHandler]
                           -> IO String
 generateSourceForDocument config (Validated e) theHandlers = do
-  let (_, finalState) = runState (gen e $ ValueName "root") initialState
+  let (_, finalState) = runState (gen e "root") initialState
       initialState = GenState { nameCounters = Map.empty
                               , genDoc = empty
-                              , handlers = map (\h -> (elementName h, generateSource h)) theHandlers
-                              , namedValues = []
-                              , valueTypes = []
+                              , handlers = map (\h -> (elementName h, getSourceGenerator h)) theHandlers
                               , interfaceNames = []
                               , focusMethods = []
                               , imports = []
+                              , allWidgetNames = []
+                              , registeredFieldNames = []
+                              , focusValues = []
                               }
 
   return $ render $ generateSourceDoc config finalState
@@ -55,8 +60,8 @@ validateAgainstDTD inputXmlHandle inputXmlPath elemInfo = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let handlers = concat $ map snd elemInfo
-             result <- doValidation e handlers
+             let hs = concat $ map snd elemInfo
+             result <- doValidation e hs
              case result of
                [] -> return $ Right $ Validated e
                es -> return $ Left es
@@ -133,21 +138,24 @@ mkElementsValue :: GenState -> Doc
 mkElementsValue st =
     let ls = header ++ [nest 2 $ addCommas body "  "] ++ footer
         body = elem_lines ++ if_act_lines ++ if_fg_lines
-        elem_lines = (flip map) (namedValues st) $ \(fieldName, (fieldValName, _)) ->
-                     text "elem_" <> toDoc fieldName
-                     <> text " = " <> toDoc fieldValName
+        elem_lines = (flip map) (registeredFieldNames st) $ \(fieldName, fieldValName) ->
+                     let valName = case fieldValName of
+                                     WName wName -> widgetName wName
+                                     VName vName -> valueName vName
+                     in text "elem_" <> text fieldName
+                            <> text " = " <> text valName
         if_act_lines = (flip map) (interfaceNames st) $
                        \(ifName, vals) ->
                            text "switchTo_"
                                     <> text ifName
                                     <> text " = "
-                                    <> (toDoc $ switchActionName vals)
+                                    <> (text $ switchActionName vals)
         if_fg_lines = (flip map) (interfaceNames st) $
                       \(ifName, vals) ->
                           text "fg_"
                                    <> text ifName
                                    <> text " = "
-                                   <> (toDoc $ focusGroupName vals)
+                                   <> (text $ focusGroupName vals)
         header = [ text "InterfaceElements {"
                  ]
         footer = [ text "}"
