@@ -80,3 +80,6 @@ Add support for:
 
 - Use exceptions instead of 'error' in error reporting, handle
   exceptions in higher-level routines
+
+- Investigate using haskell-src(-exts) to generate source instead of
+  using the pretty library and plain text strings
