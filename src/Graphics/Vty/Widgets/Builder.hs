@@ -33,6 +33,7 @@ generateSourceForDocument config (Validated e) theHandlers = do
                               , interfaceNames = []
                               , focusMethods = []
                               , imports = []
+                              , paramNames = []
                               }
 
   return $ render $ generateSourceDoc config finalState
@@ -55,8 +56,8 @@ validateAgainstDTD inputXmlHandle inputXmlPath elemInfo = do
     Right (Document _ _ e _) -> do
          case partialValidate dtd e of
            [] -> do
-             let handlers = concat $ map snd elemInfo
-             result <- doValidation e handlers
+             let theHandlers = concat $ map snd elemInfo
+             result <- doValidation e theHandlers
              case result of
                [] -> return $ Right $ Validated e
                es -> return $ Left es
@@ -103,13 +104,17 @@ generateSourceDoc config st =
                                    ]
 
         builderDoc = [ text ""
-                     , text $ "buildCollection :: IO (Collection, InterfaceElements)"
-                     , text "buildCollection = do"
+                     , text "buildCollection :: " <> theParamTypes <> text "IO (Collection, InterfaceElements)"
+                     , text "buildCollection " <> theParamNames <> text "= do"
                      , nest 2 $ vcat [ genDoc st
                                      , mkElementsValue st
                                      , text "return (c, elems)"
                                      ]
                      ]
+
+        theParamTypes = hcat $ map (\typ -> (toDoc $ TyCon "Widget" [mkTyCon typ]) <> text " -> ")
+                        (map snd $ paramNames st)
+        theParamNames = hcat $ map (\(n,_) -> text n <> text " ") (paramNames st)
 
         main = [ text ""
                , text "main :: IO ()"

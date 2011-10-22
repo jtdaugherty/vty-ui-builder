@@ -22,6 +22,10 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , declareWidget
     , withField
     , addImport
+    , registerParam
+    , isValidParamName
+    , getParamType
+    , mkTyCon
     )
 where
 
@@ -158,6 +162,16 @@ lookupFieldValueName registeredName = do
   val <- lookup registeredName <$> gets namedValues
   return $ fst <$> val
 
+isValidParamName :: String -> GenM Bool
+isValidParamName s = (isJust . lookup s) <$> gets paramNames
+
+getParamType :: String -> GenM String
+getParamType s = do
+  typ <- lookup s <$> gets paramNames
+  case typ of
+    Nothing -> error $ "Invalid parameter name: " ++ s
+    Just t -> return t
+
 lookupWidgetValueName :: RegisteredName -> GenM (Maybe ValueName)
 lookupWidgetValueName registeredName = do
   val <- lookup registeredName <$> gets namedValues
@@ -266,3 +280,14 @@ addImport :: String -> GenM ()
 addImport s = do
   st <- get
   put $ st { imports = imports st ++ [s] }
+
+registerParam :: String -> String -> GenM ()
+registerParam nam typ = do
+  st <- get
+  put $ st { paramNames = paramNames st ++ [(nam,typ)] }
+
+mkTyCon :: String -> TyCon
+mkTyCon s =
+    if ' ' `elem` s
+    then TyCon (takeWhile (/= ' ') s) [TyCon (tail $ dropWhile (/= ' ') s) []]
+    else TyCon s []

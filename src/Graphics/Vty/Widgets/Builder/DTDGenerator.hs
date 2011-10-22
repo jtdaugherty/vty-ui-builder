@@ -69,7 +69,6 @@ generateMasterDTD elementInfo = do
           let names = map elementName elemHandlers
           in map (\n -> mkLoadFragment n (dtdPath </> n ++ ".dtd")) names
 
-      allNames = map elementName allHandlers
       allEntity = "<!ENTITY % all \"" ++ (intercalate "|" widgetNames) ++ "\">\n"
       dtdLines = [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                  , commonEntities
