@@ -21,7 +21,7 @@ elementHandlers =
     , handleInterface
     , handleImport
     , handleParams
-    , handleCommon
+    , handleShared
     , handleFormat
     , handleFormattedText
     , handleVBox
@@ -116,10 +116,10 @@ handleImport =
             let Just name = getAttribute e "module"
             addImport name
 
-handleCommon :: ElementHandler
-handleCommon =
+handleShared :: ElementHandler
+handleShared =
     StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "common"
+                            , elementName = "shared"
                             , validator = Just doValidate
                             }
         where

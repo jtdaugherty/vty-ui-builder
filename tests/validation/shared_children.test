@@ -1,11 +1,11 @@
-Children of 'common' need 'id' attributes
+Children of 'shared' need 'id' attributes
 ---
 <?xml version="1.0" encoding="UTF-8" ?>
 <collection>
-  <common>
+  <shared>
     <edit/>
     <fText></fText>
-  </common>
+  </shared>
   <interface name="i">
     <checkBox label="test" id="t"/>
     <focusGroup>
@@ -14,5 +14,5 @@ Children of 'common' need 'id' attributes
   </interface>
 </collection>
 ---
-common: element 'edit' missing 'id' attribute
-common: element 'fText' missing 'id' attribute
+shared: element 'edit' missing 'id' attribute
+shared: element 'fText' missing 'id' attribute
