@@ -19,11 +19,16 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , lookupWidgetName
     , registerWidgetName
     , lookupFocusValue
+    , registerParam
+    , isValidParamName
+    , getParamType
+    , mkTyCon
     )
 where
 
 import Control.Applicative
 import Control.Monad.State
+import Data.Maybe
 import qualified Data.Map as Map
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Posn
@@ -136,6 +141,16 @@ getWidgetStateType nam = do
                ++ " to register the type?"
     Just wName -> return $ widgetType wName
 
+isValidParamName :: String -> GenM Bool
+isValidParamName s = (isJust . lookup s) <$> gets paramNames
+
+getParamType :: String -> GenM String
+getParamType s = do
+  typ <- lookup s <$> gets paramNames
+  case typ of
+    Nothing -> error $ "Invalid parameter name: " ++ s
+    Just t -> return t
+
 getAttribute :: Element a -> String -> Maybe String
 getAttribute (Elem _ attrs _) attrName =
     case lookup (N attrName) attrs of
@@ -236,3 +251,14 @@ addImport :: String -> GenM ()
 addImport s = do
   st <- get
   put $ st { imports = imports st ++ [s] }
+
+registerParam :: String -> String -> GenM ()
+registerParam nam typ = do
+  st <- get
+  put $ st { paramNames = paramNames st ++ [(nam,typ)] }
+
+mkTyCon :: String -> TyCon
+mkTyCon s =
+    if ' ' `elem` s
+    then TyCon (takeWhile (/= ' ') s) [TyCon (tail $ dropWhile (/= ' ') s) []]
+    else TyCon s []

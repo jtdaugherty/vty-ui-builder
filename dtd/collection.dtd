@@ -1,1 +1,1 @@
-<!ELEMENT collection (import*,common?,interface+)>
+<!ELEMENT collection (import*,params?,common?,interface+)>

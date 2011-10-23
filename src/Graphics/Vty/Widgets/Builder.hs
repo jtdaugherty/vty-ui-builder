@@ -38,6 +38,7 @@ generateSourceForDocument config (Validated e) theHandlers = do
                               , allWidgetNames = []
                               , registeredFieldNames = []
                               , focusValues = []
+                              , paramNames = []
                               }
 
   return $ render $ generateSourceDoc config finalState
@@ -108,13 +109,17 @@ generateSourceDoc config st =
                                    ]
 
         builderDoc = [ text ""
-                     , text $ "buildCollection :: IO (Collection, InterfaceElements)"
-                     , text "buildCollection = do"
+                     , text "buildCollection :: " <> theParamTypes <> text "IO (Collection, InterfaceElements)"
+                     , text "buildCollection " <> theParamNames <> text "= do"
                      , nest 2 $ vcat [ genDoc st
                                      , mkElementsValue st
                                      , text "return (c, elems)"
                                      ]
                      ]
+
+        theParamTypes = hcat $ map (\typ -> (toDoc $ TyCon "Widget" [mkTyCon typ]) <> text " -> ")
+                        (map snd $ paramNames st)
+        theParamNames = hcat $ map (\(n,_) -> text n <> text " ") (paramNames st)
 
         main = [ text ""
                , text "main :: IO ()"

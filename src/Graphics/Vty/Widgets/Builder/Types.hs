@@ -83,6 +83,7 @@ data GenState =
              , focusMethods :: [(String, FocusMethod)]
              , focusValues :: [(String, WidgetName)]
              , imports :: [String]
+             , paramNames :: [(String, String)]
              }
 
 data FocusMethod = Direct WidgetName -- The name of the widget which

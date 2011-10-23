@@ -20,6 +20,7 @@ elementHandlers =
     [ handleCollection
     , handleInterface
     , handleImport
+    , handleParams
     , handleCommon
     , handleFormat
     , handleFormattedText
@@ -90,6 +91,20 @@ handleInterface =
                                    }
         registerInterface ifName vals
 
+handleParams :: ElementHandler
+handleParams =
+    StructureElementHandler { generateStructureSource = genSrc
+                            , elementName = "params"
+                            , validator = Nothing
+                            }
+        where
+          genSrc e _ = do
+            forM_ (elemChildren e) $ \ch ->
+                do
+                  let Just paramId = getAttribute ch "name"
+                      Just paramTyp = getAttribute ch "type"
+                  registerParam paramId paramTyp
+
 handleImport :: ElementHandler
 handleImport =
     StructureElementHandler { generateStructureSource = genSrc
@@ -145,7 +160,18 @@ handleRef =
             val <- lookupWidgetName target
 
             case val of
-              Nothing -> error $ "ref: target '" ++ target ++ "' invalid"
+              Nothing -> do
+                       result <- isValidParamName target
+                       case result of
+                         False -> error $ "ref: target '" ++ target ++ "' invalid"
+                         True -> do
+                           typ <- getParamType target
+                           append $ hcat [ text "let "
+                                         , toDoc nam
+                                         , text " = "
+                                         , text target
+                                         ]
+                           return $ declareWidget nam $ mkTyCon typ
               Just valName -> do
                            append $ "let " >- nam >- " = " >- valName
                            typ <- getWidgetStateType $ widgetName valName

@@ -1,0 +1,17 @@
+Widgets identified by params can be used in refs and focus groups
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <params>
+    <param name="input1" type="Foo"/>
+  </params>
+
+  <interface name="i">
+    <ref target="input1"/>
+    <focusGroup>
+      <entry name="input1"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+success
