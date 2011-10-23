@@ -59,7 +59,9 @@ vty-ui-builder:
  * Get the latest source version of vty-ui from GitHub:
    https://github.com/jtdaugherty/vty-ui
 
- * Install vty-ui-builder with cabal or cabal-dev
+ * Install vty-ui
+
+ * Install vty-ui-builder
 
  * Run:
 
