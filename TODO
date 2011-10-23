@@ -25,6 +25,11 @@ Add support for:
 
   * Group
 
+- Reconsider the general 'format' element approach, since not all
+  formatters are nullary.  ('highlight' requires arguments and cannot
+  be used with the 'format' element.)  Consider implementing 'wrap'
+  which can have an fText child.
+
 - make it impossible to reference focus group entry names which are
   not in the interface corresponding to a focus group (unless they are
   refs in 'common', in which case that is okay!)
