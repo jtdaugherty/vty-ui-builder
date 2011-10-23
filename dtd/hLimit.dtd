@@ -1,0 +1,4 @@
+<!ELEMENT hLimit (%all;)>
+<!ATTLIST hLimit
+          width CDATA #REQUIRED
+>

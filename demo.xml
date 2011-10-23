@@ -277,6 +277,67 @@
     </vBox>
   </interface>
 
+  <!-- vLimit.dtd -->
+  <!-- hLimit.dtd -->
+  <interface name="limits">
+    <vBox>
+      <fText><attr fg="green">hLimit</attr> / <attr fg="green">vLimit</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>
+          Widgets which ordinarily consume all available space can be
+          constricted with a "limit" widget.  Limit widgets place an
+          <attr fg="yellow">upper bound</attr> on the limited
+          dimension of a widget.  To generate a limit widget, use
+          <attr fg="magenta">vLimit</attr> (vertical limiting), <attr
+          fg="magenta">hLimit</attr> (horizontal limiting), or <attr
+          fg="magenta">boxLimit</attr> (both).
+        </fText>
+      </format>
+      <vLimit height="5">
+        <bordered>
+          <vBox>
+            <format name="wrap">
+              <fText>
+                This bordered box is constrained to 5 rows in height
+                (2 rows are used by the borders).  The amount required
+                by the text will depend on the width of your terminal.
+              </fText>
+            </format>
+            <vFill char=" "/>
+          </vBox>
+        </bordered>
+      </vLimit>
+      <hLimit width="30">
+        <bordered>
+          <hBox>
+            <format name="wrap">
+              <fText>
+                This bordered box is constrained to 30 columns in
+                width (2 columns are used by the borders).
+              </fText>
+            </format>
+            <hFill char=" " height="1"/>
+          </hBox>
+        </bordered>
+      </hLimit>
+      <boxLimit height="10" width="25">
+        <bordered>
+          <hBox>
+            <format name="wrap">
+              <fText>
+                This bordered box is constrained to 25 columns in
+                width (2 columns are used by the borders) and 10 rows
+                in height (2 rows are used by the borders).
+              </fText>
+            </format>
+            <hFill char=" " height="1"/>
+          </hBox>
+        </bordered>
+      </boxLimit>
+    </vBox>
+  </interface>
+
   <!-- pad.dtd -->
   <interface name="pad">
     <vBox>

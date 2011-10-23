@@ -2,7 +2,27 @@
 Add support for:
 
   * Table
-  * Limits
+    * table-wide defaults for cell alignment and padding?
+
+  <table>
+    <cols>
+      <col size="auto" />
+      <col size="15" />
+
+      <!-- padding (same attributes as 'pad' but with 'pad' prefix -->
+      <col size="15" padLeft="2" padTopBottom="1" />
+
+      <!-- alignment -->
+      <col size="15" align="right" />
+    </cols>
+    <row>
+      <fText>...</fText>
+    </row>
+    <row>
+      <fText>...</fText>
+    </row>
+  </table>
+
   * Fixed
   * Group
 
