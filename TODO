@@ -75,3 +75,8 @@ Add support for:
 - improve error reporting and reduce number of pathological error
   cases by performing up-front validation and by using more types (too
   many 'error' calls)
+
+- Use Posn values in error reporting
+
+- Use exceptions instead of 'error' in error reporting, handle
+  exceptions in higher-level routines
