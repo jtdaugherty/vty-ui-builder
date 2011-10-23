@@ -18,6 +18,9 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.DTDGenerator
 import Graphics.Vty.Widgets.Builder.Handlers
 
+-- For nicer-looking error message formatting
+import Text.Trans.Tokenize (tokenize, wrapStream, serialize)
+
 data BuilderOpt = Help
                 | ModuleName String
                 | GeneratePreamble Bool
@@ -159,8 +162,13 @@ mkBuilderToolMain theHandlers = do
     Right e -> do
          when (not (ValidateOnly `elem` opts)) $
               do
-                output <- generateSourceForDocument config e allElementHandlers
-                saveOutput opts output
+                result <- generateSourceForDocument config e allElementHandlers
+                case result of
+                  Left err -> do
+                              let errMsg = serialize $ wrapStream 72 $ tokenize err ()
+                              putStrLn $ "Error: " ++ errMsg
+                              exitFailure
+                  Right output -> saveOutput opts output
 
 defaultMain :: IO ()
 defaultMain = do

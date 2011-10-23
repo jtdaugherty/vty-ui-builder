@@ -26,7 +26,7 @@ getSourceGenerator (StructureElementHandler h _ _) = SSrc h
 generateSourceForDocument :: BuilderConfig
                           -> ValidatedElement
                           -> [ElementHandler]
-                          -> IO String
+                          -> IO (Either String String)
 generateSourceForDocument config (Validated e) theHandlers = do
   let (_, finalState) = runState (gen e "root") initialState
       initialState = GenState { nameCounters = Map.empty
@@ -41,7 +41,16 @@ generateSourceForDocument config (Validated e) theHandlers = do
                               , paramNames = []
                               }
 
-  return $ render $ generateSourceDoc config finalState
+  -- If the user wants to generate a main function, we can't do that
+  -- if the generated collection constructor function takes parameters
+  -- because we don't have values to provide for them.
+  case generateMain config && (not $ null $ paramNames finalState) of
+    True -> return $ Left $ concat
+            [ "configuration indicates that a 'main' should be generated, "
+            , "but parameters are required to construct the interface. "
+            , "Turn off 'main' generation to generate the interface source."
+            ]
+    False -> return $ Right $ render $ generateSourceDoc config finalState
 
 validateAgainstDTD :: Handle
                    -> FilePath
