@@ -16,6 +16,8 @@ Cabal-version:       >=1.6
 Data-files:
   dtd/*.dtd
   tests/validation/*.test
+  demo.xml
+  README
 
 Extra-source-files:
   tests/Validation.hs
