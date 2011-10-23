@@ -219,6 +219,20 @@
           </bordered>
         </hBox>
       </bordered>
+      <bordered>
+        <hBox spacing="2">
+          <format name="wrap">
+            <fText>
+              hBox elements can specify spacing between child widgets.
+            </fText>
+          </format>
+          <format name="wrap">
+            <fText>
+              Spacing for hBoxes is in columns.
+            </fText>
+          </format>
+        </hBox>
+      </bordered>
       <format name="wrap">
         <fText>
           The <attr fg="green">hBox-sized</attr> tag is used to exert
@@ -440,6 +454,20 @@
               </fText>
             </format>
           </bordered>
+        </vBox>
+      </bordered>
+      <bordered>
+        <vBox spacing="2">
+          <format name="wrap">
+            <fText>
+              vBox elements can specify spacing between child widgets.
+            </fText>
+          </format>
+          <format name="wrap">
+            <fText>
+              Spacing for vBoxes is in rows.
+            </fText>
+          </format>
         </vBox>
       </bordered>
       <format name="wrap">

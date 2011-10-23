@@ -3,4 +3,5 @@
           first CDATA #IMPLIED
           second CDATA #IMPLIED
           percent CDATA #IMPLIED
+          spacing CDATA #IMPLIED
 >

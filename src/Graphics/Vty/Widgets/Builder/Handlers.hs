@@ -601,8 +601,8 @@ handleBordered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "Bordered" [chType])
 
-genBox :: [Element Posn] -> String -> Hs.Name -> GenM Hs.Name
-genBox es typ rootName = do
+genBox :: [Element Posn] -> String -> Maybe Int -> Hs.Name -> GenM Hs.Name
+genBox es typ spacing rootName = do
   names <- forM es $
            \child -> do
               chname <- newEntry $ elemName child
@@ -616,6 +616,13 @@ genBox es typ rootName = do
               append $ bind nextName typ [ expr c1
                                          , expr c2
                                          ]
+
+              case spacing of
+                Nothing -> return ()
+                Just val ->
+                    append $ act $ call "setBoxSpacing" [ expr nextName
+                                                        , mkInt val
+                                                        ]
 
               c1Type <- getWidgetStateType c1
               c2Type <- getWidgetStateType c2
@@ -637,7 +644,8 @@ handleVBox =
                          }
         where
           genSrc e nam = do
-            resultName <- genBox (elemChildren e) "vBox" nam
+            let spacing = getIntAttributeValue =<< getAttribute e "spacing"
+            resultName <- genBox (elemChildren e) "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -651,8 +659,9 @@ handleBoxSized typ =
           genSrc e nam = do
             let Just boxSize = getBoxSize e
                 Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
+                spacing = getIntAttributeValue =<< getAttribute e "spacing"
 
-            resultName <- genBox (elemChildren e) typ nam
+            resultName <- genBox (elemChildren e) typ spacing nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
@@ -706,7 +715,8 @@ handleHBox =
                          }
         where
           genSrc e nam = do
-            resultName <- genBox (elemChildren e) "hBox" nam
+            let spacing = getIntAttributeValue =<< getAttribute e "spacing"
+            resultName <- genBox (elemChildren e) "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 

@@ -1,11 +1,4 @@
 
-vBox/hBox
-
-  * Support child spacing controls (applies to all generated boxes
-    within any vBox / hBox)
-
-    <vBox spacing="5">
-
 Add support for:
 
   * Table
