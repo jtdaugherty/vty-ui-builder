@@ -279,6 +279,7 @@
 
   <!-- vLimit.dtd -->
   <!-- hLimit.dtd -->
+  <!-- boxLimit.dtd -->
   <interface name="limits">
     <vBox>
       <fText><attr fg="green">hLimit</attr> / <attr fg="green">vLimit</attr> demo</fText>
@@ -335,6 +336,61 @@
           </hBox>
         </bordered>
       </boxLimit>
+    </vBox>
+  </interface>
+
+  <!-- vFixed.dtd -->
+  <!-- hFixed.dtd -->
+  <!-- boxFixed.dtd -->
+  <interface name="fixed">
+    <vBox>
+      <fText><attr fg="green">hFixed</attr> / <attr fg="green">vFixed</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>
+          The size of a widget on the screen can be set to a specific
+          value using a "fixed-size" widget.  Fixed-size widgets place
+          a constraint on the dimension of a widget.  If the widget's
+          actual size is less than the constraint, it is padded so
+          that the space is always consumed.  To generate a fixed-size
+          widget, use <attr fg="magenta">vFixed</attr> (vertical fixed
+          size), <attr fg="magenta">hFixed</attr> (horizontal fixed
+          size), or <attr fg="magenta">boxFixed</attr>
+          (both).<br/><br/>Fixed-size widgets are similar to "limit"
+          widgets but guarantee that the size of the fixed widget will
+          always remain constant, whereas limit widgets guarantee only
+          an upper bound on size.
+        </fText>
+      </format>
+      <bordered>
+        <vFixed height="5">
+          <format name="wrap">
+            <fText>
+              This text is set to 5 rows in height.
+            </fText>
+          </format>
+        </vFixed>
+      </bordered>
+      <bordered>
+        <hLimit width="30">
+          <format name="wrap">
+            <fText>
+              This text is set to 30 columns in width.
+            </fText>
+          </format>
+        </hLimit>
+      </bordered>
+      <bordered>
+        <boxFixed height="10" width="25">
+          <format name="wrap">
+            <fText>
+              This text is set to 25 columns in width (2 columns are
+              used by the borders) and 10 rows in height (2 rows are
+              used by the borders).
+            </fText>
+          </format>
+        </boxFixed>
+      </bordered>
     </vBox>
   </interface>
 

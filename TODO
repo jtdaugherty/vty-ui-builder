@@ -23,7 +23,6 @@ Add support for:
     </row>
   </table>
 
-  * Fixed
   * Group
 
 - make it impossible to reference focus group entry names which are

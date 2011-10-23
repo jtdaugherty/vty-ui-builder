@@ -1,0 +1,4 @@
+<!ELEMENT vFixed (%all;)>
+<!ATTLIST vFixed
+          height CDATA #REQUIRED
+>

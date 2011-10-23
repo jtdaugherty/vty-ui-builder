@@ -1,0 +1,5 @@
+<!ELEMENT boxFixed (%all;)>
+<!ATTLIST boxFixed
+          height CDATA #REQUIRED
+          width CDATA #REQUIRED
+>

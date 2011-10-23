@@ -56,6 +56,9 @@ elementHandlers =
     , handleVLimit
     , handleHLimit
     , handleBoxLimit
+    , handleVFixed
+    , handleHFixed
+    , handleBoxFixed
     ]
 
 handleCollection :: ElementHandler
@@ -320,6 +323,98 @@ handleBoxLimit =
             append $ bind nam "boxLimit" [mkInt w, mkInt h, expr chNam]
             return $ declareWidget nam $
                    parseType $ "VLimit (HLimit (" ++ Hs.prettyPrint chType ++ "))"
+
+handleVFixed :: ElementHandler
+handleVFixed =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "vFixed"
+                         , validator = Just doValidate
+                         }
+        where
+          doValidate e = do
+            case getAttribute e "height" of
+              Nothing -> putError e "'height' attribute required"
+              Just val -> do
+                           case getIntAttributeValue val of
+                             Nothing -> putError e $ "'height' attribute must be an integer"
+                             _ -> return ()
+
+          genSrc e nam = do
+            let Just val = getIntAttributeValue =<< getAttribute e "height"
+
+            let [ch] = elemChildren e
+
+            chNam <- newEntry (elemName e)
+            gen ch chNam
+            chType <- getWidgetStateType chNam
+
+            append $ bind nam "vFixed" [mkInt val, expr chNam]
+            return $ declareWidget nam $
+                   parseType $ "VFixed (" ++ Hs.prettyPrint chType ++ ")"
+
+handleHFixed :: ElementHandler
+handleHFixed =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "hFixed"
+                         , validator = Just doValidate
+                         }
+        where
+          doValidate e = do
+            case getAttribute e "width" of
+              Nothing -> putError e "'width' attribute required"
+              Just val -> do
+                           case getIntAttributeValue val of
+                             Nothing -> putError e $ "'width' attribute must be an integer"
+                             _ -> return ()
+
+          genSrc e nam = do
+            let Just val = getIntAttributeValue =<< getAttribute e "width"
+
+            let [ch] = elemChildren e
+
+            chNam <- newEntry (elemName e)
+            gen ch chNam
+            chType <- getWidgetStateType chNam
+
+            append $ bind nam "hFixed" [mkInt val, expr chNam]
+            return $ declareWidget nam $
+                   parseType $ "HFixed (" ++ Hs.prettyPrint chType ++ ")"
+
+handleBoxFixed :: ElementHandler
+handleBoxFixed =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "boxFixed"
+                         , validator = Just doValidate
+                         }
+        where
+          doValidate e = do
+            case getAttribute e "width" of
+              Nothing -> putError e "'width' attribute required"
+              Just val -> do
+                           case getIntAttributeValue val of
+                             Nothing -> putError e $ "'width' attribute must be an integer"
+                             _ -> return ()
+
+            case getAttribute e "height" of
+              Nothing -> putError e "'height' attribute required"
+              Just val -> do
+                           case getIntAttributeValue val of
+                             Nothing -> putError e $ "'height' attribute must be an integer"
+                             _ -> return ()
+
+          genSrc e nam = do
+            let Just w = getIntAttributeValue =<< getAttribute e "width"
+                Just h = getIntAttributeValue =<< getAttribute e "height"
+
+            let [ch] = elemChildren e
+
+            chNam <- newEntry (elemName e)
+            gen ch chNam
+            chType <- getWidgetStateType chNam
+
+            append $ bind nam "boxFixed" [mkInt w, mkInt h, expr chNam]
+            return $ declareWidget nam $
+                   parseType $ "VFixed (HFixed (" ++ Hs.prettyPrint chType ++ "))"
 
 handleRef :: ElementHandler
 handleRef =
