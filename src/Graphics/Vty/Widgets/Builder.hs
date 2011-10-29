@@ -10,6 +10,7 @@ import System.IO
 import qualified Data.Map as Map
 import Control.Monad.State
 import Data.List (intercalate)
+import Data.Maybe
 
 import Text.XML.HaXml.Parse hiding (doctypedecl)
 import Text.XML.HaXml.Validate
@@ -94,11 +95,19 @@ generateModule config st =
                   then "Main"
                   else moduleName config
 
-        theExports = if generateMain config
+        theExports = if null exportList
                      then Nothing
-                     else Just [ Hs.EVar (Hs.UnQual $ mkName "buildCollection")
-                               , Hs.EThingAll (Hs.UnQual $ mkName "InterfaceElements")
-                               ]
+                     else Just exportList
+
+        exportList = if generateMain config
+                     then []
+                     else catMaybes [ if generateInterfaceBuilder config
+                                      then Just $ Hs.EVar (Hs.UnQual $ mkName "buildCollection")
+                                      else Nothing
+                                    , if generateInterfaceType config
+                                      then Just $ Hs.EThingAll (Hs.UnQual $ mkName "InterfaceElements")
+                                      else Nothing
+                                    ]
 
         theImports = [ mkImportDecl "Graphics.Vty" ["Button"]
                      , mkImportDecl "Graphics.Vty.Widgets.All" []
