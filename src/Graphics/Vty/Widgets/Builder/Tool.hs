@@ -52,7 +52,7 @@ options = [ Option "h" ["help"] (NoArg Help) "This help output"
                        "Do not generate the function which builds the interface"
 
           , Option "m" ["main"] (NoArg (GenerateMain True))
-                       ("Generate a \"main\" function for testing (implies "
+                       ("Generate a \"main\" function for testing (implies\n"
                         ++ "-n \"Main\" and implicit exports)")
 
           , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
