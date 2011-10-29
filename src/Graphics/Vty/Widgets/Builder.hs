@@ -1,6 +1,8 @@
 module Graphics.Vty.Widgets.Builder
     ( generateSourceForDocument
     , validateAgainstDTD
+    , style
+    , mode
     )
 where
 
@@ -24,6 +26,12 @@ import Graphics.Vty.Widgets.Builder.ValidateLib
 getSourceGenerator :: ElementHandler -> AnyElementSourceGenerator
 getSourceGenerator (WidgetElementHandler h _ _) = WSrc h
 getSourceGenerator (StructureElementHandler h _ _) = SSrc h
+
+style :: Hs.Style
+style = Hs.style { Hs.lineLength = 72 }
+
+mode :: Hs.PPHsMode
+mode = Hs.defaultMode { Hs.doIndent = 2, Hs.spacing = True }
 
 generateSourceForDocument :: BuilderConfig
                           -> ValidatedElement
@@ -52,7 +60,8 @@ generateSourceForDocument config (Validated e) theHandlers = do
             , "but parameters are required to construct the interface. "
             , "Turn off 'main' generation to generate the interface source."
             ]
-    False -> return $ Right $ Hs.prettyPrint $ generateModule config finalState
+    False -> return $ Right $ Hs.prettyPrintStyleMode style mode $
+             generateModule config finalState
 
 validateAgainstDTD :: Handle
                    -> FilePath
