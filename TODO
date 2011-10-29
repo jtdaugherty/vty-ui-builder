@@ -75,3 +75,9 @@ Add support for:
   Think about how other users of the tool will need to deal with their
   own namespaces.  Also look at best practices for using DTDs as part
   of this change.
+
+- Expose more of the internals of the source generator (VTY imports,
+  etc.) which are hard-coded but potentially useful to users
+
+- Make vty-ui-builder able to tell the user which version of vty-ui it
+  generates code for (look at cabal file?)
