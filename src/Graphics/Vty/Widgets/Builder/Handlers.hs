@@ -5,15 +5,16 @@ where
 
 import Control.Applicative
 import Control.Monad
-import Data.List (intercalate)
 import Data.Maybe
-import Text.PrettyPrint.HughesPJ
 import Text.XML.HaXml.Types
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util
 import Graphics.Vty.Widgets.Builder.ValidateLib
+
+-- XXX
+import qualified Language.Haskell.Exts as Hs
 
 elementHandlers :: [ElementHandler]
 elementHandlers =
@@ -45,8 +46,8 @@ elementHandlers =
     , handleFocusGroup
     ]
 
-collectionName :: String
-collectionName = "c"
+collectionName :: Hs.Name
+collectionName = mkName "c"
 
 handleCollection :: ElementHandler
 handleCollection =
@@ -57,8 +58,7 @@ handleCollection =
         where
           genSrc e _ = do
             let chs = elemChildren e
-            append $ collectionName >- " <- newCollection"
-            append $ text ""
+            append $ bind collectionName "newCollection" []
 
             forM_ chs $ \ch -> do
                         nam <- newEntry $ elemName ch
@@ -81,9 +81,10 @@ handleInterface =
         actName <- newEntry "act"
         fgName <- newEntry "focusGroup"
         gen fg fgName
-        append $ actName >- " <- addToCollection "
-                   >- collectionName >- " " >- nam
-                   >- " " >- fgName
+        append $ bind actName "addToCollection" [ expr collectionName
+                                                , expr nam
+                                                , expr fgName
+                                                ]
 
         let vals = InterfaceValues { topLevelWidgetName = nam
                                    , switchActionName = actName
@@ -103,7 +104,7 @@ handleParams =
                 do
                   let Just paramId = getAttribute ch "name"
                       Just paramTyp = getAttribute ch "type"
-                  registerParam paramId paramTyp
+                  registerParam (mkName paramId) (parseType paramTyp)
 
 handleImport :: ElementHandler
 handleImport =
@@ -145,8 +146,8 @@ handleCheckBox =
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
-            append $ nam >- " <- newCheckbox " >- show label
-            return $ declareWidget nam (TyCon "CheckBox" [TyCon "Bool" []])
+            append $ bind nam "newCheckbox" [mkString label]
+            return $ declareWidget nam (mkTyp "CheckBox" [mkTyp "Bool" []])
 
 handleRef :: ElementHandler
 handleRef =
@@ -156,24 +157,21 @@ handleRef =
                          }
         where
           genSrc e nam = do
-            let Just target = getAttribute e "target"
+            let Just tgt = getAttribute e "target"
+                target = mkName tgt
             val <- lookupWidgetName target
 
             case val of
               Nothing -> do
                        result <- isValidParamName target
                        case result of
-                         False -> error $ "ref: target '" ++ target ++ "' invalid"
+                         False -> error $ "ref: target '" ++ tgt ++ "' invalid"
                          True -> do
                            typ <- getParamType target
-                           append $ hcat [ text "let "
-                                         , toDoc nam
-                                         , text " = "
-                                         , text target
-                                         ]
-                           return $ declareWidget nam $ mkTyCon typ
+                           append $ mkLet [(nam, expr target)]
+                           return $ declareWidget nam typ
               Just valName -> do
-                           append $ "let " >- nam >- " = " >- valName
+                           append $ mkLet [(nam, expr $ widgetName valName)]
                            typ <- getWidgetStateType $ widgetName valName
                            return $ declareWidget nam typ
 
@@ -218,21 +216,24 @@ handlePad =
                                 (name, getAttribute e name >>= getIntAttributeValue)
 
                 -- For set padding attributes, extract padding expressions
-                paddingExprs :: [String]
+                paddingExprs :: [Hs.Exp]
                 paddingExprs = catMaybes $ foreach padFunctions $ \(attrName, func) -> do
                                  val <- lookup attrName paddingValues
-                                 return $ func ++ " " ++ (show val)
+                                 realVal <- val -- since lookup is Maybe (Maybe Int)
+                                 return $ call func [mkInt realVal]
 
             when (null paddingExprs) $
                  error "'pad' element requires at least one padding attribute"
 
             -- Construct padding expression from values
-            let expr = intercalate " `pad` " paddingExprs
+            let ex = foldl (\e1 e2 -> opApp e1 "pad" e2)
+                     (head paddingExprs) (tail paddingExprs)
 
-            append $ nam >- " <- padded " >- (parens $ text expr)
-                       >- " " >- chNam
+            append $ bind nam "padded" [ parens ex
+                                       , expr chNam
+                                       ]
 
-            return $ declareWidget nam (TyCon "Padded" [chType])
+            return $ declareWidget nam (mkTyp "Padded" [chType])
 
 handleDirBrowser :: ElementHandler
 handleDirBrowser =
@@ -248,16 +249,18 @@ handleDirBrowser =
 
             browserName <- newEntry "browser"
             fgName <- newEntry "focusGroup"
-            append $ "(" >- browserName >- ", " >- fgName
-                       >- ") <- newDirBrowser " >- skin
+            bData <- newEntry "browserData"
+            append $ bind bData "newDirBrowser" [expr $ mkName skin]
 
-            append $ "let " >- nam >- " = dirBrowserWidget "
-                       >- browserName
+            append $ mkLet [ (nam, call "dirBrowserWidget" [expr browserName])
+                           , (browserName, call "fst" [expr bData])
+                           , (fgName, call "snd" [expr bData])
+                           ]
 
             mergeFocus nam fgName
 
-            return $ declareWidget nam (TyCon "DirBrowserWidgetType" [])
-                       `withField` (browserName, "DirBrowser")
+            return $ declareWidget nam (mkTyp "DirBrowserWidgetType" [])
+                       `withField` (browserName, parseType "DirBrowser")
 
 handleDialog :: ElementHandler
 handleDialog =
@@ -276,14 +279,19 @@ handleDialog =
             dlgName <- newEntry "dialog"
             fgName <- newEntry "focusGroup"
 
-            append $ parens (dlgName >- ", " >- fgName)
-                       >- " <- newDialog " >- chNam >- " " >- show title
-            append $ "let " >- nam >- " = dialogWidget " >- dlgName
+            dlgData <- newEntry "dialogData"
+            append $ bind dlgData "newDialog" [ expr chNam
+                                              , mkString title
+                                              ]
+            append $ mkLet [ (nam, call "dialogWidget" [expr dlgName])
+                           , (dlgName, call "fst" [expr dlgData])
+                           , (fgName, call "snd" [expr dlgData])
+                           ]
 
             mergeFocus nam fgName
 
-            return $ declareWidget nam (TyCon "Padded" [])
-                       `withField` (dlgName, "Dialog")
+            return $ declareWidget nam (mkTyp "Padded" [])
+                       `withField` (dlgName, parseType "Dialog")
 
 handleCentered :: ElementHandler
 handleCentered =
@@ -298,10 +306,10 @@ handleCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ nam >- " <- centered " >- chNam
+            append $ bind nam "centered" [expr chNam]
 
             chType <- getWidgetStateType chNam
-            return $ declareWidget nam (TyCon "Centered" [chType])
+            return $ declareWidget nam (mkTyp "Centered" [chType])
 
 handleHCentered :: ElementHandler
 handleHCentered =
@@ -316,10 +324,10 @@ handleHCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ nam >- " <- hCentered " >- chNam
+            append $ bind nam "hCentered" [expr chNam]
 
             chType <- getWidgetStateType chNam
-            return $ declareWidget nam (TyCon "HCentered" [chType])
+            return $ declareWidget nam (mkTyp "HCentered" [chType])
 
 handleVCentered :: ElementHandler
 handleVCentered =
@@ -334,10 +342,10 @@ handleVCentered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ nam >- " <- vCentered " >- chNam
+            append $ bind nam "vCentered" [expr chNam]
 
             chType <- getWidgetStateType chNam
-            return $ declareWidget nam (TyCon "VCentered" [chType])
+            return $ declareWidget nam (mkTyp "VCentered" [chType])
 
 handleVFill :: ElementHandler
 handleVFill =
@@ -355,9 +363,9 @@ handleVFill =
 
             when (null ch) $ error "Error: 'char' for 'vFill' must be non-empty"
 
-            append $ nam >- " <- vFill " >- (show $ head ch)
+            append $ bind nam "vFill" [mkChar $ head ch]
 
-            return $ declareWidget nam (TyCon "VFill" [])
+            return $ declareWidget nam (mkTyp "VFill" [])
 
 handleHFill :: ElementHandler
 handleHFill =
@@ -386,10 +394,11 @@ handleHFill =
                         Nothing -> error "Error: 'height' of 'hFill' must be an integer"
                         Just i -> return i
 
-            append $ nam >- " <- hFill " >- (show $ head ch)
-                       >- " " >- (show (height :: Int))
+            append $ bind nam "hFill" [ mkChar $ head ch
+                                      , mkInt height
+                                      ]
 
-            return $ declareWidget nam (TyCon "HFill" [])
+            return $ declareWidget nam (mkTyp "HFill" [])
 
 handleProgressBar :: ElementHandler
 handleProgressBar =
@@ -404,17 +413,18 @@ handleProgressBar =
 
             barName <- newEntry "progressBar"
 
-            append $ barName >- " <- newProgressBar " >- compColor
-                       >- " " >- incompColor
-            append $ "let " >- nam >- " = progressBarWidget " >- barName
+            append $ bind barName "newProgressBar" [ expr $ mkName compColor
+                                                   , expr $ mkName incompColor
+                                                   ]
+            append $ mkLet [(nam, call "progressBarWidget" [expr barName])]
 
             -- The state type is 'Padded' because buttons are
             -- implemented as composite widgets; see the 'Button' type
             -- in Graphics.Vty.Widgets.Button.
-            return $ declareWidget nam (TyCon "Box" [ TyCon "HFill" []
-                                                    , TyCon "HFill" []
+            return $ declareWidget nam (mkTyp "Box" [ mkTyp "HFill" []
+                                                    , mkTyp "HFill" []
                                                     ])
-                       `withField` (barName, "ProgressBar")
+                       `withField` (barName, parseType "ProgressBar")
 
 handleButton :: ElementHandler
 handleButton =
@@ -428,14 +438,14 @@ handleButton =
 
             buttonName <- newEntry "button"
 
-            append $ buttonName >- " <- newButton " >- show label
-            append $ "let " >- nam >- " = buttonWidget " >- buttonName
+            append $ bind buttonName "newButton" [mkString label]
+            append $ mkLet [(nam, call "buttonWidget" [expr buttonName])]
 
             -- The state type is 'Padded' because buttons are
             -- implemented as composite widgets; see the 'Button' type
             -- in Graphics.Vty.Widgets.Button.
-            return $ declareWidget nam (TyCon "Padded" [])
-                       `withField` (buttonName, "Button")
+            return $ declareWidget nam (mkTyp "Padded" [])
+                       `withField` (buttonName, parseType "Button")
 
 handleEdit :: ElementHandler
 handleEdit =
@@ -445,14 +455,15 @@ handleEdit =
                          }
         where
           genSrc e nam = do
-            append $ nam >- " <- editWidget"
+            append $ bind nam "editWidget" []
 
             case getAttribute e "contents" of
               Nothing -> return ()
-              Just s -> append $ "setEditText " >- nam >- " "
-                        >- show s
+              Just s -> append $ act $ call "setEditText" [ expr nam
+                                                          , mkString s
+                                                          ]
 
-            return $ declareWidget nam (TyCon "Edit" [])
+            return $ declareWidget nam (mkTyp "Edit" [])
 
 handleHBorder :: ElementHandler
 handleHBorder =
@@ -462,8 +473,8 @@ handleHBorder =
                          }
         where
           genSrc _ nam = do
-            append $ nam >- " <- hBorder"
-            return $ declareWidget nam (TyCon "HBorder" [])
+            append $ bind nam "hBorder" []
+            return $ declareWidget nam (mkTyp "HBorder" [])
 
 handleVBorder :: ElementHandler
 handleVBorder =
@@ -473,8 +484,8 @@ handleVBorder =
                          }
         where
           genSrc _ nam = do
-            append $ nam >- " <- vBorder"
-            return $ declareWidget nam (TyCon "VBorder" [])
+            append $ bind nam "vBorder" []
+            return $ declareWidget nam (mkTyp "VBorder" [])
 
 handleBordered :: ElementHandler
 handleBordered =
@@ -489,10 +500,10 @@ handleBordered =
             chNam <- newEntry $ elemName ch
             gen ch chNam
 
-            append $ nam >- " <- bordered " >- chNam
+            append $ bind nam "bordered" [expr chNam]
 
             chType <- getWidgetStateType chNam
-            return $ declareWidget nam (TyCon "Bordered" [chType])
+            return $ declareWidget nam (mkTyp "Bordered" [chType])
 
 handleVBox :: ElementHandler
 handleVBox =
@@ -513,21 +524,22 @@ handleVBox =
                 buildVBox [c] = return c
                 buildVBox (c1:c2:rest) = do
                            nextName <- newEntry "vBox"
-                           append $ nextName >- " <- vBox " >- c1
-                                      >- " " >- c2
+                           append $ bind nextName "vBox" [ expr c1
+                                                         , expr c2
+                                                         ]
 
                            c1Type <- getWidgetStateType c1
                            c2Type <- getWidgetStateType c2
 
                            registerWidgetName $ WidgetName { widgetName = nextName
-                                                           , widgetType = TyCon "Box" [c1Type, c2Type]
+                                                           , widgetType = mkTyp "Box" [c1Type, c2Type]
                                                            }
                            buildVBox (nextName:rest)
 
-            result <- buildVBox names
-            append $ "let " >- nam >- " = " >- result
+            resultName <- buildVBox names
+            append $ mkLet [(nam, expr resultName)]
 
-            ty <- getWidgetStateType result
+            ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
 handleHBox :: ElementHandler
@@ -545,25 +557,27 @@ handleHBox =
                            gen child chname
                            return chname
 
-            let buildHBox [] = error "BUG: hBox cannot be built from zero children"
+            let buildHBox :: [Hs.Name] -> GenM Hs.Name
+                buildHBox [] = error "BUG: hBox cannot be built from zero children"
                 buildHBox [c] = return c
                 buildHBox (c1:c2:rest) = do
                            nextName <- newEntry "hBox"
-                           append $ nextName >- " <- hBox " >- c1
-                                      >- " " >- c2
+                           append $ bind nextName "hBox" [ expr c1
+                                                         , expr c2
+                                                         ]
 
                            c1Type <- getWidgetStateType c1
                            c2Type <- getWidgetStateType c2
 
                            registerWidgetName $ WidgetName { widgetName = nextName
-                                                           , widgetType = TyCon "Box" [c1Type, c2Type]
+                                                           , widgetType = mkTyp "Box" [c1Type, c2Type]
                                                            }
                            buildHBox (nextName:rest)
 
-            result <- buildHBox names
-            append $ "let " >- nam >- " = " >- result
+            resultName <- buildHBox names
+            append $ mkLet [(nam, expr resultName)]
 
-            ty <- getWidgetStateType result
+            ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
 handleFormat :: ElementHandler
@@ -579,9 +593,10 @@ handleFormat =
 
             gen ch nam
             tempNam <- newEntry "formattedText"
-            append $ tempNam >- " <- getTextFormatter " >- nam
-            append $ "setTextFormatter " >- nam >- " "
-                       >- parens (tempNam >- " &.& " >- formatName)
+            append $ bind tempNam "getTextFormatter" [expr nam]
+            append $ act $ call "setTextFormatter" [ expr nam
+                                                   , parens (opApp (expr tempNam) "&.&" (expr $ mkName formatName))
+                                                   ]
 
 handleFormattedText :: ElementHandler
 handleFormattedText =
@@ -596,23 +611,28 @@ handleFormattedText =
             -- it is an Attr element, recurse on it, building another
             -- list of (string, attr) to merge.
 
-            let processContent expr c =
+            let processContent :: Hs.Exp -> Content t -> [(String, Hs.Exp)]
+                processContent ex c =
                     case c of
-                      CString _ cd _ -> [(cd, expr)]
-                      CElem (Elem (N "br") _ _) _ -> [("\n", expr)]
+                      CString _ cd _ -> [(cd, ex)]
+                      CElem (Elem (N "br") _ _) _ -> [("\n", ex)]
                       CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
-                      _ -> error "BUG: fText got unsupported content, should \
+                      _ -> error "BUG: fgot unsupported content, should \
                                  \have been disallowed by DTD"
 
+                defAttr = expr $ mkName "def_attr"
+
+                processAttr :: Element a -> [(String, Hs.Exp)]
                 processAttr attr@(Elem _ _ contents) =
                     let attrResult = ( getAttribute attr "fg"
                                      , getAttribute attr "bg"
                                      )
                         attrExpr = case attrsToExpr attrResult of
-                                     Nothing -> "def_attr"
-                                     Just expr -> expr
+                                     Nothing -> defAttr
+                                     Just ex -> ex
                     in concat $ map (processContent attrExpr) contents
 
+                collapse :: [(String, Hs.Exp)] -> [(String, Hs.Exp)]
                 collapse [] = []
                 collapse [e] = [e]
                 collapse ((s1, e1):(s2, e2):es) =
@@ -620,19 +640,22 @@ handleFormattedText =
                     then collapse ((s1 ++ s2, e1) : es)
                     else (s1, e1) : collapse ((s2, e2):es)
 
-                pairs = concat $ mapM (processContent "def_attr") eContents
+                pairs :: [(String, Hs.Exp)]
+                pairs = concat $ map (processContent defAttr) eContents
 
+                collapsed :: [(String, Hs.Exp)]
                 collapsed = collapse pairs
+
                 pairExprList = map pairExpr collapsed
-                pairExpr (s, expr) = parens $ (show s) >- ", " >- expr
+                pairExpr :: (String, Hs.Exp) -> Hs.Exp
+                pairExpr (s, ex) = mkTup [ mkString s
+                                         , ex
+                                         ]
 
-            append $ nam >- " <- plainText \"\""
-            append $ "setTextWithAttrs " >- nam >- " "
-                       >- vcat [ addCommas pairExprList "[ "
-                               , text "]"
-                               ]
+            append $ bind nam "plainText" [mkString ""]
+            append $ act $ call "setTextWithAttrs" [expr nam, mkList pairExprList]
 
-            return $ declareWidget nam (TyCon "FormattedText" [])
+            return $ declareWidget nam (mkTyp "FormattedText" [])
 
 handleFocusGroup :: ElementHandler
 handleFocusGroup =
@@ -642,7 +665,7 @@ handleFocusGroup =
                             }
         where
           genSrc e nam = do
-            append $ nam >- " <- newFocusGroup"
+            append $ bind nam "newFocusGroup" []
 
             -- For each child element of the focus group, resolve it
             -- to a named value and add the specified widget to the
@@ -655,7 +678,7 @@ handleFocusGroup =
                                      \DTD should have disallowed this"
                     Just entryName ->
                         do
-                          result <- lookupFocusValue entryName
+                          result <- lookupFocusValue (mkName entryName)
                           case result of
                             Nothing -> error $ "Focus group error: widget name "
                                        ++ show entryName
@@ -665,11 +688,15 @@ handleFocusGroup =
                                         m <- lookupFocusMethod $ widgetName wName
                                         case m of
                                           Just (Merge fgName) ->
-                                              append $ "appendFocusGroup " >- nam >- " " >- fgName
+                                              append $ act $ call "appendFocusGroup" [ expr nam
+                                                                                     , expr fgName
+                                                                                     ]
                                           -- Covers the Just Direct
                                           -- and Nothing cases
                                           -- (default is Direct so
                                           -- handlers don't have to
                                           -- register focus method
                                           -- unless it's Merge)
-                                          _ -> append $ "addToFocusGroup " >- nam >- " " >- wName
+                                          _ -> append $ act $ call "addToFocusGroup" [ expr nam
+                                                                                     , expr $ widgetName wName
+                                                                                     ]

@@ -1,6 +1,5 @@
 module Graphics.Vty.Widgets.Builder.GenLib
     ( gen
-    , generateTypes
     , elemChildren
     , getString
     , append
@@ -9,7 +8,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getIntAttributeValue
     , attrsToExpr
     , registerInterface
-    , addCommas
     , lookupFocusMethod
     , declareWidget
     , withField
@@ -22,7 +20,27 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , registerParam
     , isValidParamName
     , getParamType
-    , mkTyCon
+    , parseType
+    , nameStr
+
+    -- Helper functions for source generation
+    , call
+    , bind
+    , tBind
+    , noLoc
+    , act
+    , expr
+    , mkTyp
+    , mkList
+    , parens
+    , mkName
+    , mkString
+    , mkInt
+    , mkChar
+    , mkTup
+    , opApp
+    , mkLet
+    , mkImportDecl
     )
 where
 
@@ -33,11 +51,11 @@ import qualified Data.Map as Map
 import Text.XML.HaXml.Types
 import Text.XML.HaXml.Posn
 import Text.XML.HaXml.Combinators hiding (when)
-import Text.PrettyPrint.HughesPJ
 
 import Graphics.Vty.Widgets.Builder.Types
+import qualified Language.Haskell.Exts as Hs
 
-gen :: Element Posn -> String -> GenM ()
+gen :: Element Posn -> Hs.Name -> GenM ()
 gen e@(Elem (N n) _ _) nam = do
   hs <- gets handlers
   case lookup n hs of
@@ -66,21 +84,20 @@ gen e@(Elem (N n) _ _) nam = do
                       -- specified by the handler (which may not have
                       -- type Widget a), or fall back to the widget
                       -- value if no custom field value was specified.
-                      registerFieldValueName newName fieldValName
+                      registerFieldValueName (mkName newName) fieldValName
                       -- When setting up the widget value to be added
                       -- to the focus group for this widget, always
                       -- use the resultWidgetName name since it will
                       -- have the right type (Widget a) in the
                       -- generated source.
-                      setFocusValue newName $ resultWidgetName result
+                      setFocusValue (mkName newName) $ resultWidgetName result
 
           -- Use common attributes on the element to annotate it with
           -- widget-agnostic properties.
           annotateElement e nam
-          append $ text ""
 gen _ _ = error "Got unsupported element structure"
 
-lookupWidgetName :: String -> GenM (Maybe WidgetName)
+lookupWidgetName :: Hs.Name -> GenM (Maybe WidgetName)
 lookupWidgetName nam = lookup nam <$> allWidgetNames <$> get
 
 registerWidgetName :: WidgetName -> GenM ()
@@ -88,50 +105,29 @@ registerWidgetName wn =
     modify $ \st ->
         st { allWidgetNames = allWidgetNames st ++ [(widgetName wn, wn)] }
 
-registerFieldValueName :: String -> AnyName -> GenM ()
+registerFieldValueName :: Hs.Name -> AnyName -> GenM ()
 registerFieldValueName fName valName =
     modify $ \st ->
         st { registeredFieldNames = registeredFieldNames st ++ [(fName, valName)] }
 
-lookupFocusValue :: String -> GenM (Maybe WidgetName)
+lookupFocusValue :: Hs.Name -> GenM (Maybe WidgetName)
 lookupFocusValue s = lookup s <$> focusValues <$> get
 
--- Using the registered element names in the input document, generate
--- a type with fields for each of the named elements.
-generateTypes :: GenState -> Doc
-generateTypes st =
-    let header = [ text "data InterfaceElements = InterfaceElements {"
-                 ]
-        footer = [ text "}"
-                 ]
-        body = elem_lines ++ if_act_lines ++ if_fg_lines
-        elem_lines = (flip map) (registeredFieldNames st) $ \(fieldName, valName) ->
-                     let typeExpr = case valName of
-                                      WName wName -> toDoc $ TyCon "Widget" [widgetType wName]
-                                      VName vName -> text $ valueType vName
-                     in "elem_" >- fieldName >- " :: " >- typeExpr
-        if_act_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
-                       (text $ "switchTo_" ++ ifName ++ " :: IO ()")
-        if_fg_lines = (flip map) (interfaceNames st) $ \(ifName, _) ->
-                      (text $ "fg_" ++ ifName ++ " :: Widget FocusGroup")
-
-    in vcat (header ++ [nest 2 $ addCommas body "  "] ++ footer)
-
-mergeFocus :: String -> String -> GenM ()
+mergeFocus :: Hs.Name -> Hs.Name -> GenM ()
 mergeFocus wName fgName = do
   st <- get
   put $ st { focusMethods = (wName, Merge fgName) : focusMethods st }
 
-lookupFocusMethod :: String -> GenM (Maybe FocusMethod)
+lookupFocusMethod :: Hs.Name -> GenM (Maybe FocusMethod)
 lookupFocusMethod valName = do
   st <- get
   return $ lookup valName (focusMethods st)
 
-setFocusValue :: String -> WidgetName -> GenM ()
+setFocusValue :: Hs.Name -> WidgetName -> GenM ()
 setFocusValue s wName = do
   modify $ \st -> st { focusValues = (s, wName) : focusValues st }
 
-getWidgetStateType :: String -> GenM TyCon
+getWidgetStateType :: Hs.Name -> GenM Hs.Type
 getWidgetStateType nam = do
   vts <- gets allWidgetNames
   case lookup nam vts of
@@ -141,14 +137,14 @@ getWidgetStateType nam = do
                ++ " to register the type?"
     Just wName -> return $ widgetType wName
 
-isValidParamName :: String -> GenM Bool
+isValidParamName :: Hs.Name -> GenM Bool
 isValidParamName s = (isJust . lookup s) <$> gets paramNames
 
-getParamType :: String -> GenM String
+getParamType :: Hs.Name -> GenM Hs.Type
 getParamType s = do
   typ <- lookup s <$> gets paramNames
   case typ of
-    Nothing -> error $ "Invalid parameter name: " ++ s
+    Nothing -> error $ "Invalid parameter name: " ++ show s
     Just t -> return t
 
 getAttribute :: Element a -> String -> Maybe String
@@ -163,11 +159,14 @@ getIntAttributeValue s = do
     [] -> Nothing
     ((i,_):_) -> return i
 
-attrsToExpr :: (Maybe String, Maybe String) -> Maybe String
+attrsToExpr :: (Maybe String, Maybe String) -> Maybe Hs.Exp
 attrsToExpr (Nothing, Nothing) = Nothing
-attrsToExpr (Just fg, Nothing) = Just $ "fgColor " ++ fg
-attrsToExpr (Nothing, Just bg) = Just $ "bgColor " ++ bg
-attrsToExpr (Just fg, Just bg) = Just $ fg ++ " `on` " ++ bg
+attrsToExpr (Just fg, Nothing) = Just $ call "fgColor" [expr $ mkName fg]
+attrsToExpr (Nothing, Just bg) = Just $ call "bgColor" [expr $ mkName bg]
+attrsToExpr (Just fg, Just bg) = Just $ opApp
+                                 (expr $ mkName fg)
+                                 "on"
+                                 (expr $ mkName bg)
 
 registerInterface :: String -> InterfaceValues -> GenM ()
 registerInterface ifName vals = do
@@ -178,25 +177,98 @@ registerInterface ifName vals = do
   put $ st { interfaceNames = interfaceNames st ++ [(ifName, vals)]
            }
 
-annotateElement :: Element a -> String -> GenM ()
-annotateElement e nam = do
+nameStr :: Hs.Name -> String
+nameStr (Hs.Ident s) = s
+nameStr n = error $ "Unsupported name: " ++ (show n)
+
+noLoc :: Hs.SrcLoc
+noLoc = Hs.SrcLoc { Hs.srcFilename = "-"
+                  , Hs.srcLine = 0
+                  , Hs.srcColumn = 0
+                  }
+
+mkTyp :: String -> [Hs.Type] -> Hs.Type
+mkTyp tyCon [] = Hs.TyCon $ Hs.UnQual $ mkName tyCon
+mkTyp tyCon args = mkApp (Hs.TyCon (Hs.UnQual (mkName tyCon))) args
+    where
+      mkApp ty [] = ty
+      mkApp ty (ty':tys) = mkApp (Hs.TyApp ty ty') tys
+
+call :: String -> [Hs.Exp] -> Hs.Exp
+call func [] = Hs.Var $ Hs.UnQual $ mkName func
+call func args =
+    mkApp (Hs.Var $ Hs.UnQual $ mkName func) args
+        where
+          mkApp app [] = app
+          mkApp app (arg:rest) = mkApp (Hs.App app arg) rest
+
+bind :: Hs.Name -> String -> [Hs.Exp] -> Hs.Stmt
+bind lval func args =
+    Hs.Generator noLoc (Hs.PVar lval) $ call func args
+
+tBind :: [Hs.Name] -> String -> [Hs.Exp] -> Hs.Stmt
+tBind lvals func args =
+    Hs.Generator noLoc (Hs.PTuple (map Hs.PVar lvals)) $ call func args
+
+act :: Hs.Exp -> Hs.Stmt
+act = Hs.Qualifier
+
+expr :: Hs.Name -> Hs.Exp
+expr = Hs.Var . Hs.UnQual
+
+parens :: Hs.Exp -> Hs.Exp
+parens = Hs.Paren
+
+mkString :: String -> Hs.Exp
+mkString = Hs.Lit . Hs.String
+
+mkInt :: Int -> Hs.Exp
+mkInt = Hs.Lit . Hs.Int . toEnum
+
+mkChar :: Char -> Hs.Exp
+mkChar = Hs.Lit . Hs.Char
+
+mkTup :: [Hs.Exp] -> Hs.Exp
+mkTup = Hs.Tuple
+
+mkList :: [Hs.Exp] -> Hs.Exp
+mkList = Hs.List
+
+opApp :: Hs.Exp -> String -> Hs.Exp -> Hs.Exp
+opApp a op b = Hs.InfixApp a (Hs.QVarOp $ Hs.UnQual $ mkName op) b
+
+mkLet :: [(Hs.Name, Hs.Exp)] -> Hs.Stmt
+mkLet pairs = Hs.LetStmt $ Hs.BDecls $ map mkDecl pairs
+    where
+      mkDecl (nam, e) = Hs.PatBind
+                        noLoc
+                        (Hs.PVar nam)
+                        Nothing
+                        (Hs.UnGuardedRhs e)
+                        (Hs.BDecls [])
+
+annotateElement :: Element a -> Hs.Name -> GenM ()
+annotateElement elemt nam = do
   -- Normal attribute override
-  let normalResult = ( getAttribute e "normalFg"
-                     , getAttribute e "normalBg"
+  let normalResult = ( getAttribute elemt "normalFg"
+                     , getAttribute elemt "normalBg"
                      )
   case attrsToExpr normalResult of
     Nothing -> return ()
-    Just expr ->
-        append $ "setNormalAttribute " >- nam >- " $ " >- expr
+    Just e ->
+        append $ act $ call "setNormalAttribute" [expr nam, e]
 
   -- Focus attribute override
-  let focusResult = ( getAttribute e "focusFg"
-                    , getAttribute e "focusBg"
+  let focusResult = ( getAttribute elemt "focusFg"
+                    , getAttribute elemt "focusBg"
                     )
   case attrsToExpr focusResult of
     Nothing -> return ()
-    Just expr ->
-        append $ "setFocusAttribute " >- nam >- " $ " >- expr
+    Just e ->
+        append $ act $ call "setFocusAttribute" [expr nam, e]
+
+mkName :: String -> Hs.Name
+mkName = Hs.Ident
 
 elemChildren :: Element a -> [Element a]
 elemChildren (Elem _ _ cs) = map getElem contents
@@ -209,12 +281,11 @@ getString :: Content i -> String
 getString (CString _ s _) = s
 getString _ = error "Cannot get string from non-CString content"
 
-append :: Doc -> GenM ()
-append d = do
-  st <- get
-  put $ st { genDoc = (genDoc st) $$ d }
+append :: Hs.Stmt -> GenM ()
+append stmt =
+    modify $ \st -> st { hsStatements = hsStatements st ++ [stmt] }
 
-newEntry :: String -> GenM String
+newEntry :: String -> GenM Hs.Name
 newEntry n = do
   st <- get
 
@@ -225,14 +296,9 @@ newEntry n = do
   let newMap = Map.insert n (val + 1) (nameCounters st)
   put $ st { nameCounters = newMap }
 
-  return $ n ++ show val
+  return $ mkName $ n ++ show val
 
-addCommas :: [Doc] -> String -> Doc
-addCommas [] _ = text ""
-addCommas (l:ls) s =
-    text s <> l $$ (vcat $ map (text ", " <>) ls)
-
-declareWidget :: String -> TyCon -> WidgetHandlerResult
+declareWidget :: Hs.Name -> Hs.Type -> WidgetHandlerResult
 declareWidget nam tyCon =
     WidgetHandlerResult { resultWidgetName = WidgetName { widgetName = nam
                                                         , widgetType = tyCon
@@ -240,25 +306,35 @@ declareWidget nam tyCon =
                         , fieldValueName = Nothing
                         }
 
-withField :: WidgetHandlerResult -> (String, String) -> WidgetHandlerResult
+withField :: WidgetHandlerResult -> (Hs.Name, Hs.Type) -> WidgetHandlerResult
 withField mh (val, typ) =
     mh { fieldValueName = Just $ ValueName { valueName = val
                                            , valueType = typ
                                            }
        }
 
+mkImportDecl :: String -> [String] -> Hs.ImportDecl
+mkImportDecl name hidden =
+    Hs.ImportDecl { Hs.importLoc = noLoc
+                  , Hs.importModule = Hs.ModuleName name
+                  , Hs.importQualified = False
+                  , Hs.importSrc = False
+                  , Hs.importPkg = Nothing
+                  , Hs.importAs = Nothing
+                  , Hs.importSpecs = case hidden of
+                                       [] -> Nothing
+                                       is -> Just (True, map (Hs.IVar . mkName) is)
+                  }
+
 addImport :: String -> GenM ()
-addImport s = do
-  st <- get
-  put $ st { imports = imports st ++ [s] }
+addImport s = modify $ \st -> st { imports = imports st ++ [mkImportDecl s []] }
 
-registerParam :: String -> String -> GenM ()
-registerParam nam typ = do
-  st <- get
-  put $ st { paramNames = paramNames st ++ [(nam,typ)] }
+registerParam :: Hs.Name -> Hs.Type -> GenM ()
+registerParam nam typ =
+    modify $ \st -> st { paramNames = paramNames st ++ [(nam, typ)] }
 
-mkTyCon :: String -> TyCon
-mkTyCon s =
-    if ' ' `elem` s
-    then TyCon (takeWhile (/= ' ') s) [TyCon (tail $ dropWhile (/= ' ') s) []]
-    else TyCon s []
+parseType :: String -> Hs.Type
+parseType s =
+    case Hs.parse s of
+      Hs.ParseOk val -> val
+      Hs.ParseFailed _ msg -> error $ "Error parsing type string '" ++ s ++ "': " ++ msg
