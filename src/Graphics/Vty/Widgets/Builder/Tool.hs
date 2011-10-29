@@ -40,11 +40,9 @@ options = [ Option "h" ["help"] (NoArg Help) "This help output"
                        ("The name of the generated module (default: "
                         ++ (show $ moduleName defaultConfig) ++ ")")
 
-          , Option "p" ["no-preamble"] (NoArg (GeneratePreamble False))
-                       "Do not generate a module preamble"
-
-          , Option "i" ["no-imports"] (NoArg (GenerateImports False))
-                       "Do not generate vty-ui library imports"
+          , Option "d" ["no-module-decl"] (NoArg (GeneratePreamble False))
+                       ("Do not generate a module declaration or imports (only\n"
+                        ++ "generate the module body)")
 
           , Option "t" ["no-type"] (NoArg (GenerateInterfaceType False))
                        ("Do not generate the interface type used to return\n"
@@ -55,7 +53,7 @@ options = [ Option "h" ["help"] (NoArg Help) "This help output"
 
           , Option "m" ["main"] (NoArg (GenerateMain True))
                        ("Generate a \"main\" function for testing (implies "
-                        ++ "-n \"Main\")")
+                        ++ "-n \"Main\" and implicit exports)")
 
           , Option "o" ["output"] (ReqArg OutputFilename "FILENAME")
                        "The output filename (default: standard output)"

@@ -23,6 +23,10 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , parseType
     , nameStr
 
+    -- Common names
+    , collectionName
+    , uiElementsName
+
     -- Helper functions for source generation
     , call
     , bind
@@ -338,3 +342,9 @@ parseType s =
     case Hs.parse s of
       Hs.ParseOk val -> val
       Hs.ParseFailed _ msg -> error $ "Error parsing type string '" ++ s ++ "': " ++ msg
+
+collectionName :: Hs.Name
+collectionName = mkName "c"
+
+uiElementsName :: Hs.Name
+uiElementsName = mkName "elems"

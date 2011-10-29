@@ -46,9 +46,6 @@ elementHandlers =
     , handleFocusGroup
     ]
 
-collectionName :: Hs.Name
-collectionName = mkName "c"
-
 handleCollection :: ElementHandler
 handleCollection =
     StructureElementHandler { generateStructureSource = genSrc

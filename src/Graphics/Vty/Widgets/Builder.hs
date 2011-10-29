@@ -61,8 +61,13 @@ generateSourceForDocument config (Validated e) theHandlers = do
             , "but parameters are required to construct the interface. "
             , "Turn off 'main' generation to generate the interface source."
             ]
-    False -> return $ Right $ Hs.prettyPrintStyleMode style mode $
-             generateModule config finalState
+    False -> do
+      let moduleBody = generateModuleBody config finalState
+          result = case generateModulePreamble config of
+                     True -> Hs.prettyPrintStyleMode style mode $
+                             generateModule config finalState moduleBody
+                     False -> concat $ map (Hs.prettyPrintStyleMode style mode) moduleBody
+      return $ Right result
 
 validateAgainstDTD :: Handle
                    -> FilePath
@@ -89,8 +94,8 @@ validateAgainstDTD inputXmlHandle inputXmlPath elemInfo = do
                es -> return $ Left es
            es -> return $ Left es
 
-generateModule :: BuilderConfig -> GenState -> Hs.Module
-generateModule config st =
+generateModule :: BuilderConfig -> GenState -> [Hs.Decl] -> Hs.Module
+generateModule config st moduleBody =
     let modName = if generateMain config
                   then "Main"
                   else moduleName config
@@ -113,9 +118,13 @@ generateModule config st =
                      , mkImportDecl "Graphics.Vty.Widgets.All" []
                      ] ++ imports st
 
-        main = mkMain $ concat [ [tBind [mkName "c", mkName "values"] "buildCollection" []]
+    in Hs.Module noLoc (Hs.ModuleName modName) [] Nothing theExports theImports moduleBody
+
+generateModuleBody :: BuilderConfig -> GenState -> [Hs.Decl]
+generateModuleBody config st =
+    let main = mkMain $ concat [ [tBind [collectionName, mkName "values"] "buildCollection" []]
                                , mkKeyHandlers st
-                               , [act $ call "runUi" [expr $ mkName "c", expr $ mkName "defaultContext"]]
+                               , [act $ call "runUi" [expr collectionName, expr $ mkName "defaultContext"]]
                                ]
 
         moduleBody = concat [ if generateInterfaceType config then [mkInterfaceType st] else []
@@ -123,7 +132,7 @@ generateModule config st =
                             , if generateMain config then main else []
                             ]
 
-    in Hs.Module noLoc (Hs.ModuleName modName) [] Nothing theExports theImports moduleBody
+    in moduleBody
 
 -- Using the registered element names in the input document, generate
 -- a type with fields for each of the named elements.
@@ -163,8 +172,8 @@ mkBuilderFunction st =
        , Hs.FunBind [ Hs.Match noLoc (Hs.Ident "buildCollection") theParamNames Nothing
                                    (Hs.UnGuardedRhs (Hs.Do $ hsStatements st
                                                                  ++ [ mkElementsValue st
-                                                                    , act $ call "return" [ mkTup [ expr $ mkName "c"
-                                                                                                  , expr $ mkName "elems"
+                                                                    , act $ call "return" [ mkTup [ expr collectionName
+                                                                                                  , expr uiElementsName
                                                                                                   ]
                                                                                           ]
                                                                     ]
@@ -242,4 +251,4 @@ mkElementsValue st =
         elemsValue :: Hs.Exp
         elemsValue = Hs.RecConstr (Hs.UnQual $ mkName "InterfaceElements")
                      fields
-    in mkLet [(mkName "elems", elemsValue)]
+    in mkLet [(uiElementsName, elemsValue)]
