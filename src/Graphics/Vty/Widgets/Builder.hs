@@ -233,7 +233,11 @@ mkElementsValue st =
                                 ]
 
         fields :: [Hs.FieldUpdate]
-        fields = map (\(nam, val) -> Hs.FieldUpdate (Hs.UnQual $ mkName nam) $ Hs.Var (Hs.UnQual val)) allFieldValues
+        fields = map mkFieldUpdate allFieldValues
+
+        mkFieldUpdate :: (String, Hs.Name) -> Hs.FieldUpdate
+        mkFieldUpdate (nam, val) = Hs.FieldUpdate (Hs.UnQual $ mkName nam) $
+                                   Hs.Var (Hs.UnQual val)
 
         elemsValue :: Hs.Exp
         elemsValue = Hs.RecConstr (Hs.UnQual $ mkName "InterfaceElements")
