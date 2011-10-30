@@ -48,6 +48,8 @@ The generated 'main' will:
    - 'p' to switch to the previous interface in the sequence
      (depending on the interface ordering in the XML)
 
+ * Run the vty-ui event loop with the interface collection
+
 Extending vty-ui-builder
 ------------------------
 
