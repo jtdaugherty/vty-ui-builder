@@ -409,12 +409,22 @@ handleProgressBar :: ElementHandler
 handleProgressBar =
     WidgetElementHandler { generateWidgetSource = genSrc
                          , elementName = "progressBar"
-                         , validator = Nothing
+                         , validator = Just doValidate
                          }
         where
+          doValidate e = do
+            let prog = getAttribute e "progress"
+
+            case prog of
+              Nothing -> return ()
+              Just val -> case getIntAttributeValue val of
+                            Nothing -> putError e "'progress' attribute must be an integer"
+                            Just _ -> return ()
+
           genSrc e nam = do
             let Just compColor = getAttribute e "completeColor"
                 Just incompColor = getAttribute e "incompleteColor"
+                prog = getAttribute e "progress"
 
             barName <- newEntry "progressBar"
 
@@ -422,6 +432,12 @@ handleProgressBar =
                                                    , expr $ mkName incompColor
                                                    ]
             append $ mkLet [(nam, call "progressBarWidget" [expr barName])]
+
+            case prog of
+              Nothing -> return ()
+              Just val -> do
+                           let Just p = getIntAttributeValue val
+                           append $ act $ call "setProgress" [expr barName, mkInt p]
 
             -- The state type is 'Padded' because buttons are
             -- implemented as composite widgets; see the 'Button' type
