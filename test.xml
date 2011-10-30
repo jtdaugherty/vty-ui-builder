@@ -81,18 +81,14 @@
       <fText><attr fg="green">dialog</attr> demo</fText>
       <hBorder/>
       <dialog id="dlg1" title="Testing Dialog">
-        <vBox>
-          <format name="wrap">
-            <fText>This is the content of the dialog.  The dialog can
-            have arbitrary content widgets -- even interactive widgets
-            -- like this edit edit widget:</fText>
-          </format>
-          <edit id="dlgEdit1"/>
-        </vBox>
+        <format name="wrap">
+          <fText>This is the content of the dialog.  The dialog can
+          have arbitrary content widgets (even interactive
+          widgets).</fText>
+        </format>
       </dialog>
     </vBox>
     <focusGroup>
-      <entry name="dlgEdit1"/>
       <entry name="dlg1"/>
     </focusGroup>
   </interface>
@@ -115,6 +111,23 @@
   </interface>
 
   <!-- edit.dtd -->
+  <interface name="edit">
+    <vBox id="edit">
+      <fText><attr fg="green">edit</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>Below is an edit widget.  Edit widgets support
+        relatively standard Emacs-style line-editing
+        keystrokes.</fText>
+      </format>
+      <bordered>
+        <edit id="e1"/>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="e1"/>
+    </focusGroup>
+  </interface>
 
   <!-- fText.dtd -->
   <interface name="fText">
