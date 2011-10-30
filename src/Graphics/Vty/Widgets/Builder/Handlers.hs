@@ -736,9 +736,7 @@ handleFormattedText =
                                              else c1 : (stripWhitespace (c2:cs))
                 stripWhitespace ls = ls
 
-            append $ bind nam "plainText" [mkString ""]
-            append $ act $ call "setTextWithAttrs" [expr nam, mkList pairExprList]
-
+            append $ bind nam "plainTextWithAttrs" [mkList pairExprList]
             return $ declareWidget nam (mkTyp "FormattedText" [])
 
 handleFocusGroup :: ElementHandler
