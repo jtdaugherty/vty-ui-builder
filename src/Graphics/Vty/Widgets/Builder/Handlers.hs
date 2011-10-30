@@ -7,6 +7,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Maybe
 import Text.XML.HaXml.Types
+import Text.XML.HaXml.Posn
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -511,33 +512,37 @@ handleVBox =
         where
           genSrc e nam = do
             -- DTD: >= 2 children
-            names <- forM (elemChildren e) $
-                     \child -> do
-                           chname <- newEntry $ elemName child
-                           gen child chname
-                           return chname
-
-            let buildVBox [] = error "BUG: vBox cannot be built from zero children"
-                buildVBox [c] = return c
-                buildVBox (c1:c2:rest) = do
-                           nextName <- newEntry "vBox"
-                           append $ bind nextName "vBox" [ expr c1
-                                                         , expr c2
-                                                         ]
-
-                           c1Type <- getWidgetStateType c1
-                           c2Type <- getWidgetStateType c2
-
-                           registerWidgetName $ WidgetName { widgetName = nextName
-                                                           , widgetType = mkTyp "Box" [c1Type, c2Type]
-                                                           }
-                           buildVBox (nextName:rest)
-
-            resultName <- buildVBox names
-            append $ mkLet [(nam, expr resultName)]
-
+            resultName <- genBox (elemChildren e) "vBox" nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
+
+genBox :: [Element Posn] -> String -> Hs.Name -> GenM Hs.Name
+genBox es typ rootName = do
+  names <- forM es $
+           \child -> do
+              chname <- newEntry $ elemName child
+              gen child chname
+              return chname
+
+  let buildBox [] = error "BUG: box cannot be built from zero children"
+      buildBox [c] = return c
+      buildBox (c1:c2:rest) = do
+              nextName <- newEntry typ
+              append $ bind nextName typ [ expr c1
+                                         , expr c2
+                                         ]
+
+              c1Type <- getWidgetStateType c1
+              c2Type <- getWidgetStateType c2
+
+              registerWidgetName $ WidgetName { widgetName = nextName
+                                              , widgetType = mkTyp "Box" [c1Type, c2Type]
+                                              }
+              buildBox (nextName:rest)
+
+  resultName <- buildBox names
+  append $ mkLet [(rootName, expr resultName)]
+  return resultName
 
 handleHBox :: ElementHandler
 handleHBox =
