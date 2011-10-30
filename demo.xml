@@ -94,6 +94,9 @@
     <vBox>
       <fText><attr fg="green">checkBox</attr> demo</fText>
       <hBorder/>
+      <format name="wrap">
+        <fText>Checkboxes can be toggled by pressing the spacebar.</fText>
+      </format>
       <checkBox id="cb1" label="Breakfast"/>
       <checkBox id="cb2" label="Lunch"/>
       <checkBox id="cb3" label="Dinner"/>
