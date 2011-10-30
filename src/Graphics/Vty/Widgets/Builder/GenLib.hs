@@ -25,6 +25,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , nameStr
     , getFieldValueName
     , getElementStringContent
+    , registerFieldValueName
 
     -- Common names
     , collectionName

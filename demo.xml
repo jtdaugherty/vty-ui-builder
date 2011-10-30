@@ -100,11 +100,22 @@
       <checkBox id="cb1" label="Breakfast"/>
       <checkBox id="cb2" label="Lunch"/>
       <checkBox id="cb3" label="Dinner"/>
+      <format name="wrap">
+        <fText>
+          Checkboxes can also be used as radio buttons by setting a
+          <attr fg="magenta">radioGroup</attr> XML attribute to the
+          name of a desired radio button group.
+        </fText>
+      </format>
+      <checkBox id="cb4" label="Cake" radioGroup="rg1" />
+      <checkBox id="cb5" label="Death" radioGroup="rg1" />
     </vBox>
     <focusGroup>
       <entry name="cb1"/>
       <entry name="cb2"/>
       <entry name="cb3"/>
+      <entry name="cb4"/>
+      <entry name="cb5"/>
     </focusGroup>
   </interface>
 

@@ -161,7 +161,30 @@ handleCheckBox =
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
+                rg = getAttribute e "radioGroup"
+
             append $ bind nam "newCheckbox" [mkString label]
+
+            case rg of
+              Nothing -> return ()
+              Just rgName -> do
+                           -- Ensure that we have a radio group by
+                           -- this name.
+                           fieldValName <- getFieldValueName $ mkName rgName
+                           rgValName <- case fieldValName of
+                                          Nothing -> do
+                                            rgValName <- newEntry "radioGroup"
+                                            append $ bind rgValName "newRadioGroup" []
+                                            registerFieldValueName (mkName rgName)
+                                                                       (VName $ ValueName rgValName $ parseType "RadioGroup")
+                                            return rgValName
+                                          Just (VName rgv) -> return $ valueName rgv
+                                          Just (WName _) -> error "BUG: radio group field value is a widget value!"
+
+                           -- Generate a statement to add the checkbox
+                           -- to the radio group.
+                           append $ act $ call "addToRadioGroup" [expr rgValName, expr nam]
+
             return $ declareWidget nam (mkTyp "CheckBox" [mkTyp "Bool" []])
 
 handleStringList :: ElementHandler

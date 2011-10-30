@@ -1,4 +1,5 @@
 <!ELEMENT checkBox EMPTY>
 <!ATTLIST checkBox
           label CDATA #REQUIRED
+          radioGroup CDATA #IMPLIED
 >
