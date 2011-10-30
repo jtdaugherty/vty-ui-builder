@@ -2,7 +2,39 @@
 <collection>
 
   <!-- bordered.dtd -->
+  <interface name="bordered">
+    <vBox id="bordered">
+      <fText><attr fg="green">bordered</attr> demo</fText>
+      <hBorder/>
+      <bordered>
+        <fText>This text has an ASCII art border around it.</fText>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="bordered"/>
+    </focusGroup>
+  </interface>
+
   <!-- button.dtd -->
+  <interface name="button">
+    <vBox id="button">
+      <fText><attr fg="green">button</attr> demo</fText>
+      <hBorder/>
+      <fText>Press <attr fg="yellow">TAB</attr> to switch focus from
+      one button to the next.</fText>
+      <hBox>
+        <button id="b1" label="Button 1"/>
+        <button id="b2" label="Button 2"/>
+        <button id="b3" label="Button 3"/>
+      </hBox>
+    </vBox>
+    <focusGroup>
+      <entry name="b1"/>
+      <entry name="b2"/>
+      <entry name="b3"/>
+    </focusGroup>
+  </interface>
+
   <!-- centered.dtd -->
   <!-- checkBox.dtd -->
   <!-- collection.dtd -->
@@ -13,7 +45,7 @@
   <!-- fText.dtd -->
   <interface name="fText">
     <vBox id="w1">
-      <fText>fText demo</fText>
+      <fText><attr fg="green">fText</attr> demo</fText>
       <hBorder/>
 
       <vBox>
