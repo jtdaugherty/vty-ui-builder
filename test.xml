@@ -42,16 +42,19 @@
       <hBorder/>
       <hBox>
         <hCentered>
-          <fText>This text is horizontally centered.</fText>
+          <fText>This text is horizontally centered <br/>using the <attr
+          fg="green">hCentered</attr> tag.</fText>
         </hCentered>
         <vBorder/>
         <vCentered>
-          <fText>This text is vertically centered.</fText>
+          <fText>This text is vertically centered <br/>using the <attr
+          fg="green">vCentered</attr> tag.</fText>
         </vCentered>
       </hBox>
       <hBorder/>
       <centered>
-        <fText>This text is both vertically and horizontally centered.</fText>
+        <fText>This text is both vertically and horizontally centered
+        using the <attr fg="green">centered</attr> tag.</fText>
       </centered>
     </vBox>
     <focusGroup>
@@ -156,24 +159,17 @@
     </focusGroup>
   </interface>
 
-  <!-- focusGroup.dtd -->
-  <!-- format.dtd -->
   <!-- hBorder.dtd -->
   <!-- hBox-sized.dtd -->
   <!-- hBox.dtd -->
-  <!-- hCentered.dtd -->
   <!-- hFill.dtd -->
-  <!-- import.dtd -->
-  <!-- interface.dtd -->
   <!-- pad.dtd -->
-  <!-- params.dtd -->
   <!-- progressBar.dtd -->
   <!-- ref.dtd -->
   <!-- shared.dtd -->
   <!-- vBorder.dtd -->
   <!-- vBox-sized.dtd -->
   <!-- vBox.dtd -->
-  <!-- vCentered.dtd -->
   <!-- vFill.dtd -->
 
 </collection>
