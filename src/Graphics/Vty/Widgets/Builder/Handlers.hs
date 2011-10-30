@@ -313,7 +313,7 @@ handleCentered =
             append $ bind nam "centered" [expr chNam]
 
             chType <- getWidgetStateType chNam
-            return $ declareWidget nam (mkTyp "Centered" [chType])
+            return $ declareWidget nam (parseType $ "VCentered (HCentered (" ++ Hs.prettyPrint chType ++ "))")
 
 handleHCentered :: ElementHandler
 handleHCentered =
