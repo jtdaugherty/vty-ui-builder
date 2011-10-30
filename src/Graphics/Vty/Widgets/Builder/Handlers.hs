@@ -294,7 +294,7 @@ handleDialog =
 
             mergeFocus nam fgName
 
-            return $ declareWidget nam (mkTyp "Padded" [])
+            return $ declareWidget nam (parseType "Bordered Padded")
                        `withField` (dlgName, parseType "Dialog")
 
 handleCentered :: ElementHandler
