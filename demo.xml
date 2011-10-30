@@ -244,8 +244,8 @@
   <!-- hFill.dtd -->
   <!-- vFill.dtd -->
   <interface name="fills">
-    <vBox id="fills">
-      <fText><attr fg="green">hFill</attr> / <attr fg="green">vFill</attr> demo</fText>
+    <vBox>
+      <fText id="ft1"><attr fg="green">hFill</attr> / <attr fg="green">vFill</attr> demo</fText>
       <hBorder/>
       <bordered>
         <hBox>
@@ -261,7 +261,7 @@
       </bordered>
     </vBox>
     <focusGroup>
-      <entry name="fills"/>
+      <entry name="ft1"/>
     </focusGroup>
   </interface>
 
@@ -271,7 +271,7 @@
       <fText><attr fg="green">pad</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
-        <fText>
+        <fText id="padt1">
           Padding elements can specify one or more padding attributes
           to pad a child widget.  Multiple padding attribute values
           will be combined.
@@ -320,7 +320,7 @@
       </hBox>
     </vBox>
     <focusGroup>
-      <entry name="fills"/>
+      <entry name="padt1"/>
     </focusGroup>
   </interface>
 
