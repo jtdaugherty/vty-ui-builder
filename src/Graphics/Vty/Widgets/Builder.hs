@@ -191,6 +191,11 @@ mkKeyHandlers st =
                                                                    else i + 1
                            lastIf = (length $ interfaceNames st) - 1
 
+                           prevIfName = fst $ interfaceNames st !! if i == firstIf
+                                                                   then lastIf
+                                                                   else i - 1
+                           firstIf = 0
+
                        in act $ opApp (Hs.Var $ Hs.UnQual $ mkName $ "(fg_" ++ nam ++ " values)")
                               (mkName "onKeyPressed")
                               $ Hs.Lambda noLoc [Hs.PWildCard, Hs.PVar $ mkName "k", Hs.PWildCard] $
@@ -202,6 +207,11 @@ mkKeyHandlers st =
                                                    (Hs.BDecls [])
                                       , Hs.Alt noLoc (Hs.PApp (Hs.UnQual $ mkName "KASCII") [Hs.PLit $ Hs.Char 'n'])
                                                    (Hs.UnGuardedAlt $ Hs.Do [ act $ call ("switchTo_" ++ nextIfName) [expr $ mkName "values"]
+                                                                            , act $ call "return" [Hs.Con $ Hs.UnQual $ mkName "True"]
+                                                                            ])
+                                                   (Hs.BDecls [])
+                                      , Hs.Alt noLoc (Hs.PApp (Hs.UnQual $ mkName "KASCII") [Hs.PLit $ Hs.Char 'p'])
+                                                   (Hs.UnGuardedAlt $ Hs.Do [ act $ call ("switchTo_" ++ prevIfName) [expr $ mkName "values"]
                                                                             , act $ call "return" [Hs.Con $ Hs.UnQual $ mkName "True"]
                                                                             ])
                                                    (Hs.BDecls [])

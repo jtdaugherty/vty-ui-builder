@@ -17,7 +17,8 @@
           handlers for each interface to allow you to evaluate each
           one as you are building your XML document.<br/><br/>Press
           the <attr fg="magenta">'n'</attr> key whenever you want to
-          change to the next demonstration interface.
+          change to the next demonstration interface (or <attr
+          fg="magenta">'p'</attr> to go to the previous one).
         </fText>
       </format>
     </vBox>

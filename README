@@ -45,6 +45,8 @@ The generated 'main' will:
    - 'Esc' to application exit
    - 'n' to switch to the next interface in the sequence (depending on
      the interface ordering in the XML)
+   - 'p' to switch to the previous interface in the sequence
+     (depending on the interface ordering in the XML)
 
 Extending vty-ui-builder
 ------------------------
