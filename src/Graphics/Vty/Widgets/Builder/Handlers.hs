@@ -85,6 +85,10 @@ handleInterface =
                          _ -> error "BUG: invalid interface children"
             Just ifName = getAttribute e "name"
 
+        if' <- lookupInterface ifName
+        when (isJust if') $
+             error $ "Interface '" ++ ifName ++ "' defined more than once"
+
         gen ch nam
 
         actName <- newEntry "act"

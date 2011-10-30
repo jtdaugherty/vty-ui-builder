@@ -8,6 +8,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getIntAttributeValue
     , attrsToExpr
     , registerInterface
+    , lookupInterface
     , lookupFocusMethod
     , declareWidget
     , withField
@@ -177,6 +178,9 @@ attrsToExpr (Just fg, Just bg) = Just $ opApp
                                  (expr $ mkName fg)
                                  (mkName "on")
                                  (expr $ mkName bg)
+
+lookupInterface :: String -> GenM (Maybe InterfaceValues)
+lookupInterface ifName = lookup ifName <$> interfaceNames <$> get
 
 registerInterface :: String -> InterfaceValues -> GenM ()
 registerInterface ifName vals = do
