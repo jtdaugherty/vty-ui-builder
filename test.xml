@@ -36,6 +36,29 @@
   </interface>
 
   <!-- centered.dtd -->
+  <interface name="centered">
+    <vBox id="centered">
+      <fText><attr fg="green">centered</attr> demo</fText>
+      <hBorder/>
+      <hBox>
+        <hCentered>
+          <fText>This text is horizontally centered.</fText>
+        </hCentered>
+        <vBorder/>
+        <vCentered>
+          <fText>This text is vertically centered.</fText>
+        </vCentered>
+      </hBox>
+      <hBorder/>
+      <centered>
+        <fText>This text is both vertically and horizontally centered.</fText>
+      </centered>
+    </vBox>
+    <focusGroup>
+      <entry name="bordered"/>
+    </focusGroup>
+  </interface>
+
   <!-- checkBox.dtd -->
   <!-- collection.dtd -->
   <!-- dialog.dtd -->
