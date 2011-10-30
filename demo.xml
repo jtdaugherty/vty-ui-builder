@@ -250,6 +250,51 @@
 
   <!-- vBox-sized.dtd -->
   <!-- vBox.dtd -->
+  <interface name="vbox">
+    <vBox id="vbox">
+      <fText><attr fg="green">vBox</attr> / <attr fg="green">vBox-sized</attr> demo</fText>
+      <hBorder/>
+      <bordered>
+        <vBox>
+          <format name="wrap">
+            <fText>
+              vBox elements can contain two or more elements.
+            </fText>
+          </format>
+          <bordered>
+            <format name="wrap">
+              <fText>
+                They will be laid out vertically.
+              </fText>
+            </format>
+          </bordered>
+        </vBox>
+      </bordered>
+      <format name="wrap">
+        <fText>
+          The <attr fg="green">vBox-sized</attr> tag is used to exert
+          control over the size policy of box children.  This tag
+          supports only two children.  Try resizing your terminal to
+          see how these boxes behave.
+        </fText>
+      </format>
+      <bordered>
+        <vBox-sized first="3" second="7">
+          <fText>3 rows</fText>
+          <fText>7 rows</fText>
+        </vBox-sized>
+      </bordered>
+      <bordered>
+        <vBox-sized percent="25">
+          <fText>25%</fText>
+          <fText>75%</fText>
+        </vBox-sized>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="vbox"/>
+    </focusGroup>
+  </interface>
 
   <!-- vFill.dtd -->
 
