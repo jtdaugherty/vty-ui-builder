@@ -70,3 +70,7 @@ Add support for:
 
 - Add support for typical entity references like &gt;, &lt;, and
   &nbsp; in any text string in the input document
+
+- Add validation test for duplicate interface names
+
+- Trailing newlines in fTexts don't appear to be working.
