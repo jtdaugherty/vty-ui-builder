@@ -27,9 +27,6 @@ Add support for:
   not in the interface corresponding to a focus group (unless they are
   refs in 'common', in which case that is okay!)
 
-- figure out how to resolve whitespace handling in fText and attr
-  elements so it is clear what the semantics will be
-
 - figure out why DTD validation isn't catching some of the attribute
   mistakes I've seen (#REQUIRED attributes are missing and the
   validator does not complain).  HaXml bug?
@@ -40,22 +37,23 @@ Add support for:
   attributes, since it's the auto-generated one (all #IMPLIED).
   Whoops!
 
-- support setting render context information: skin, default attributes
+  Waiting on maintainer to release the fix.
 
 - improve error reporting and reduce number of pathological error
   cases by performing up-front validation and by using more types (too
   many 'error' calls)
 
-- Use Posn values in error reporting
+  - Use exceptions instead of 'error' in error reporting, handle
+    exceptions in higher-level routines
 
-- Use exceptions instead of 'error' in error reporting, handle
-  exceptions in higher-level routines
+- Use Posn values in error reporting
 
 - Add support for customizing:
   - the name of the collection builder function
   - name of the interface elements data type
 
-- Do validation on names ([a-z0-9']+) in mkName
+- Do validation on names ([a-z0-9']+) in mkName (e.g., names with '-'
+  in them will cause compilation failures in the generated source)
 
 - Set an XML namespace in the XML files and require it in the parser.
   Think about how other users of the tool will need to deal with their
