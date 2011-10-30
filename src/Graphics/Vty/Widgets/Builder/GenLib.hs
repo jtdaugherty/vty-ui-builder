@@ -22,6 +22,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getParamType
     , parseType
     , nameStr
+    , getFieldValueName
 
     -- Common names
     , collectionName
@@ -115,6 +116,9 @@ registerFieldValueName :: Hs.Name -> AnyName -> GenM ()
 registerFieldValueName fName valName =
     modify $ \st ->
         st { registeredFieldNames = registeredFieldNames st ++ [(fName, valName)] }
+
+getFieldValueName :: Hs.Name -> GenM (Maybe AnyName)
+getFieldValueName fName = lookup fName <$> registeredFieldNames <$> get
 
 lookupFocusValue :: Hs.Name -> GenM (Maybe WidgetName)
 lookupFocusValue s = lookup s <$> focusValues <$> get

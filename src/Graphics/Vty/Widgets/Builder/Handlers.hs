@@ -163,7 +163,7 @@ handleRef =
           genSrc e nam = do
             let Just tgt = getAttribute e "target"
                 target = mkName tgt
-            val <- lookupWidgetName target
+            val <- getFieldValueName target
 
             case val of
               Nothing -> do
@@ -174,10 +174,12 @@ handleRef =
                            typ <- getParamType target
                            append $ mkLet [(nam, expr target)]
                            return $ declareWidget nam typ
-              Just valName -> do
+              Just (WName valName) -> do
                            append $ mkLet [(nam, expr $ widgetName valName)]
                            typ <- getWidgetStateType $ widgetName valName
                            return $ declareWidget nam typ
+              Just (VName _) -> error $ "ref: target '" ++ tgt
+                                ++ "' references non-widget type"
 
 handlePad :: ElementHandler
 handlePad =
