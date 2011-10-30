@@ -81,3 +81,6 @@ Add support for:
 
 - Make vty-ui-builder able to tell the user which version of vty-ui it
   generates code for (look at cabal file?)
+
+- vBox/hBox-sized: coherence checks on size declarations of child
+  elements (mixtures of percentages, fixed values, auto, etc.)
