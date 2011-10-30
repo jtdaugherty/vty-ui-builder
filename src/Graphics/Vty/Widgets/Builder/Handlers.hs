@@ -664,7 +664,7 @@ handleFormattedText =
             let processContent :: Hs.Exp -> Content t -> [(String, Hs.Exp)]
                 processContent ex c =
                     case c of
-                      CString _ cd _ -> [(cd, ex)]
+                      CString _ cd _ -> [(stripWhitespace cd, ex)]
                       CElem (Elem (N "br") _ _) _ -> [("\n", ex)]
                       CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
                       _ -> error "BUG: fgot unsupported content, should \
@@ -696,11 +696,26 @@ handleFormattedText =
                 collapsed :: [(String, Hs.Exp)]
                 collapsed = collapse pairs
 
-                pairExprList = map pairExpr collapsed
                 pairExpr :: (String, Hs.Exp) -> Hs.Exp
                 pairExpr (s, ex) = mkTup [ mkString s
                                          , ex
                                          ]
+
+                isWhitespace = (`elem` " \t\n")
+                headTrimmed ls = if null ls
+                                 then []
+                                 else (dropWhile isWhitespace (fst $ head ls), snd $ head ls) : tail ls
+                tailTrimmed ls = if null ls
+                                 then []
+                                 else init ls ++ [ (reverse $ dropWhile isWhitespace $ reverse (fst $ last ls), snd $ last ls) ]
+
+                pairExprList = map pairExpr $ tailTrimmed $ headTrimmed collapsed
+
+                stripWhitespace :: [Char] -> [Char]
+                stripWhitespace (c1:c2:cs) = if isWhitespace c1 && isWhitespace c2
+                                             then stripWhitespace (c2:cs)
+                                             else c1 : (stripWhitespace (c2:cs))
+                stripWhitespace ls = ls
 
             append $ bind nam "plainText" [mkString ""]
             append $ act $ call "setTextWithAttrs" [expr nam, mkList pairExprList]

@@ -58,6 +58,7 @@ import Text.XML.HaXml.Posn
 import Text.XML.HaXml.Combinators hiding (when)
 
 import Graphics.Vty.Widgets.Builder.Types
+import Graphics.Vty.Widgets.Builder.Util
 import qualified Language.Haskell.Exts as Hs
 
 gen :: Element Posn -> Hs.Name -> GenM ()
@@ -303,11 +304,6 @@ newEntry n = do
 
   let newMap = Map.insert n (val + 1) (nameCounters st)
   put $ st { nameCounters = newMap }
-
-  let replace _ _ [] = []
-      replace from_ to_ (e:es) = if e == from_
-                                 then to_ : replace from_ to_ es
-                                 else e : replace from_ to_ es
 
   return $ mkName $ (replace '-' '_' n) ++ show val
 
