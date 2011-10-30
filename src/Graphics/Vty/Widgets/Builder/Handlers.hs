@@ -190,7 +190,7 @@ handlePad =
             when (length attrs == 0) $
                  putError e $ "at least one padding attribute must be specified"
 
-            let attrNames = ["top", "bottom", "left", "right"]
+            let attrNames = ["top", "bottom", "left", "right", "topBottom", "leftRight", "all"]
 
             forM_ attrNames $ \attr -> do
               let val = getAttribute e attr
@@ -205,12 +205,13 @@ handlePad =
             chNam <- newEntry (elemName e)
             gen ch chNam
 
-            chType <- getWidgetStateType chNam
-
             let padFunctions = [ ("top", "padTop")
                                , ("bottom", "padBottom")
                                , ("left", "padLeft")
                                , ("right", "padRight")
+                               , ("leftRight", "padLeftRight")
+                               , ("topBottom", "padTopBottom")
+                               , ("all", "padAll")
                                ]
 
                 attrNames = fst <$> padFunctions
@@ -233,11 +234,11 @@ handlePad =
             let ex = foldl (\e1 e2 -> opApp e1 (mkName "pad") e2)
                      (head paddingExprs) (tail paddingExprs)
 
-            append $ bind nam "padded" [ parens ex
-                                       , expr chNam
+            append $ bind nam "padded" [ expr chNam
+                                       , parens ex
                                        ]
 
-            return $ declareWidget nam (mkTyp "Padded" [chType])
+            return $ declareWidget nam (mkTyp "Padded" [])
 
 handleDirBrowser :: ElementHandler
 handleDirBrowser =

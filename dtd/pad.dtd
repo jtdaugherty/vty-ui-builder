@@ -4,4 +4,7 @@
           bottom CDATA #IMPLIED
           left CDATA #IMPLIED
           right CDATA #IMPLIED
+          leftRight CDATA #IMPLIED
+          topBottom CDATA #IMPLIED
+          all CDATA #IMPLIED
 >
