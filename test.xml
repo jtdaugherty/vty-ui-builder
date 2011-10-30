@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE interface SYSTEM "test.dtd">
 <collection>
 
 <!-- bordered.dtd -->
@@ -19,9 +18,17 @@
       <vBox>
         <fText>This is some <attr fg="cyan">cyan</attr> text.</fText>
         <format name="wrap">
-          <fText>This is some text which has been modified with the <attr fg="green">wrap</attr> formatter.  If your terminal is sufficiently narrow, this text will be wrapped automatically!</fText>
+          <fText>
+            This is some text which has been modified with the <attr
+            fg="green">wrap</attr> formatter.  If your terminal is
+            sufficiently narrow, this text will be wrapped
+            automatically!  The <attr fg="red">attr</attr> tag can be
+            used to apply <attr bg="green" fg="black">different
+            attributes</attr> to <attr fg="yellow">text</attr>.  A
+            <attr fg="magenta">'br'</attr> tag introduces a line
+            break.
+          </fText>
         </format>
-        <fText>The <attr fg="red">attr</attr> tag can be used to apply <attr bg="green" fg="black">different attributes</attr> to <attr fg="yellow">text</attr>.</fText>
       </vBox>
     </vBox>
     <focusGroup>
