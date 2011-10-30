@@ -67,3 +67,6 @@ Add support for:
 
 - Make vty-ui-builder able to tell the user which version of vty-ui it
   generates code for (look at cabal file?)
+
+- Add support for typical entity references like &gt;, &lt;, and
+  &nbsp; in any text string in the input document
