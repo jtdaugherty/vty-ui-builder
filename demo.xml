@@ -3,7 +3,7 @@
 
   <!-- Introduction -->
   <interface name="intro">
-    <vBox id="intro">
+    <vBox>
       <fText>vty-ui-builder demo: Introduction</fText>
       <hBorder/>
       <format name="wrap">
@@ -22,14 +22,11 @@
         </fText>
       </format>
     </vBox>
-    <focusGroup>
-      <entry name="intro"/>
-    </focusGroup>
   </interface>
 
   <!-- bordered.dtd -->
   <interface name="bordered">
-    <vBox id="bordered">
+    <vBox>
       <fText><attr fg="green">bordered</attr> demo</fText>
       <hBorder/>
       <bordered>
@@ -44,9 +41,6 @@
         <hBorder/>
       </vBox>
     </vBox>
-    <focusGroup>
-      <entry name="bordered"/>
-    </focusGroup>
   </interface>
 
   <!-- button.dtd -->
@@ -71,7 +65,7 @@
 
   <!-- centered.dtd -->
   <interface name="centered">
-    <vBox id="centered">
+    <vBox>
       <fText><attr fg="green">centered</attr> demo</fText>
       <hBorder/>
       <hBox>
@@ -91,14 +85,11 @@
         using the <attr fg="green">centered</attr> tag.</fText>
       </centered>
     </vBox>
-    <focusGroup>
-      <entry name="bordered"/>
-    </focusGroup>
   </interface>
 
   <!-- checkBox.dtd -->
   <interface name="checkbox">
-    <vBox id="checkbox">
+    <vBox>
       <fText><attr fg="green">checkBox</attr> demo</fText>
       <hBorder/>
       <checkBox id="cb1" label="Breakfast"/>
@@ -114,7 +105,7 @@
 
   <!-- dialog.dtd -->
   <interface name="dialog">
-    <vBox id="dialog">
+    <vBox>
       <fText><attr fg="green">dialog</attr> demo</fText>
       <hBorder/>
       <dialog id="dlg1" title="Testing Dialog">
@@ -132,7 +123,7 @@
 
   <!-- dirBrowser.dtd -->
   <interface name="dirbrowser">
-    <vBox id="dirbrowser">
+    <vBox>
       <fText><attr fg="green">dirBrowser</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
@@ -149,7 +140,7 @@
 
   <!-- edit.dtd -->
   <interface name="edit">
-    <vBox id="edit">
+    <vBox>
       <fText><attr fg="green">edit</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
@@ -168,7 +159,7 @@
 
   <!-- fText.dtd -->
   <interface name="fText">
-    <vBox id="w1">
+    <vBox>
       <fText><attr fg="green">fText</attr> demo</fText>
       <hBorder/>
 
@@ -188,15 +179,12 @@
         </format>
       </vBox>
     </vBox>
-    <focusGroup>
-      <entry name="w1"/>
-    </focusGroup>
   </interface>
 
   <!-- hBox-sized.dtd -->
   <!-- hBox.dtd -->
   <interface name="hbox">
-    <vBox id="hbox">
+    <vBox>
       <fText><attr fg="green">hBox</attr> / <attr fg="green">hBox-sized</attr> demo</fText>
       <hBorder/>
       <bordered>
@@ -236,16 +224,13 @@
         </hBox-sized>
       </bordered>
     </vBox>
-    <focusGroup>
-      <entry name="hbox"/>
-    </focusGroup>
   </interface>
 
   <!-- hFill.dtd -->
   <!-- vFill.dtd -->
   <interface name="fills">
     <vBox>
-      <fText id="ft1"><attr fg="green">hFill</attr> / <attr fg="green">vFill</attr> demo</fText>
+      <fText><attr fg="green">hFill</attr> / <attr fg="green">vFill</attr> demo</fText>
       <hBorder/>
       <bordered>
         <hBox>
@@ -260,14 +245,11 @@
         </hBox>
       </bordered>
     </vBox>
-    <focusGroup>
-      <entry name="ft1"/>
-    </focusGroup>
   </interface>
 
   <!-- pad.dtd -->
   <interface name="pad">
-    <vBox id="pad">
+    <vBox>
       <fText><attr fg="green">pad</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
@@ -319,9 +301,6 @@
         </vBox>
       </hBox>
     </vBox>
-    <focusGroup>
-      <entry name="padt1"/>
-    </focusGroup>
   </interface>
 
   <!-- progressBar.dtd -->
@@ -330,7 +309,7 @@
       <fText><attr fg="green">progressBar</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
-        <fText id="t1">
+        <fText>
           Progress bars use background colors to show progress and
           automatically scale as you resize your terminal.
         </fText>
@@ -354,9 +333,6 @@
         </vBox>
       </bordered>
     </vBox>
-    <focusGroup>
-      <entry name="t1" />
-    </focusGroup>
   </interface>
 
   <!-- ref.dtd -->
@@ -365,7 +341,7 @@
       <fText><attr fg="green">ref</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
-        <fText id="t2">
+        <fText>
           The 'ref' element makes it possible to reference an existing
           widget in more than one place in a document.  In particular,
           this can be used to share widgets between interfaces.
@@ -379,9 +355,6 @@
       <ref target="theWidget"/>
       <ref target="theWidget"/>
     </vBox>
-    <focusGroup>
-      <entry name="t2" />
-    </focusGroup>
   </interface>
 
   <!-- shared.dtd -->
@@ -389,7 +362,7 @@
   <!-- vBox-sized.dtd -->
   <!-- vBox.dtd -->
   <interface name="vbox">
-    <vBox id="vbox">
+    <vBox>
       <fText><attr fg="green">vBox</attr> / <attr fg="green">vBox-sized</attr> demo</fText>
       <hBorder/>
       <bordered>
@@ -429,9 +402,6 @@
         </vBox-sized>
       </bordered>
     </vBox>
-    <focusGroup>
-      <entry name="vbox"/>
-    </focusGroup>
   </interface>
 
 </collection>

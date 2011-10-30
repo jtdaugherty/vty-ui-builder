@@ -76,8 +76,13 @@ handleInterface =
                             }
     where
       genSrc e nam = do
-        -- DTD: two children
-        let [ch, fg] = elemChildren e
+        -- The focus group is optional, but even if the input document
+        -- doesn't specify one, we need to create one for the
+        -- interface and register it as an interface element field.
+        let [ch, fg] = case elemChildren e of
+                         [e1, e2] -> [e1, e2]
+                         [e1] -> [e1, Elem (N "focusGroup") [] []]
+                         _ -> error "BUG: invalid interface children"
             Just ifName = getAttribute e "name"
 
         gen ch nam
