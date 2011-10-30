@@ -230,7 +230,7 @@ handlePad =
                  error "'pad' element requires at least one padding attribute"
 
             -- Construct padding expression from values
-            let ex = foldl (\e1 e2 -> opApp e1 "pad" e2)
+            let ex = foldl (\e1 e2 -> opApp e1 (mkName "pad") e2)
                      (head paddingExprs) (tail paddingExprs)
 
             append $ bind nam "padded" [ parens ex
@@ -633,7 +633,7 @@ handleFormat =
             tempNam <- newEntry "formattedText"
             append $ bind tempNam "getTextFormatter" [expr nam]
             append $ act $ call "setTextFormatter" [ expr nam
-                                                   , parens (opApp (expr tempNam) "&.&" (expr $ mkName formatName))
+                                                   , parens (opApp (expr tempNam) (mkSym "&.&") (expr $ mkName formatName))
                                                    ]
 
 handleFormattedText :: ElementHandler

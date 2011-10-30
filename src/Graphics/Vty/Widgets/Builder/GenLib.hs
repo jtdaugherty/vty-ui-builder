@@ -38,6 +38,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , mkList
     , parens
     , mkName
+    , mkSym
     , mkString
     , mkInt
     , mkChar
@@ -169,7 +170,7 @@ attrsToExpr (Just fg, Nothing) = Just $ call "fgColor" [expr $ mkName fg]
 attrsToExpr (Nothing, Just bg) = Just $ call "bgColor" [expr $ mkName bg]
 attrsToExpr (Just fg, Just bg) = Just $ opApp
                                  (expr $ mkName fg)
-                                 "on"
+                                 (mkName "on")
                                  (expr $ mkName bg)
 
 registerInterface :: String -> InterfaceValues -> GenM ()
@@ -238,8 +239,8 @@ mkTup = Hs.Tuple
 mkList :: [Hs.Exp] -> Hs.Exp
 mkList = Hs.List
 
-opApp :: Hs.Exp -> String -> Hs.Exp -> Hs.Exp
-opApp a op b = Hs.InfixApp a (Hs.QVarOp $ Hs.UnQual $ mkName op) b
+opApp :: Hs.Exp -> Hs.Name -> Hs.Exp -> Hs.Exp
+opApp a op b = Hs.InfixApp a (Hs.QVarOp $ Hs.UnQual op) b
 
 mkLet :: [(Hs.Name, Hs.Exp)] -> Hs.Stmt
 mkLet pairs = Hs.LetStmt $ Hs.BDecls $ map mkDecl pairs
@@ -273,6 +274,9 @@ annotateElement elemt nam = do
 
 mkName :: String -> Hs.Name
 mkName = Hs.Ident
+
+mkSym :: String -> Hs.Name
+mkSym = Hs.Symbol
 
 elemChildren :: Element a -> [Element a]
 elemChildren (Elem _ _ cs) = map getElem contents

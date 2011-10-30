@@ -192,7 +192,7 @@ mkKeyHandlers st =
                            lastIf = (length $ interfaceNames st) - 1
 
                        in act $ opApp (Hs.Var $ Hs.UnQual $ mkName $ "(fg_" ++ nam ++ " values)")
-                              "onKeyPressed"
+                              (mkName "onKeyPressed")
                               $ Hs.Lambda noLoc [Hs.PWildCard, Hs.PVar $ mkName "k", Hs.PWildCard] $
                                 Hs.Case (Hs.Var $ Hs.UnQual $ mkName "k")
                                       [ Hs.Alt noLoc (Hs.PApp (Hs.UnQual $ mkName "KEsc") [])
