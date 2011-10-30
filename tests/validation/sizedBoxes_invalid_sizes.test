@@ -1,0 +1,43 @@
+boxes with invalid sizes
+---
+<?xml version="1.0" encoding="UTF-8" ?>
+<collection>
+  <interface name="i">
+    <vBox-sized percent="foobar">
+      <edit id="e1"/>
+      <vBox-sized percent="0">
+        <edit/>
+        <vBox-sized percent="100">
+          <edit/>
+          <vBox-sized>
+            <edit/>
+            <vBox-sized first="5">
+              <edit/>
+              <vBox-sized second="5">
+                <edit/>
+                <vBox-sized first="foo">
+                  <edit/>
+                  <vBox-sized second="foo">
+                    <edit/>
+                    <vBox-sized first="foo" second="foo">
+                      <edit/>
+                      <edit/>
+                    </vBox-sized>
+                  </vBox-sized>
+                </vBox-sized>
+              </vBox-sized>
+            </vBox-sized>
+          </vBox-sized>
+        </vBox-sized>
+      </vBox-sized>
+    </vBox-sized>
+
+    <focusGroup>
+      <entry name="e1"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+vBox-sized: No box size set; set 'percent' or both 'first' and 'second' to integer values
+vBox-sized: Box percentage value '0' is invalid, must be between 1 and 99 inclusive
+vBox-sized: Box percentage value '100' is invalid, must be between 1 and 99 inclusive

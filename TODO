@@ -4,21 +4,7 @@ vBox/hBox
   * Support child spacing controls (applies to all generated boxes
     within any vBox / hBox)
 
-  * Support child size policy controls, e.g.,
-
-    <!-- Percentage of top-level box size -->
-    <vBox sizing="50%,25%,25%">
-      <ch1>...</ch1>
-      <ch2>...</ch2>
-      <ch3>...</ch3>
-    </vBox>
-
-    <!-- Fixed number of rows/columns -->
-    <vBox sizing="25,auto,13">
-      <ch1>...</ch1>
-      <ch2>...</ch2>
-      <ch3>...</ch3>
-    </vBox>
+    <vBox spacing="5">
 
 Add support for:
 
@@ -81,6 +67,3 @@ Add support for:
 
 - Make vty-ui-builder able to tell the user which version of vty-ui it
   generates code for (look at cabal file?)
-
-- vBox/hBox-sized: coherence checks on size declarations of child
-  elements (mixtures of percentages, fixed values, auto, etc.)

@@ -300,7 +300,12 @@ newEntry n = do
   let newMap = Map.insert n (val + 1) (nameCounters st)
   put $ st { nameCounters = newMap }
 
-  return $ mkName $ n ++ show val
+  let replace _ _ [] = []
+      replace from_ to_ (e:es) = if e == from_
+                                 then to_ : replace from_ to_ es
+                                 else e : replace from_ to_ es
+
+  return $ mkName $ (replace '-' '_' n) ++ show val
 
 declareWidget :: Hs.Name -> Hs.Type -> WidgetHandlerResult
 declareWidget nam tyCon =

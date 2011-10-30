@@ -14,6 +14,11 @@ import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util
 import Graphics.Vty.Widgets.Builder.ValidateLib
 
+import Graphics.Vty.Widgets.Box
+    ( ChildSizePolicy(..)
+    , IndividualPolicy(..)
+    )
+
 import qualified Language.Haskell.Exts as Hs
 
 elementHandlers :: [ElementHandler]
@@ -27,6 +32,8 @@ elementHandlers =
     , handleFormattedText
     , handleVBox
     , handleHBox
+    , handleVBoxSized
+    , handleHBoxSized
     , handleHBorder
     , handleVBorder
     , handleBordered
@@ -538,10 +545,78 @@ handleVBox =
                          }
         where
           genSrc e nam = do
-            -- DTD: >= 2 children
             resultName <- genBox (elemChildren e) "vBox" nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
+
+handleVBoxSized :: ElementHandler
+handleVBoxSized =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "vBox-sized"
+                         , validator = Just checkBoxSize
+                         }
+        where
+          genSrc e nam = do
+            let Just boxSize = getBoxSize e
+                Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
+
+            resultName <- genBox (elemChildren e) "vBox" nam
+            append $ act $ call "setBoxChildSizePolicy" [ expr nam
+                                                        , parsedSizeExpr
+                                                        ]
+            ty <- getWidgetStateType resultName
+            return $ declareWidget nam ty
+
+handleHBoxSized :: ElementHandler
+handleHBoxSized =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "hBox-sized"
+                         , validator = Just checkBoxSize
+                         }
+        where
+          genSrc e nam = do
+            let Just boxSize = getBoxSize e
+                Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
+
+            resultName <- genBox (elemChildren e) "hBox" nam
+            append $ act $ call "setBoxChildSizePolicy" [ expr nam
+                                                        , parsedSizeExpr
+                                                        ]
+            ty <- getWidgetStateType resultName
+            return $ declareWidget nam ty
+
+getBoxSize :: Element Posn -> Maybe ChildSizePolicy
+getBoxSize e = getPercentSize <|> getDualSize
+    where
+      getPercentSize = do
+        p <- getAttribute e "percent"
+        val <- getIntAttributeValue p
+        return $ Percentage val
+
+      getDualSize = do
+        firstSize <- getAttribute e "first"
+        secondSize <- getAttribute e "second"
+
+        f <- case firstSize of
+               "auto" -> return BoxAuto
+               val -> BoxFixed <$> getIntAttributeValue val
+
+        s <- case secondSize of
+               "auto" -> return BoxAuto
+               val -> BoxFixed <$> getIntAttributeValue val
+
+        return $ PerChild f s
+
+checkBoxSize :: ElementValidator
+checkBoxSize e = do
+  case getBoxSize e of
+    Nothing -> do
+      putError e "No box size set; set 'percent' or both 'first' and 'second' to integer values"
+    Just (Percentage v) -> do
+                   when (v >= 100 || v <= 0) $
+                        putError e $ "Box percentage value '" ++ show v
+                                     ++ "' is invalid, must be between 1 and 99 inclusive"
+    _ -> return ()
 
 handleHBox :: ElementHandler
 handleHBox =
