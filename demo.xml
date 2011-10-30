@@ -34,6 +34,14 @@
       <bordered>
         <fText>This text has an ASCII art border around it.</fText>
       </bordered>
+      <hBox>
+        <fText>Here is a vertical border:</fText>
+        <vBorder/>
+      </hBox>
+      <vBox>
+        <fText>Here is a horizontal border:</fText>
+        <hBorder/>
+      </vBox>
     </vBox>
     <focusGroup>
       <entry name="bordered"/>
