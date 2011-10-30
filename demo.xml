@@ -364,6 +364,36 @@
 
   <!-- shared.dtd -->
 
+  <!-- stringList.dtd -->
+  <interface name="stringlist">
+    <vBox>
+      <fText><attr fg="green">stringList</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>
+          A <attr fg="magenta">stringList</attr> element generates a
+          List widget with String as its key type and FormattedText as
+          its widget type.  The XML attributes of the stringList
+          element set the visual attributes of the list's cursor when
+          the list does not have the focus.
+        </fText>
+      </format>
+      <hBorder/>
+      <bordered id="theList">
+        <stringList cursorFg="black" cursorBg="yellow">
+          <str>Foo</str>
+          <str>Bar</str>
+          <str>Baz</str>
+          <str>Stuff</str>
+          <str>Things</str>
+        </stringList>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="theList" />
+    </focusGroup>
+  </interface>
+
   <!-- vBox-sized.dtd -->
   <!-- vBox.dtd -->
   <interface name="vbox">

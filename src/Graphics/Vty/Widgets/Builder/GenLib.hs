@@ -24,6 +24,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , parseType
     , nameStr
     , getFieldValueName
+    , getElementStringContent
 
     -- Common names
     , collectionName
@@ -293,6 +294,12 @@ elemChildren (Elem _ _ cs) = map getElem contents
       getElem (CElem e _) = e
       getElem _ = error "BUG: getElem got a non-element!"
       contents = concat $ map elm cs
+
+getElementStringContent :: Element a -> String
+getElementStringContent (Elem _ _ cs) = concat $ map getStr cs
+    where
+      getStr (CString _ s _) = s
+      getStr _ = error "BUG: getStr got a non-string content value!"
 
 getString :: Content i -> String
 getString (CString _ s _) = s

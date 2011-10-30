@@ -8,15 +8,7 @@ vBox/hBox
 
 Add support for:
 
-  * List
-
-    - User needs to specify internal value and widget types for the
-      list (annoying)
-
-    - Specifying initial list contents could get ugly, since we can't
-      necessarily type-check the values resulting from the child
-      elements of a <list>.
-
+  * List (string lists supported, need more general list support)
   * Table
   * Radio buttons
   * Limits

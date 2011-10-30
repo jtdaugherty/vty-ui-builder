@@ -51,6 +51,7 @@ elementHandlers =
     , handleRef
     , handleCheckBox
     , handleFocusGroup
+    , handleStringList
     ]
 
 handleCollection :: ElementHandler
@@ -161,6 +162,25 @@ handleCheckBox =
             let Just label = getAttribute e "label"
             append $ bind nam "newCheckbox" [mkString label]
             return $ declareWidget nam (mkTyp "CheckBox" [mkTyp "Bool" []])
+
+handleStringList :: ElementHandler
+handleStringList =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "stringList"
+                         , validator = Nothing
+                         }
+        where
+          genSrc e nam = do
+            let strs = map getElementStringContent $ elemChildren e
+                attrResult = ( getAttribute e "cursorFg"
+                             , getAttribute e "cursorBg"
+                             )
+                attrExpr = case attrsToExpr attrResult of
+                             Nothing -> defAttr
+                             Just ex -> ex
+
+            append $ bind nam "newStringList" [attrExpr, mkList $ map mkString strs]
+            return $ declareWidget nam $ parseType "List String FormattedText"
 
 handleRef :: ElementHandler
 handleRef =
@@ -676,6 +696,9 @@ handleFormat =
             ty <- getWidgetStateType nam
             return $ declareWidget nam ty
 
+defAttr :: Hs.Exp
+defAttr = expr $ mkName "def_attr"
+
 handleFormattedText :: ElementHandler
 handleFormattedText =
     WidgetElementHandler { generateWidgetSource = genSrc
@@ -699,8 +722,6 @@ handleFormattedText =
                       CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
                       _ -> error "BUG: got unsupported content, should \
                                  \have been disallowed by DTD"
-
-                defAttr = expr $ mkName "def_attr"
 
                 processAttr :: Element a -> [(Either String String, Hs.Exp)]
                 processAttr attr@(Elem _ _ contents) =

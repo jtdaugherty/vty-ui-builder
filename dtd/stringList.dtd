@@ -1,0 +1,6 @@
+<!ELEMENT stringList (str*)>
+<!ELEMENT str (#PCDATA)>
+<!ATTLIST stringList
+          cursorFg (%fgcolor;) #REQUIRED
+          cursorBg (%bgcolor;) #REQUIRED
+>
