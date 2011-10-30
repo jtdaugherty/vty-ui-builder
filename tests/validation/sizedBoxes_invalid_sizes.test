@@ -36,6 +36,41 @@ boxes with invalid sizes
       <entry name="e1"/>
     </focusGroup>
   </interface>
+
+  <interface name="i">
+    <hBox-sized percent="foobar">
+      <edit id="e2"/>
+      <hBox-sized percent="0">
+        <edit/>
+        <hBox-sized percent="100">
+          <edit/>
+          <hBox-sized>
+            <edit/>
+            <hBox-sized first="5">
+              <edit/>
+              <hBox-sized second="5">
+                <edit/>
+                <hBox-sized first="foo">
+                  <edit/>
+                  <hBox-sized second="foo">
+                    <edit/>
+                    <hBox-sized first="foo" second="foo">
+                      <edit/>
+                      <edit/>
+                    </hBox-sized>
+                  </hBox-sized>
+                </hBox-sized>
+              </hBox-sized>
+            </hBox-sized>
+          </hBox-sized>
+        </hBox-sized>
+      </hBox-sized>
+    </hBox-sized>
+
+    <focusGroup>
+      <entry name="e2"/>
+    </focusGroup>
+  </interface>
 </collection>
 ---
 vBox-sized: No box size set; set 'percent' or both 'first' and 'second' to integer values

@@ -41,6 +41,46 @@ Boxes with valid size declarations work
       <entry name="e4"/>
     </focusGroup>
   </interface>
+
+  <interface name="i">
+    <hBox-sized percent="10">
+      <edit id="e5"/>
+      <edit/>
+    </hBox-sized>
+    <focusGroup>
+      <entry name="e5"/>
+    </focusGroup>
+  </interface>
+
+  <interface name="i">
+    <hBox-sized first="5" second="10">
+      <edit id="e6"/>
+      <edit/>
+    </hBox-sized>
+    <focusGroup>
+      <entry name="e6"/>
+    </focusGroup>
+  </interface>
+
+  <interface name="i">
+    <hBox-sized first="auto" second="10">
+      <edit id="e7"/>
+      <edit/>
+    </hBox-sized>
+    <focusGroup>
+      <entry name="e7"/>
+    </focusGroup>
+  </interface>
+
+  <interface name="i">
+    <hBox-sized first="5" second="auto">
+      <edit id="e8"/>
+      <edit/>
+    </hBox-sized>
+    <focusGroup>
+      <entry name="e8"/>
+    </focusGroup>
+  </interface>
 </collection>
 ---
 success

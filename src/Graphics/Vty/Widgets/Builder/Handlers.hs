@@ -549,10 +549,10 @@ handleVBox =
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleVBoxSized :: ElementHandler
-handleVBoxSized =
+handleBoxSized :: String -> ElementHandler
+handleBoxSized typ =
     WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vBox-sized"
+                         , elementName = typ ++ "-sized"
                          , validator = Just checkBoxSize
                          }
         where
@@ -560,7 +560,7 @@ handleVBoxSized =
             let Just boxSize = getBoxSize e
                 Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
 
-            resultName <- genBox (elemChildren e) "vBox" nam
+            resultName <- genBox (elemChildren e) typ nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
@@ -568,22 +568,10 @@ handleVBoxSized =
             return $ declareWidget nam ty
 
 handleHBoxSized :: ElementHandler
-handleHBoxSized =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hBox-sized"
-                         , validator = Just checkBoxSize
-                         }
-        where
-          genSrc e nam = do
-            let Just boxSize = getBoxSize e
-                Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
+handleHBoxSized = handleBoxSized "hBox"
 
-            resultName <- genBox (elemChildren e) "hBox" nam
-            append $ act $ call "setBoxChildSizePolicy" [ expr nam
-                                                        , parsedSizeExpr
-                                                        ]
-            ty <- getWidgetStateType resultName
-            return $ declareWidget nam ty
+handleVBoxSized :: ElementHandler
+handleVBoxSized = handleBoxSized "vBox"
 
 getBoxSize :: Element Posn -> Maybe ChildSizePolicy
 getBoxSize e = getPercentSize <|> getDualSize

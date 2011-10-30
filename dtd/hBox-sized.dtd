@@ -1,5 +1,5 @@
-<!ELEMENT vBox-sized ((%all;),(%all;))>
-<!ATTLIST vBox-sized
+<!ELEMENT hBox-sized ((%all;),(%all;))>
+<!ATTLIST hBox-sized
           first CDATA #IMPLIED
           second CDATA #IMPLIED
           percent CDATA #IMPLIED
