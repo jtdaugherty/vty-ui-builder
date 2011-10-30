@@ -388,9 +388,24 @@
           <str>Things</str>
         </stringList>
       </bordered>
+      <format name="wrap">
+        <fText>
+          If you want to generate a more general List widget, use the
+          <attr fg="magenta">list</attr> tag instead, which allows you
+          to specify the key and widget types for the list.  Below is
+          such a list, although because it is generic on the types of
+          its keys and widgets, we can't populate the list from the
+          XML.  In practice, you would populate it from your
+          application code.
+        </fText>
+      </format>
+      <bordered>
+        <list id="customList" cursorFg="black" cursorBg="yellow" keyType="Int" elemType="FormattedText" />
+      </bordered>
     </vBox>
     <focusGroup>
       <entry name="theList" />
+      <entry name="customList" />
     </focusGroup>
   </interface>
 

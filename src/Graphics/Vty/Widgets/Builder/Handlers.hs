@@ -52,6 +52,7 @@ elementHandlers =
     , handleCheckBox
     , handleFocusGroup
     , handleStringList
+    , handleList
     ]
 
 handleCollection :: ElementHandler
@@ -181,6 +182,26 @@ handleStringList =
 
             append $ bind nam "newStringList" [attrExpr, mkList $ map mkString strs]
             return $ declareWidget nam $ parseType "List String FormattedText"
+
+handleList :: ElementHandler
+handleList =
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "list"
+                         , validator = Nothing
+                         }
+        where
+          genSrc e nam = do
+            let attrResult = ( getAttribute e "cursorFg"
+                             , getAttribute e "cursorBg"
+                             )
+                attrExpr = case attrsToExpr attrResult of
+                             Nothing -> defAttr
+                             Just ex -> ex
+                Just keyType = getAttribute e "keyType"
+                Just elemType = getAttribute e "elemType"
+
+            append $ bind nam "newList" [attrExpr]
+            return $ declareWidget nam $ parseType $ "List (" ++ keyType ++ ") (" ++ elemType ++ ")"
 
 handleRef :: ElementHandler
 handleRef =

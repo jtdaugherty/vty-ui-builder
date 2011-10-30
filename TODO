@@ -8,7 +8,6 @@ vBox/hBox
 
 Add support for:
 
-  * List (string lists supported, need more general list support)
   * Table
   * Radio buttons
   * Limits

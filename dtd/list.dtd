@@ -1,0 +1,7 @@
+<!ELEMENT list EMPTY>
+<!ATTLIST list
+          keyType CDATA #REQUIRED
+          elemType CDATA #REQUIRED
+          cursorFg (%fgcolor;) #REQUIRED
+          cursorBg (%bgcolor;) #REQUIRED
+>
