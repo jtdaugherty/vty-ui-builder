@@ -360,6 +360,30 @@
   </interface>
 
   <!-- ref.dtd -->
+  <interface name="ref">
+    <vBox>
+      <fText><attr fg="green">ref</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText id="t2">
+          The 'ref' element makes it possible to reference an existing
+          widget in more than one place in a document.  In particular,
+          this can be used to share widgets between interfaces.
+        </fText>
+      </format>
+      <bordered id="theWidget">
+        <format name="wrap">
+          <fText>This box is the referenced widget, but it is only defined once in the document.</fText>
+        </format>
+      </bordered>
+      <ref target="theWidget"/>
+      <ref target="theWidget"/>
+    </vBox>
+    <focusGroup>
+      <entry name="t2" />
+    </focusGroup>
+  </interface>
+
   <!-- shared.dtd -->
 
   <!-- vBox-sized.dtd -->
