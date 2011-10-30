@@ -98,6 +98,22 @@
   </interface>
 
   <!-- dirBrowser.dtd -->
+  <interface name="dirbrowser">
+    <vBox id="dirbrowser">
+      <fText><attr fg="green">dirBrowser</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>Below is a directory browser widget.  Arrow keys can be
+        used to select files or directories, and Enter will enter a
+        directory.</fText>
+      </format>
+      <dirBrowser id="db1"/>
+    </vBox>
+    <focusGroup>
+      <entry name="db1"/>
+    </focusGroup>
+  </interface>
+
   <!-- edit.dtd -->
 
   <!-- fText.dtd -->
