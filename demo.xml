@@ -266,6 +266,64 @@
   </interface>
 
   <!-- pad.dtd -->
+  <interface name="pad">
+    <vBox id="pad">
+      <fText><attr fg="green">pad</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>
+          Padding elements can specify one or more padding attributes
+          to pad a child widget.  Multiple padding attribute values
+          will be combined.
+        </fText>
+      </format>
+      <hBox>
+        <vBox>
+          <bordered>
+            <pad left="2">
+              <fText>Padded on <attr fg="cyan">left</attr></fText>
+            </pad>
+          </bordered>
+          <bordered>
+            <pad right="2">
+              <fText>Padded on <attr fg="cyan">right</attr></fText>
+            </pad>
+          </bordered>
+          <bordered>
+            <pad top="2">
+              <fText>Padded on <attr fg="cyan">top</attr></fText>
+            </pad>
+          </bordered>
+          <bordered>
+            <pad bottom="2">
+              <fText>Padded on <attr fg="cyan">bottom</attr></fText>
+            </pad>
+          </bordered>
+        </vBox>
+        <vBox>
+          <bordered>
+            <pad topBottom="2">
+              <fText>Padded on top and bottom (<attr fg="cyan">topBottom</attr>)</fText>
+            </pad>
+          </bordered>
+          <bordered>
+            <pad leftRight="2">
+              <fText>Padded on left and right (<attr fg="cyan">leftRight</attr>)</fText>
+            </pad>
+          </bordered>
+          <bordered>
+            <pad all="2">
+              <fText>Padded on <attr fg="cyan">all</attr> sides</fText>
+            </pad>
+          </bordered>
+        </vBox>
+      </hBox>
+    </vBox>
+    <focusGroup>
+      <entry name="fills"/>
+    </focusGroup>
+  </interface>
+
   <!-- progressBar.dtd -->
 
   <!-- ref.dtd -->
