@@ -192,17 +192,64 @@
     </focusGroup>
   </interface>
 
-  <!-- hBorder.dtd -->
   <!-- hBox-sized.dtd -->
   <!-- hBox.dtd -->
+  <interface name="hbox">
+    <vBox id="hbox">
+      <fText><attr fg="green">hBox</attr> / <attr fg="green">hBox-sized</attr> demo</fText>
+      <hBorder/>
+      <bordered>
+        <hBox>
+          <format name="wrap">
+            <fText>
+              hBox elements can contain two or more elements.
+            </fText>
+          </format>
+          <bordered>
+            <format name="wrap">
+              <fText>
+                They will be laid out horizontally.
+              </fText>
+            </format>
+          </bordered>
+        </hBox>
+      </bordered>
+      <format name="wrap">
+        <fText>
+          The <attr fg="green">hBox-sized</attr> tag is used to exert
+          control over the size policy of box children.  This tag
+          supports only two children.  Try resizing your terminal to
+          see how these boxes behave.
+        </fText>
+      </format>
+      <bordered>
+        <hBox-sized first="20" second="30">
+          <fText>20 columns</fText>
+          <fText>30 columns</fText>
+        </hBox-sized>
+      </bordered>
+      <bordered>
+        <hBox-sized percent="25">
+          <fText>25%</fText>
+          <fText>75%</fText>
+        </hBox-sized>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="hbox"/>
+    </focusGroup>
+  </interface>
+
   <!-- hFill.dtd -->
   <!-- pad.dtd -->
   <!-- progressBar.dtd -->
+
   <!-- ref.dtd -->
   <!-- shared.dtd -->
-  <!-- vBorder.dtd -->
+
   <!-- vBox-sized.dtd -->
   <!-- vBox.dtd -->
+
   <!-- vFill.dtd -->
 
 </collection>
