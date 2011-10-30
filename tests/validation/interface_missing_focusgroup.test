@@ -7,6 +7,4 @@ Interface without a focus group
   </interface>
 </collection>
 ---
-^Element <interface> should contain
-Element <interface> should contain focusGroup but does not.
-Element <interface> contains extra elements beyond its content spec.
+success
