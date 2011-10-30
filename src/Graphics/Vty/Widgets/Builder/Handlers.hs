@@ -14,7 +14,6 @@ import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util
 import Graphics.Vty.Widgets.Builder.ValidateLib
 
--- XXX
 import qualified Language.Haskell.Exts as Hs
 
 elementHandlers :: [ElementHandler]
