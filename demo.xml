@@ -242,6 +242,29 @@
   </interface>
 
   <!-- hFill.dtd -->
+  <!-- vFill.dtd -->
+  <interface name="fills">
+    <vBox id="fills">
+      <fText><attr fg="green">hFill</attr> / <attr fg="green">vFill</attr> demo</fText>
+      <hBorder/>
+      <bordered>
+        <hBox>
+          <fText>This is a horizontal fill,<br/>given a height and fill character:</fText>
+          <hFill height="2" char="X"/>
+        </hBox>
+      </bordered>
+      <bordered>
+        <hBox>
+          <fText>This is a vertical fill,<br/>given a fill character:</fText>
+          <vFill char="X"/>
+        </hBox>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="fills"/>
+    </focusGroup>
+  </interface>
+
   <!-- pad.dtd -->
   <!-- progressBar.dtd -->
 
@@ -295,7 +318,5 @@
       <entry name="vbox"/>
     </focusGroup>
   </interface>
-
-  <!-- vFill.dtd -->
 
 </collection>
