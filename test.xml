@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <collection>
 
-<!-- bordered.dtd -->
-<!-- button.dtd -->
-<!-- centered.dtd -->
-<!-- checkBox.dtd -->
-<!-- collection.dtd -->
-<!-- dialog.dtd -->
-<!-- dirBrowser.dtd -->
-<!-- edit.dtd -->
+  <!-- bordered.dtd -->
+  <!-- button.dtd -->
+  <!-- centered.dtd -->
+  <!-- checkBox.dtd -->
+  <!-- collection.dtd -->
+  <!-- dialog.dtd -->
+  <!-- dirBrowser.dtd -->
+  <!-- edit.dtd -->
 
+  <!-- fText.dtd -->
   <interface name="fText">
     <vBox id="w1">
       <fText>fText demo</fText>
@@ -36,24 +37,24 @@
     </focusGroup>
   </interface>
 
-<!-- focusGroup.dtd -->
-<!-- format.dtd -->
-<!-- hBorder.dtd -->
-<!-- hBox-sized.dtd -->
-<!-- hBox.dtd -->
-<!-- hCentered.dtd -->
-<!-- hFill.dtd -->
-<!-- import.dtd -->
-<!-- interface.dtd -->
-<!-- pad.dtd -->
-<!-- params.dtd -->
-<!-- progressBar.dtd -->
-<!-- ref.dtd -->
-<!-- shared.dtd -->
-<!-- vBorder.dtd -->
-<!-- vBox-sized.dtd -->
-<!-- vBox.dtd -->
-<!-- vCentered.dtd -->
-<!-- vFill.dtd -->
+  <!-- focusGroup.dtd -->
+  <!-- format.dtd -->
+  <!-- hBorder.dtd -->
+  <!-- hBox-sized.dtd -->
+  <!-- hBox.dtd -->
+  <!-- hCentered.dtd -->
+  <!-- hFill.dtd -->
+  <!-- import.dtd -->
+  <!-- interface.dtd -->
+  <!-- pad.dtd -->
+  <!-- params.dtd -->
+  <!-- progressBar.dtd -->
+  <!-- ref.dtd -->
+  <!-- shared.dtd -->
+  <!-- vBorder.dtd -->
+  <!-- vBox-sized.dtd -->
+  <!-- vBox.dtd -->
+  <!-- vCentered.dtd -->
+  <!-- vFill.dtd -->
 
 </collection>
