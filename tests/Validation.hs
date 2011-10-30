@@ -83,12 +83,18 @@ readValidationTest filename = do
     Nothing -> error $ "Cannot parse test case " ++ filename
     Just t -> return t
 
+matchingFailureMessage :: (String, String) -> Bool
+matchingFailureMessage (expected, actual) =
+    case expected of
+      ('^':rest) -> rest `isPrefixOf` actual
+      _ -> expected == actual
+
 matchingFailureMessages :: [String] -> [String] -> Bool
+matchingFailureMessages [] [] = True
+matchingFailureMessages [] _ = False
+matchingFailureMessages _ [] = False
 matchingFailureMessages expectedEs actualEs =
-    and $ map checkActual expectedEs
-        where
-          checkActual ('^':expected) = or $ map (expected `isPrefixOf`) actualEs
-          checkActual expected = expected `elem` actualEs
+    and $ map matchingFailureMessage $ zip expectedEs actualEs
 
 runValidationTest :: ValidationTest -> IO ()
 runValidationTest tc = do

@@ -10,7 +10,8 @@ Interface with an unknown child element
   </interface>
 </collection>
 ---
-# For invalid element
+# Both for invalid element
+^Element <interface> should contain
 ^Element <interface> should contain
 Element <interface> should contain focusGroup but does not.
 Element <interface> contains extra elements beyond its content spec.
