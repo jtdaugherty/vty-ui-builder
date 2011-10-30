@@ -667,7 +667,7 @@ handleFormattedText =
                       CString _ cd _ -> [(stripWhitespace cd, ex)]
                       CElem (Elem (N "br") _ _) _ -> [("\n", ex)]
                       CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
-                      _ -> error "BUG: fgot unsupported content, should \
+                      _ -> error "BUG: got unsupported content, should \
                                  \have been disallowed by DTD"
 
                 defAttr = expr $ mkName "def_attr"
