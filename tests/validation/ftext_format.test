@@ -1,0 +1,15 @@
+Formatted text constitutes a widget
+---
+<collection>
+  <interface name="text">
+    <vBox id="w1">
+      <edit/>
+      <format name="wrap"><fText>This is some <attr fg="cyan">cyan</attr> text.</fText></format>
+    </vBox>
+    <focusGroup>
+      <entry name="w1"/>
+    </focusGroup>
+  </interface>
+</collection>
+---
+success

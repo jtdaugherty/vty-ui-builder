@@ -620,10 +620,10 @@ handleHBox =
 
 handleFormat :: ElementHandler
 handleFormat =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "format"
-                            , validator = Nothing
-                            }
+    WidgetElementHandler { generateWidgetSource = genSrc
+                         , elementName = "format"
+                         , validator = Nothing
+                         }
         where
           genSrc e nam = do
             let [ch] = elemChildren e
@@ -635,6 +635,18 @@ handleFormat =
             append $ act $ call "setTextFormatter" [ expr nam
                                                    , parens (opApp (expr tempNam) (mkSym "&.&") (expr $ mkName formatName))
                                                    ]
+
+            -- NB: this is a no-op because the child element handler
+            -- will have already registered a type for 'nam'.
+            -- However, we are required to return something from this
+            -- handler because it is a widget element handler, so we
+            -- just return the same thing the child would have
+            -- returned.  Ultimately the name and type declared here
+            -- will be ignored because they'll be appended onto the
+            -- list of registered widget names and won't be reached by
+            -- 'lookup' calls.
+            ty <- getWidgetStateType nam
+            return $ declareWidget nam ty
 
 handleFormattedText :: ElementHandler
 handleFormattedText =
