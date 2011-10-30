@@ -76,3 +76,6 @@ Add support for:
 - Trailing newlines in fTexts don't appear to be working.
 
 - Support modular interface files (including other files, etc.)
+
+- When adding widgets to focus groups, also store references to the
+  wrapper widgets returned by addToFocusGroup in the InterfaceElements
