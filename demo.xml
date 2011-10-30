@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <collection>
 
+  <!-- Introduction -->
+  <interface name="intro">
+    <vBox id="intro">
+      <fText>vty-ui-builder demo: Introduction</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText>
+          This program will demonstrate the major features of the
+          <attr fg="cyan">vty-ui-builder</attr> tool.  This program
+          will take you through a series of interfaces which have been
+          expressed in the vty-ui-builder input XML
+          format.<br/><br/>The tool will generate a Haskell module
+          with a default 'main' function which will set up key event
+          handlers for each interface to allow you to evaluate each
+          one as you are building your XML document.<br/><br/>Press
+          the <attr fg="magenta">'n'</attr> key whenever you want to
+          change to the next demonstration interface.
+        </fText>
+      </format>
+    </vBox>
+    <focusGroup>
+      <entry name="intro"/>
+    </focusGroup>
+  </interface>
+
   <!-- bordered.dtd -->
   <interface name="bordered">
     <vBox id="bordered">
@@ -102,7 +127,7 @@
       <fText><attr fg="green">dirBrowser</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
-        <fText>Below is a directory browser widget.  Arrow keys can be
+        <fText>This is a directory browser widget.  Arrow keys can be
         used to select files or directories, and Enter will enter a
         directory.</fText>
       </format>
@@ -119,7 +144,7 @@
       <fText><attr fg="green">edit</attr> demo</fText>
       <hBorder/>
       <format name="wrap">
-        <fText>Below is an edit widget.  Edit widgets support
+        <fText>This is an edit widget.  Edit widgets support
         relatively standard Emacs-style line-editing
         keystrokes.</fText>
       </format>
