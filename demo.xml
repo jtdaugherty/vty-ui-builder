@@ -325,6 +325,39 @@
   </interface>
 
   <!-- progressBar.dtd -->
+  <interface name="progressbar">
+    <vBox>
+      <fText><attr fg="green">progressBar</attr> demo</fText>
+      <hBorder/>
+      <format name="wrap">
+        <fText id="t1">
+          Progress bars use background colors to show progress and
+          automatically scale as you resize your terminal.
+        </fText>
+      </format>
+      <bordered>
+        <vBox>
+          <fText>Below is a progress bar at zero percent.</fText>
+          <progressBar completeColor="blue" incompleteColor="white" />
+        </vBox>
+      </bordered>
+      <bordered>
+        <vBox>
+          <fText>Below is a progress bar at 50 percent.</fText>
+          <progressBar progress="50" completeColor="blue" incompleteColor="white" />
+        </vBox>
+      </bordered>
+      <bordered>
+        <vBox>
+          <fText>Below is a progress bar at 75 percent.</fText>
+          <progressBar progress="75" completeColor="blue" incompleteColor="white" />
+        </vBox>
+      </bordered>
+    </vBox>
+    <focusGroup>
+      <entry name="t1" />
+    </focusGroup>
+  </interface>
 
   <!-- ref.dtd -->
   <!-- shared.dtd -->
