@@ -60,8 +60,43 @@
   </interface>
 
   <!-- checkBox.dtd -->
-  <!-- collection.dtd -->
+  <interface name="checkbox">
+    <vBox id="checkbox">
+      <fText><attr fg="green">checkBox</attr> demo</fText>
+      <hBorder/>
+      <checkBox id="cb1" label="Breakfast"/>
+      <checkBox id="cb2" label="Lunch"/>
+      <checkBox id="cb3" label="Dinner"/>
+    </vBox>
+    <focusGroup>
+      <entry name="cb1"/>
+      <entry name="cb2"/>
+      <entry name="cb3"/>
+    </focusGroup>
+  </interface>
+
   <!-- dialog.dtd -->
+  <interface name="dialog">
+    <vBox id="dialog">
+      <fText><attr fg="green">dialog</attr> demo</fText>
+      <hBorder/>
+      <dialog id="dlg1" title="Testing Dialog">
+        <vBox>
+          <format name="wrap">
+            <fText>This is the content of the dialog.  The dialog can
+            have arbitrary content widgets -- even interactive widgets
+            -- like this edit edit widget:</fText>
+          </format>
+          <edit id="dlgEdit1"/>
+        </vBox>
+      </dialog>
+    </vBox>
+    <focusGroup>
+      <entry name="dlgEdit1"/>
+      <entry name="dlg1"/>
+    </focusGroup>
+  </interface>
+
   <!-- dirBrowser.dtd -->
   <!-- edit.dtd -->
 
