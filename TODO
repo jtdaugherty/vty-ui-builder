@@ -73,8 +73,6 @@ Add support for:
 
 - Add validation test for duplicate interface names
 
-- Trailing newlines in fTexts don't appear to be working.
-
 - Support modular interface files (including other files, etc.)
 
 - When adding widgets to focus groups, also store references to the

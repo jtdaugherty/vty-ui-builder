@@ -689,18 +689,20 @@ handleFormattedText =
             -- it is an Attr element, recurse on it, building another
             -- list of (string, attr) to merge.
 
-            let processContent :: Hs.Exp -> Content t -> [(String, Hs.Exp)]
+            -- Left: do not strip whitespace
+            -- Right: do strip whitespace
+            let processContent :: Hs.Exp -> Content t -> [(Either String String, Hs.Exp)]
                 processContent ex c =
                     case c of
-                      CString _ cd _ -> [(stripWhitespace cd, ex)]
-                      CElem (Elem (N "br") _ _) _ -> [("\n", ex)]
+                      CString _ cd _ -> [(Right $ stripWhitespace cd, ex)]
+                      CElem (Elem (N "br") _ _) _ -> [(Left "\n", ex)]
                       CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
                       _ -> error "BUG: got unsupported content, should \
                                  \have been disallowed by DTD"
 
                 defAttr = expr $ mkName "def_attr"
 
-                processAttr :: Element a -> [(String, Hs.Exp)]
+                processAttr :: Element a -> [(Either String String, Hs.Exp)]
                 processAttr attr@(Elem _ _ contents) =
                     let attrResult = ( getAttribute attr "fg"
                                      , getAttribute attr "bg"
@@ -710,18 +712,19 @@ handleFormattedText =
                                      Just ex -> ex
                     in concat $ map (processContent attrExpr) contents
 
-                collapse :: [(String, Hs.Exp)] -> [(String, Hs.Exp)]
+                collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
                 collapse [] = []
                 collapse [e] = [e]
-                collapse ((s1, e1):(s2, e2):es) =
+                collapse ((Right s1, e1):(Right s2, e2):es) =
                     if e1 == e2
-                    then collapse ((s1 ++ s2, e1) : es)
-                    else (s1, e1) : collapse ((s2, e2):es)
+                    then collapse ((Right $ s1 ++ s2, e1) : es)
+                    else (Right s1, e1) : collapse ((Right s2, e2):es)
+                collapse (e:es) = e : collapse es
 
-                pairs :: [(String, Hs.Exp)]
+                pairs :: [(Either String String, Hs.Exp)]
                 pairs = concat $ map (processContent defAttr) eContents
 
-                collapsed :: [(String, Hs.Exp)]
+                collapsed :: [(Either String String, Hs.Exp)]
                 collapsed = collapse pairs
 
                 pairExpr :: (String, Hs.Exp) -> Hs.Exp
@@ -730,14 +733,18 @@ handleFormattedText =
                                          ]
 
                 isWhitespace = (`elem` " \t\n")
-                headTrimmed ls = if null ls
-                                 then []
-                                 else (dropWhile isWhitespace (fst $ head ls), snd $ head ls) : tail ls
-                tailTrimmed ls = if null ls
-                                 then []
-                                 else init ls ++ [ (reverse $ dropWhile isWhitespace $ reverse (fst $ last ls), snd $ last ls) ]
+                headTrimmed ((Right s, attr):rest) = (Right $ dropWhile isWhitespace s, attr) : rest
+                headTrimmed es = es
 
-                pairExprList = map pairExpr $ tailTrimmed $ headTrimmed collapsed
+                tailTrimmed [] = []
+                tailTrimmed ls =
+                    init ls ++ case last ls of
+                                 (Right s, attr) -> [(Right $ reverse $ dropWhile isWhitespace $ reverse s, attr)]
+                                 other -> [other]
+
+                normStrings ls = map (\(s, attr) -> (either id id s, attr)) ls
+
+                pairExprList = map pairExpr $ normStrings $ tailTrimmed $ headTrimmed collapsed
 
                 stripWhitespace :: [Char] -> [Char]
                 stripWhitespace (c1:c2:cs) = if isWhitespace c1 && isWhitespace c2
