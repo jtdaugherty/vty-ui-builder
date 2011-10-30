@@ -1,57 +1,51 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE interface SYSTEM "test.dtd">
 <collection>
-  <interface name="main">
-    <vCentered>
-      <hCentered>
-        <vBox id="flub">
-          <fText id="username">foo</fText>
-          <fText>bar</fText>
-        </vBox>
-      </hCentered>
-    </vCentered>
-    <focusGroup>
-      <entry name="flub"/>
-    </focusGroup>
-  </interface>
 
-  <interface name="other">
-    <centered>
+<!-- bordered.dtd -->
+<!-- button.dtd -->
+<!-- centered.dtd -->
+<!-- checkBox.dtd -->
+<!-- collection.dtd -->
+<!-- dialog.dtd -->
+<!-- dirBrowser.dtd -->
+<!-- edit.dtd -->
+
+  <interface name="fText">
+    <vBox id="w1">
+      <fText>fText demo</fText>
+      <hBorder/>
+
       <vBox>
-        <hBox>
-          <fText><attr fg="red">Enter</attr> <attr fg="green">some</attr> <attr fg="yellow">text:</attr> </fText>
-          <edit id="edit1"/>
-          <edit id="edit2" contents="flurb"/>
-          <button id="button" label="Press Me"/>
-          <progressBar completeColor="cyan" incompleteColor="white"/>
-        </hBox>
-        <vFill char="y"/>
+        <fText>This is some <attr fg="cyan">cyan</attr> text.</fText>
+        <format name="wrap">
+          <fText>This is some text which has been modified with the <attr fg="green">wrap</attr> formatter.  If your terminal is sufficiently narrow, this text will be wrapped automatically!</fText>
+        </format>
       </vBox>
-    </centered>
+    </vBox>
     <focusGroup>
-      <entry name="edit1"/>
-      <entry name="edit2"/>
-      <entry name="button"/>
+      <entry name="w1"/>
     </focusGroup>
   </interface>
 
-  <interface name="dlgIf">
-    <dialog id="dlg" title="A dialog!">
-      <vBox>
-        <fText>Some text in the dialog.</fText>
-        <edit id="dlgEdit"/>
-      </vBox>
-    </dialog>
-    <focusGroup>
-      <entry name="dlgEdit"/>
-      <entry name="dlg"/>
-    </focusGroup>
-  </interface>
+<!-- focusGroup.dtd -->
+<!-- format.dtd -->
+<!-- hBorder.dtd -->
+<!-- hBox-sized.dtd -->
+<!-- hBox.dtd -->
+<!-- hCentered.dtd -->
+<!-- hFill.dtd -->
+<!-- import.dtd -->
+<!-- interface.dtd -->
+<!-- pad.dtd -->
+<!-- params.dtd -->
+<!-- progressBar.dtd -->
+<!-- ref.dtd -->
+<!-- shared.dtd -->
+<!-- vBorder.dtd -->
+<!-- vBox-sized.dtd -->
+<!-- vBox.dtd -->
+<!-- vCentered.dtd -->
+<!-- vFill.dtd -->
 
-  <interface name="browser">
-    <dirBrowser id="b"/>
-    <focusGroup>
-      <entry name="b"/>
-    </focusGroup>
-  </interface>
 </collection>
