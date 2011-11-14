@@ -50,6 +50,7 @@ generateSourceForDocument config (Validated e) theHandlers = do
                               , registeredFieldNames = []
                               , focusValues = []
                               , paramNames = []
+                              , tempRegisteredNames = []
                               }
 
   -- If the user wants to generate a main function, we can't do that

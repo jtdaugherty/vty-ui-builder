@@ -38,6 +38,7 @@ elementHandlers =
     , handleVBorder
     , handleBordered
     , handleEdit
+    , handleFocusGroup
     , handleButton
     , handleVFill
     , handleHFill
@@ -50,7 +51,6 @@ elementHandlers =
     , handlePad
     , handleRef
     , handleCheckBox
-    , handleFocusGroup
     , handleStringList
     , handleList
     , handleVLimit
@@ -84,6 +84,8 @@ handleInterface =
                             }
     where
       genSrc e nam = do
+        clearTempRegisteredNames
+
         -- The focus group is optional, but even if the input document
         -- doesn't specify one, we need to create one for the
         -- interface and register it as an interface element field.
@@ -102,6 +104,7 @@ handleInterface =
         actName <- newEntry "act"
         fgName <- newEntry "focusGroup"
         gen fg fgName
+
         append $ bind actName "addToCollection" [ expr collectionName
                                                 , expr nam
                                                 , expr fgName
@@ -440,6 +443,7 @@ handleRef =
               Just (WName valName) -> do
                            append $ mkLet [(nam, expr $ widgetName valName)]
                            typ <- getWidgetStateType $ widgetName valName
+                           putTempRegisteredName target
                            return $ declareWidget nam typ
               Just (VName _) -> error $ "ref: target '" ++ tgt
                                 ++ "' references non-widget type"
@@ -1028,6 +1032,8 @@ handleFocusGroup =
                             }
         where
           genSrc e nam = do
+            regNames <- getTempRegisteredNames
+
             append $ bind nam "newFocusGroup" []
 
             -- For each child element of the focus group, resolve it
@@ -1041,25 +1047,26 @@ handleFocusGroup =
                                      \DTD should have disallowed this"
                     Just entryName ->
                         do
-                          result <- lookupFocusValue (mkName entryName)
-                          case result of
-                            Nothing -> error $ "Focus group error: widget name "
+                          case (mkName entryName) `elem` regNames of
+                            False -> error $ "Focus group error: widget name "
                                        ++ show entryName
-                                       ++ " not found in document"
-                            Just wName -> do
-                                        -- Get the focus method for this value.
-                                        m <- lookupFocusMethod $ widgetName wName
-                                        case m of
-                                          Just (Merge fgName) ->
-                                              append $ act $ call "appendFocusGroup" [ expr nam
-                                                                                     , expr fgName
-                                                                                     ]
-                                          -- Covers the Just Direct
-                                          -- and Nothing cases
-                                          -- (default is Direct so
-                                          -- handlers don't have to
-                                          -- register focus method
-                                          -- unless it's Merge)
-                                          _ -> append $ act $ call "addToFocusGroup" [ expr nam
-                                                                                     , expr $ widgetName wName
-                                                                                     ]
+                                       ++ " not found in interface"
+                            True -> do
+                              -- Since we know the name is valid for
+                              -- this interface, this lookup should
+                              -- always succeed.
+                              Just wName <- lookupFocusValue (mkName entryName)
+                              -- Get the focus method for this value.
+                              m <- lookupFocusMethod $ widgetName wName
+                              case m of
+                                Just (Merge fgName) ->
+                                     append $ act $ call "appendFocusGroup" [ expr nam
+                                                                            , expr fgName
+                                                                            ]
+                                -- Covers the Just Direct and Nothing
+                                -- cases (default is Direct so
+                                -- handlers don't have to register
+                                -- focus method unless it's Merge)
+                                _ -> append $ act $ call "addToFocusGroup" [ expr nam
+                                                                           , expr $ widgetName wName
+                                                                           ]

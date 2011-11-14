@@ -63,6 +63,10 @@ data GenState =
              , focusValues :: [(Hs.Name, WidgetName)]
              , imports :: [Hs.ImportDecl]
              , paramNames :: [(Hs.Name, Hs.Type)]
+             -- Used to build up a list of registered values' names so
+             -- that focus group entry names can be resolved to the
+             -- current interface being processed, only
+             , tempRegisteredNames :: [Hs.Name]
              }
 
 data FocusMethod = Direct WidgetName -- The name of the widget which

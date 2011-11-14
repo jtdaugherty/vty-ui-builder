@@ -26,6 +26,9 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getFieldValueName
     , getElementStringContent
     , registerFieldValueName
+    , getTempRegisteredNames
+    , clearTempRegisteredNames
+    , putTempRegisteredName
 
     -- Common names
     , collectionName
@@ -116,9 +119,26 @@ registerWidgetName wn =
         st { allWidgetNames = allWidgetNames st ++ [(widgetName wn, wn)] }
 
 registerFieldValueName :: Hs.Name -> AnyName -> GenM ()
-registerFieldValueName fName valName =
+registerFieldValueName fName valName = do
+  putTempRegisteredName fName
+  modify $ \st ->
+      st { registeredFieldNames = registeredFieldNames st ++ [(fName, valName)]
+         }
+
+putTempRegisteredName :: Hs.Name -> GenM ()
+putTempRegisteredName n =
     modify $ \st ->
-        st { registeredFieldNames = registeredFieldNames st ++ [(fName, valName)] }
+        st { tempRegisteredNames = n : tempRegisteredNames st
+           }
+
+getTempRegisteredNames :: GenM [Hs.Name]
+getTempRegisteredNames = tempRegisteredNames <$> get
+
+clearTempRegisteredNames :: GenM ()
+clearTempRegisteredNames =
+    modify $ \st ->
+        st { tempRegisteredNames = []
+           }
 
 getFieldValueName :: Hs.Name -> GenM (Maybe AnyName)
 getFieldValueName fName = lookup fName <$> registeredFieldNames <$> get
