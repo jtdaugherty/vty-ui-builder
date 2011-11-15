@@ -29,6 +29,16 @@ Source-Repository head
 Library
   Hs-Source-Dirs:    src
   GHC-Options:       -Wall
+  Build-Depends:
+    vty-ui >= 1.3 && < 1.4,
+    HaXml >= 1.22 && < 1.23,
+    mtl >= 2.0 && < 2.1,
+    filepath >= 1.1 && < 1.2,
+    directory >= 1.0 && < 1.1,
+    containers >= 0.3 && < 0.4,
+    base >= 4 && < 5,
+    haskell-src-exts >= 1.11 && < 1.12,
+    haskell98
   Exposed-modules:
     Graphics.Vty.Widgets.Builder
     Graphics.Vty.Widgets.Builder.Types
@@ -38,25 +48,10 @@ Library
     Graphics.Vty.Widgets.Builder.Config
     Graphics.Vty.Widgets.Builder.Util
     Graphics.Vty.Widgets.Builder.ValidateLib
-    Graphics.Vty.Widgets.Builder.Tool
     Graphics.Vty.Widgets.Builder.AST
     Graphics.Vty.Widgets.Builder.Reader
-
-Executable vty-ui-builder
-  Hs-Source-Dirs:    src
-  Main-is:           Main.hs
-  GHC-Options:       -Wall
-  Build-Depends:
-    vty-ui >= 1.3 && < 1.4,
-    HaXml >= 1.22 && < 1.23,
-    pretty >= 1.0 && < 1.1,
-    mtl >= 2.0 && < 2.1,
-    filepath >= 1.1 && < 1.2,
-    directory >= 1.0 && < 1.1,
-    containers >= 0.3 && < 0.4,
-    base >= 4 && < 5,
-    haskell-src-exts >= 1.11 && < 1.12,
-    haskell98
+  Other-modules:
+    Paths_vty_ui_builder
 
 Executable vty-ui-builder-tests
   Hs-Source-Dirs:    src tests
