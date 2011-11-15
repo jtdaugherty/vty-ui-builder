@@ -1,5 +1,0 @@
-<!ELEMENT boxLimit (%all;)>
-<!ATTLIST boxLimit
-          height CDATA #REQUIRED
-          width CDATA #REQUIRED
->

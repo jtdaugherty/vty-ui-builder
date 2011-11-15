@@ -1,6 +1,0 @@
-<!ELEMENT fText (#PCDATA | attr | br)*>
-<!ELEMENT attr (#PCDATA | attr | br)*>
-<!ELEMENT br EMPTY>
-<!ATTLIST attr
-          bg (%bgcolor;) #IMPLIED
-          fg (%fgcolor;) #IMPLIED>

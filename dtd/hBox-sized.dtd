@@ -1,7 +1,0 @@
-<!ELEMENT hBox-sized ((%all;),(%all;))>
-<!ATTLIST hBox-sized
-          first CDATA #IMPLIED
-          second CDATA #IMPLIED
-          percent CDATA #IMPLIED
-          spacing CDATA #IMPLIED
->

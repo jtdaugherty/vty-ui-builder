@@ -1,4 +1,0 @@
-<!ELEMENT vLimit (%all;)>
-<!ATTLIST vLimit
-          height CDATA #REQUIRED
->

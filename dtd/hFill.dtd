@@ -1,5 +1,0 @@
-<!ELEMENT hFill EMPTY>
-<!ATTLIST hFill
-  char CDATA #REQUIRED
-  height CDATA #REQUIRED
->

@@ -1,2 +1,0 @@
-<!ELEMENT dialog (%all;)>
-<!ATTLIST dialog title CDATA #REQUIRED>

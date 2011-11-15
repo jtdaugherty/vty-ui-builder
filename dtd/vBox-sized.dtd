@@ -1,7 +1,0 @@
-<!ELEMENT vBox-sized ((%all;),(%all;))>
-<!ATTLIST vBox-sized
-          first CDATA #IMPLIED
-          second CDATA #IMPLIED
-          percent CDATA #IMPLIED
-          spacing CDATA #IMPLIED
->

@@ -1,2 +1,0 @@
-<!ELEMENT ref EMPTY>
-<!ATTLIST ref target CDATA #REQUIRED>

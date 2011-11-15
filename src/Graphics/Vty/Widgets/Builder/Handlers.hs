@@ -1,18 +1,17 @@
 module Graphics.Vty.Widgets.Builder.Handlers
-    ( elementHandlers
+    ( handleDoc
+    , elementHandlers
     )
 where
 
 import Control.Applicative
 import Control.Monad
 import Data.Maybe
-import Text.XML.HaXml.Types
-import Text.XML.HaXml.Posn
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util
-import Graphics.Vty.Widgets.Builder.ValidateLib
+import qualified Graphics.Vty.Widgets.Builder.AST as A
 
 import Graphics.Vty.Widgets.Box
     ( ChildSizePolicy(..)
@@ -21,14 +20,9 @@ import Graphics.Vty.Widgets.Box
 
 import qualified Language.Haskell.Exts as Hs
 
-elementHandlers :: [ElementHandler]
+elementHandlers :: [WidgetSpecHandler]
 elementHandlers =
-    [ handleCollection
-    , handleInterface
-    , handleImport
-    , handleParams
-    , handleShared
-    , handleFormat
+    [ handleFormat
     , handleFormattedText
     , handleVBox
     , handleHBox
@@ -38,7 +32,6 @@ elementHandlers =
     , handleVBorder
     , handleBordered
     , handleEdit
-    , handleFocusGroup
     , handleButton
     , handleVFill
     , handleHFill
@@ -49,7 +42,6 @@ elementHandlers =
     , handleDialog
     , handleDirBrowser
     , handlePad
-    , handleRef
     , handleCheckBox
     , handleStringList
     , handleList
@@ -61,111 +53,50 @@ elementHandlers =
     , handleBoxFixed
     ]
 
-handleCollection :: ElementHandler
-handleCollection =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "collection"
-                            , validator = Nothing
-                            }
-        where
-          genSrc e _ = do
-            let chs = elemChildren e
-            append $ bind collectionName "newCollection" []
+handleDoc :: A.Doc -> GenM ()
+handleDoc doc = do
+  mapM_ handleParam $ A.documentParams doc
+  forM_ (A.documentSharedWidgets doc) $ \spec ->
+      do
+        nam <- newEntry $ A.widgetType spec
+        gen (A.Widget spec) nam
 
-            forM_ chs $ \ch -> do
-                        nam <- newEntry $ elemName ch
-                        gen ch nam
+  append $ bind collectionName "newCollection" []
 
-handleInterface :: ElementHandler
-handleInterface =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "interface"
-                            , validator = Nothing
-                            }
-    where
-      genSrc e nam = do
-        clearTempRegisteredNames
+  forM_ (A.documentInterfaces doc) $ \iface ->
+      do
+        nam <- newEntry "interface"
+        handleInterface iface nam
 
-        -- The focus group is optional, but even if the input document
-        -- doesn't specify one, we need to create one for the
-        -- interface and register it as an interface element field.
-        let [ch, fg] = case elemChildren e of
-                         [e1, e2] -> [e1, e2]
-                         [e1] -> [e1, Elem (N "focusGroup") [] []]
-                         _ -> error "BUG: invalid interface children"
-            Just ifName = getAttribute e "name"
+handleInterface :: A.Interface -> Hs.Name -> GenM ()
+handleInterface iface nam = do
+  gen (A.interfaceContent iface) nam
 
-        if' <- lookupInterface ifName
-        when (isJust if') $
-             error $ "Interface '" ++ ifName ++ "' defined more than once"
+  actName <- newEntry "act"
+  fgName <- newEntry "focusGroup"
 
-        gen ch nam
+  forM_ (A.interfaceFocusEntries iface) $ \w ->
+      handleFocusEntry iface w fgName
 
-        actName <- newEntry "act"
-        fgName <- newEntry "focusGroup"
-        gen fg fgName
+  append $ bind actName "addToCollection" [ expr collectionName
+                                          , expr nam
+                                          , expr fgName
+                                          ]
 
-        append $ bind actName "addToCollection" [ expr collectionName
-                                                , expr nam
-                                                , expr fgName
-                                                ]
+  let vals = InterfaceValues { topLevelWidgetName = nam
+                             , switchActionName = actName
+                             , focusGroupName = fgName
+                             }
+  registerInterface (A.interfaceName iface) vals
 
-        let vals = InterfaceValues { topLevelWidgetName = nam
-                                   , switchActionName = actName
-                                   , focusGroupName = fgName
-                                   }
-        registerInterface ifName vals
+handleParam :: A.Param -> GenM ()
+handleParam p =
+    registerParam (mkName $ A.paramName p) (parseType $ A.paramType p)
 
-handleParams :: ElementHandler
-handleParams =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "params"
-                            , validator = Nothing
-                            }
-        where
-          genSrc e _ = do
-            forM_ (elemChildren e) $ \ch ->
-                do
-                  let Just paramId = getAttribute ch "name"
-                      Just paramTyp = getAttribute ch "type"
-                  registerParam (mkName paramId) (parseType paramTyp)
-
-handleImport :: ElementHandler
-handleImport =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "import"
-                            , validator = Nothing
-                            }
-        where
-          genSrc e _ = do
-            let Just name = getAttribute e "module"
-            addImport name
-
-handleShared :: ElementHandler
-handleShared =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "shared"
-                            , validator = Just doValidate
-                            }
-        where
-          doValidate e = do
-            forM_ (elemChildren e) $ \ch ->
-                do
-                  when (isNothing $ getAttribute ch "id") $
-                       putError e $ "element '" ++ elemName ch
-                                    ++ "' missing 'id' attribute"
-
-          genSrc e _ = do
-            forM_ (elemChildren e) $ \ch ->
-                do
-                  chNam <- newEntry $ elemName ch
-                  gen ch chNam
-
-handleCheckBox :: ElementHandler
+handleCheckBox :: WidgetSpecHandler
 handleCheckBox =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "checkBox"
-                         , validator = Nothing
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                         , specType = "checkBox"
                          }
         where
           genSrc e nam = do
@@ -196,15 +127,14 @@ handleCheckBox =
 
             return $ declareWidget nam (mkTyp "CheckBox" [mkTyp "Bool" []])
 
-handleStringList :: ElementHandler
+handleStringList :: WidgetSpecHandler
 handleStringList =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "stringList"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "stringList"
+                      }
         where
           genSrc e nam = do
-            let strs = map getElementStringContent $ elemChildren e
+            let strs = map getSpecStringContent $ specChildWidgets e
                 attrResult = ( getAttribute e "cursorFg"
                              , getAttribute e "cursorBg"
                              )
@@ -215,12 +145,11 @@ handleStringList =
             append $ bind nam "newStringList" [attrExpr, mkList $ map mkString strs]
             return $ declareWidget nam $ parseType "List String FormattedText"
 
-handleList :: ElementHandler
+handleList :: WidgetSpecHandler
 handleList =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "list"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "list"
+                      }
         where
           genSrc e nam = do
             let attrResult = ( getAttribute e "cursorFg"
@@ -235,27 +164,18 @@ handleList =
             append $ bind nam "newList" [attrExpr]
             return $ declareWidget nam $ parseType $ "List (" ++ keyType ++ ") (" ++ elemType ++ ")"
 
-handleVLimit :: ElementHandler
+handleVLimit :: WidgetSpecHandler
 handleVLimit =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vLimit"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "vLimit"
+                      }
         where
-          doValidate e = do
-            case getAttribute e "height" of
-              Nothing -> putError e "'height' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'height' attribute must be an integer"
-                             _ -> return ()
-
           genSrc e nam = do
             let Just val = getIntAttributeValue =<< getAttribute e "height"
 
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -263,27 +183,18 @@ handleVLimit =
             return $ declareWidget nam $
                    parseType $ "VLimit (" ++ Hs.prettyPrint chType ++ ")"
 
-handleHLimit :: ElementHandler
+handleHLimit :: WidgetSpecHandler
 handleHLimit =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hLimit"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "hLimit"
+                      }
         where
-          doValidate e = do
-            case getAttribute e "width" of
-              Nothing -> putError e "'width' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'width' attribute must be an integer"
-                             _ -> return ()
-
           genSrc e nam = do
             let Just val = getIntAttributeValue =<< getAttribute e "width"
 
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -291,35 +202,19 @@ handleHLimit =
             return $ declareWidget nam $
                    parseType $ "HLimit (" ++ Hs.prettyPrint chType ++ ")"
 
-handleBoxLimit :: ElementHandler
+handleBoxLimit :: WidgetSpecHandler
 handleBoxLimit =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "boxLimit"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "boxLimit"
+                      }
         where
-          doValidate e = do
-            case getAttribute e "width" of
-              Nothing -> putError e "'width' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'width' attribute must be an integer"
-                             _ -> return ()
-
-            case getAttribute e "height" of
-              Nothing -> putError e "'height' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'height' attribute must be an integer"
-                             _ -> return ()
-
           genSrc e nam = do
             let Just w = getIntAttributeValue =<< getAttribute e "width"
                 Just h = getIntAttributeValue =<< getAttribute e "height"
 
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -327,27 +222,18 @@ handleBoxLimit =
             return $ declareWidget nam $
                    parseType $ "VLimit (HLimit (" ++ Hs.prettyPrint chType ++ "))"
 
-handleVFixed :: ElementHandler
+handleVFixed :: WidgetSpecHandler
 handleVFixed =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vFixed"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "vFixed"
+                      }
         where
-          doValidate e = do
-            case getAttribute e "height" of
-              Nothing -> putError e "'height' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'height' attribute must be an integer"
-                             _ -> return ()
-
           genSrc e nam = do
             let Just val = getIntAttributeValue =<< getAttribute e "height"
 
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -355,27 +241,18 @@ handleVFixed =
             return $ declareWidget nam $
                    parseType $ "VFixed (" ++ Hs.prettyPrint chType ++ ")"
 
-handleHFixed :: ElementHandler
+handleHFixed :: WidgetSpecHandler
 handleHFixed =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hFixed"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "hFixed"
+                      }
         where
-          doValidate e = do
-            case getAttribute e "width" of
-              Nothing -> putError e "'width' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'width' attribute must be an integer"
-                             _ -> return ()
-
           genSrc e nam = do
             let Just val = getIntAttributeValue =<< getAttribute e "width"
 
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -383,35 +260,19 @@ handleHFixed =
             return $ declareWidget nam $
                    parseType $ "HFixed (" ++ Hs.prettyPrint chType ++ ")"
 
-handleBoxFixed :: ElementHandler
+handleBoxFixed :: WidgetSpecHandler
 handleBoxFixed =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "boxFixed"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "boxFixed"
+                      }
         where
-          doValidate e = do
-            case getAttribute e "width" of
-              Nothing -> putError e "'width' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'width' attribute must be an integer"
-                             _ -> return ()
-
-            case getAttribute e "height" of
-              Nothing -> putError e "'height' attribute required"
-              Just val -> do
-                           case getIntAttributeValue val of
-                             Nothing -> putError e $ "'height' attribute must be an integer"
-                             _ -> return ()
-
           genSrc e nam = do
             let Just w = getIntAttributeValue =<< getAttribute e "width"
                 Just h = getIntAttributeValue =<< getAttribute e "height"
 
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -419,59 +280,16 @@ handleBoxFixed =
             return $ declareWidget nam $
                    parseType $ "VFixed (HFixed (" ++ Hs.prettyPrint chType ++ "))"
 
-handleRef :: ElementHandler
-handleRef =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "ref"
-                         , validator = Nothing
-                         }
-        where
-          genSrc e nam = do
-            let Just tgt = getAttribute e "target"
-                target = mkName tgt
-            val <- getFieldValueName target
-
-            case val of
-              Nothing -> do
-                       result <- isValidParamName target
-                       case result of
-                         False -> error $ "ref: target '" ++ tgt ++ "' invalid"
-                         True -> do
-                           typ <- getParamType target
-                           append $ mkLet [(nam, expr target)]
-                           return $ declareWidget nam typ
-              Just (WName valName) -> do
-                           append $ mkLet [(nam, expr $ widgetName valName)]
-                           typ <- getWidgetStateType $ widgetName valName
-                           putTempRegisteredName target
-                           return $ declareWidget nam typ
-              Just (VName _) -> error $ "ref: target '" ++ tgt
-                                ++ "' references non-widget type"
-
-handlePad :: ElementHandler
+handlePad :: WidgetSpecHandler
 handlePad =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "pad"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "pad"
+                      }
         where
-          doValidate e@(Elem _ attrs _) = do
-            when (length attrs == 0) $
-                 putError e $ "at least one padding attribute must be specified"
-
-            let attrNames = ["top", "bottom", "left", "right", "topBottom", "leftRight", "all"]
-
-            forM_ attrNames $ \attr -> do
-              let val = getAttribute e attr
-              case (val, val >>= getIntAttributeValue) of
-                (Just _, Nothing) ->
-                    putError e $ "attribute '" ++ attr ++ "' must be an integer"
-                _ -> return ()
-
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry (elemName e)
+            chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
 
             let padFunctions = [ ("top", "padTop")
@@ -509,12 +327,11 @@ handlePad =
 
             return $ declareWidget nam (mkTyp "Padded" [])
 
-handleDirBrowser :: ElementHandler
+handleDirBrowser :: WidgetSpecHandler
 handleDirBrowser =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "dirBrowser"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "dirBrowser"
+                      }
         where
           genSrc e nam = do
             let skin = case getAttribute e "skin" of
@@ -536,18 +353,17 @@ handleDirBrowser =
             return $ declareWidget nam (mkTyp "DirBrowserWidgetType" [])
                        `withField` (browserName, parseType "DirBrowser")
 
-handleDialog :: ElementHandler
+handleDialog :: WidgetSpecHandler
 handleDialog =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "dialog"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "dialog"
+                      }
         where
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
                 Just title = getAttribute e "title"
 
-            chNam <- newEntry $ elemName ch
+            chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
             dlgName <- newEntry "dialog"
@@ -567,17 +383,16 @@ handleDialog =
             return $ declareWidget nam (parseType "Bordered Padded")
                        `withField` (dlgName, parseType "Dialog")
 
-handleCentered :: ElementHandler
+handleCentered :: WidgetSpecHandler
 handleCentered =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "centered"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "centered"
+                      }
         where
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry $ elemName ch
+            chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
             append $ bind nam "centered" [expr chNam]
@@ -585,17 +400,16 @@ handleCentered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (parseType $ "VCentered (HCentered (" ++ Hs.prettyPrint chType ++ "))")
 
-handleHCentered :: ElementHandler
+handleHCentered :: WidgetSpecHandler
 handleHCentered =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hCentered"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "hCentered"
+                      }
         where
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry $ elemName ch
+            chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
             append $ bind nam "hCentered" [expr chNam]
@@ -603,17 +417,16 @@ handleHCentered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "HCentered" [chType])
 
-handleVCentered :: ElementHandler
+handleVCentered :: WidgetSpecHandler
 handleVCentered =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vCentered"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "vCentered"
+                      }
         where
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry $ elemName ch
+            chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
             append $ bind nam "vCentered" [expr chNam]
@@ -621,17 +434,12 @@ handleVCentered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "VCentered" [chType])
 
-handleVFill :: ElementHandler
+handleVFill :: WidgetSpecHandler
 handleVFill =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vFill"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "vFill"
+                      }
         where
-          doValidate e = do
-            let Just ch = getAttribute e "char"
-            when (null ch) $ putError e "attribute 'char' must be non-empty"
-
           genSrc e nam = do
             let Just ch = getAttribute e "char"
 
@@ -641,23 +449,12 @@ handleVFill =
 
             return $ declareWidget nam (mkTyp "VFill" [])
 
-handleHFill :: ElementHandler
+handleHFill :: WidgetSpecHandler
 handleHFill =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hFill"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "hFill"
+                      }
         where
-          doValidate e = do
-            let Just ch = getAttribute e "char"
-                Just h = getAttribute e "height"
-
-            when (null ch) $ putError e "attribute 'char' must be non-empty"
-
-            case getIntAttributeValue h of
-              Nothing -> putError e "attribute 'height' must be an integer"
-              Just _ -> return ()
-
           genSrc e nam = do
             let Just ch = getAttribute e "char"
                 Just heightStr = getAttribute e "height"
@@ -674,22 +471,12 @@ handleHFill =
 
             return $ declareWidget nam (mkTyp "HFill" [])
 
-handleProgressBar :: ElementHandler
+handleProgressBar :: WidgetSpecHandler
 handleProgressBar =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "progressBar"
-                         , validator = Just doValidate
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "progressBar"
+                      }
         where
-          doValidate e = do
-            let prog = getAttribute e "progress"
-
-            case prog of
-              Nothing -> return ()
-              Just val -> case getIntAttributeValue val of
-                            Nothing -> putError e "'progress' attribute must be an integer"
-                            Just _ -> return ()
-
           genSrc e nam = do
             let Just compColor = getAttribute e "completeColor"
                 Just incompColor = getAttribute e "incompleteColor"
@@ -716,12 +503,11 @@ handleProgressBar =
                                                     ])
                        `withField` (barName, parseType "ProgressBar")
 
-handleButton :: ElementHandler
+handleButton :: WidgetSpecHandler
 handleButton =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "button"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "button"
+                      }
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
@@ -737,12 +523,11 @@ handleButton =
             return $ declareWidget nam (mkTyp "Padded" [])
                        `withField` (buttonName, parseType "Button")
 
-handleEdit :: ElementHandler
+handleEdit :: WidgetSpecHandler
 handleEdit =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "edit"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "edit"
+                      }
         where
           genSrc e nam = do
             append $ bind nam "editWidget" []
@@ -755,39 +540,36 @@ handleEdit =
 
             return $ declareWidget nam (mkTyp "Edit" [])
 
-handleHBorder :: ElementHandler
+handleHBorder :: WidgetSpecHandler
 handleHBorder =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hBorder"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "hBorder"
+                      }
         where
           genSrc _ nam = do
             append $ bind nam "hBorder" []
             return $ declareWidget nam (mkTyp "HBorder" [])
 
-handleVBorder :: ElementHandler
+handleVBorder :: WidgetSpecHandler
 handleVBorder =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vBorder"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "vBorder"
+                      }
         where
           genSrc _ nam = do
             append $ bind nam "vBorder" []
             return $ declareWidget nam (mkTyp "VBorder" [])
 
-handleBordered :: ElementHandler
+handleBordered :: WidgetSpecHandler
 handleBordered =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "bordered"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "bordered"
+                      }
         where
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
 
-            chNam <- newEntry $ elemName ch
+            chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
             append $ bind nam "bordered" [expr chNam]
@@ -795,11 +577,11 @@ handleBordered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "Bordered" [chType])
 
-genBox :: [Element Posn] -> String -> Maybe Int -> Hs.Name -> GenM Hs.Name
+genBox :: [A.WidgetLike] -> String -> Maybe Int -> Hs.Name -> GenM Hs.Name
 genBox es typ spacing rootName = do
   names <- forM es $
            \child -> do
-              chname <- newEntry $ elemName child
+              chname <- newEntry $ widgetLikeType child
               gen child chname
               return chname
 
@@ -830,45 +612,43 @@ genBox es typ spacing rootName = do
   append $ mkLet [(rootName, expr resultName)]
   return resultName
 
-handleVBox :: ElementHandler
+handleVBox :: WidgetSpecHandler
 handleVBox =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "vBox"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "vBox"
+                      }
         where
           genSrc e nam = do
             let spacing = getIntAttributeValue =<< getAttribute e "spacing"
-            resultName <- genBox (elemChildren e) "vBox" spacing nam
+            resultName <- genBox (specChildren e) "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleBoxSized :: String -> ElementHandler
+handleBoxSized :: String -> WidgetSpecHandler
 handleBoxSized typ =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = typ ++ "-sized"
-                         , validator = Just checkBoxSize
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = typ ++ "-sized"
+                      }
         where
           genSrc e nam = do
             let Just boxSize = getBoxSize e
                 Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
                 spacing = getIntAttributeValue =<< getAttribute e "spacing"
 
-            resultName <- genBox (elemChildren e) typ spacing nam
+            resultName <- genBox (specChildren e) typ spacing nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleHBoxSized :: ElementHandler
+handleHBoxSized :: WidgetSpecHandler
 handleHBoxSized = handleBoxSized "hBox"
 
-handleVBoxSized :: ElementHandler
+handleVBoxSized :: WidgetSpecHandler
 handleVBoxSized = handleBoxSized "vBox"
 
-getBoxSize :: Element Posn -> Maybe ChildSizePolicy
+getBoxSize :: A.WidgetSpec -> Maybe ChildSizePolicy
 getBoxSize e = getPercentSize <|> getDualSize
     where
       getPercentSize = do
@@ -890,39 +670,26 @@ getBoxSize e = getPercentSize <|> getDualSize
 
         return $ PerChild f s
 
-checkBoxSize :: ElementValidator
-checkBoxSize e = do
-  case getBoxSize e of
-    Nothing -> do
-      putError e "No box size set; set 'percent' or both 'first' and 'second' to integer values"
-    Just (Percentage v) -> do
-                   when (v >= 100 || v <= 0) $
-                        putError e $ "Box percentage value '" ++ show v
-                                     ++ "' is invalid, must be between 1 and 99 inclusive"
-    _ -> return ()
-
-handleHBox :: ElementHandler
+handleHBox :: WidgetSpecHandler
 handleHBox =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "hBox"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "hBox"
+                      }
         where
           genSrc e nam = do
             let spacing = getIntAttributeValue =<< getAttribute e "spacing"
-            resultName <- genBox (elemChildren e) "hBox" spacing nam
+            resultName <- genBox (specChildren e) "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleFormat :: ElementHandler
+handleFormat :: WidgetSpecHandler
 handleFormat =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "format"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "format"
+                      }
         where
           genSrc e nam = do
-            let [ch] = elemChildren e
+            let [ch] = specChildren e
                 Just formatName = getAttribute e "name"
 
             gen ch nam
@@ -947,14 +714,13 @@ handleFormat =
 defAttr :: Hs.Exp
 defAttr = expr $ mkName "def_attr"
 
-handleFormattedText :: ElementHandler
+handleFormattedText :: WidgetSpecHandler
 handleFormattedText =
-    WidgetElementHandler { generateWidgetSource = genSrc
-                         , elementName = "fText"
-                         , validator = Nothing
-                         }
+    WidgetSpecHandler { generateWidgetSource = genSrc
+                      , specType = "fText"
+                      }
         where
-          genSrc (Elem _ _ eContents) nam = do
+          genSrc e nam = do
             -- For each entry in the contents list: If it is a string,
             -- give it the default attribute and put it in a list.  If
             -- it is an Attr element, recurse on it, building another
@@ -962,36 +728,38 @@ handleFormattedText =
 
             -- Left: do not strip whitespace
             -- Right: do strip whitespace
-            let processContent :: Hs.Exp -> Content t -> [(Either String String, Hs.Exp)]
+            let processContent :: Hs.Exp -> A.WidgetSpecContent -> [(Either String String, Hs.Exp)]
                 processContent ex c =
                     case c of
-                      CString _ cd _ -> [(Right $ stripWhitespace cd, ex)]
-                      CElem (Elem (N "br") _ _) _ -> [(Left "\n", ex)]
-                      CElem attr@(Elem (N "attr") _ _) _ -> processAttr attr
-                      _ -> error "BUG: got unsupported content, should \
-                                 \have been disallowed by DTD"
+                      A.Text s _ -> [(Right $ stripWhitespace s, ex)]
+                      A.Child (A.Widget w) ->
+                          case A.widgetType w of
+                            "br" -> [(Left "\n", ex)]
+                            "attr" -> processAttr w
+                            badName -> error $ "Got unsupported child of attr: " ++ badName
+                      A.Child (A.Ref _) -> error "Got unsupported child of attr: reference"
 
-                processAttr :: Element a -> [(Either String String, Hs.Exp)]
-                processAttr attr@(Elem _ _ contents) =
+                processAttr :: A.WidgetSpec -> [(Either String String, Hs.Exp)]
+                processAttr attr =
                     let attrResult = ( getAttribute attr "fg"
                                      , getAttribute attr "bg"
                                      )
                         attrExpr = case attrsToExpr attrResult of
                                      Nothing -> defAttr
                                      Just ex -> ex
-                    in concat $ map (processContent attrExpr) contents
+                    in concat $ map (processContent attrExpr) $ A.widgetSpecContents attr
 
                 collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
                 collapse [] = []
-                collapse [e] = [e]
+                collapse [p] = [p]
                 collapse ((Right s1, e1):(Right s2, e2):es) =
                     if e1 == e2
                     then collapse ((Right $ s1 ++ s2, e1) : es)
                     else (Right s1, e1) : collapse ((Right s2, e2):es)
-                collapse (e:es) = e : collapse es
+                collapse (p:ps) = p : collapse ps
 
                 pairs :: [(Either String String, Hs.Exp)]
-                pairs = concat $ map (processContent defAttr) eContents
+                pairs = concat $ map (processContent defAttr) $ A.widgetSpecContents e
 
                 collapsed :: [(Either String String, Hs.Exp)]
                 collapsed = collapse pairs
@@ -1024,49 +792,26 @@ handleFormattedText =
             append $ bind nam "plainTextWithAttrs" [mkList pairExprList]
             return $ declareWidget nam (mkTyp "FormattedText" [])
 
-handleFocusGroup :: ElementHandler
-handleFocusGroup =
-    StructureElementHandler { generateStructureSource = genSrc
-                            , elementName = "focusGroup"
-                            , validator = Nothing
-                            }
-        where
-          genSrc e nam = do
-            regNames <- getTempRegisteredNames
-
-            append $ bind nam "newFocusGroup" []
-
-            -- For each child element of the focus group, resolve it
-            -- to a named value and add the specified widget to the
-            -- focus group.
-            forM_ (elemChildren e) $ \ch ->
-                do
-                  let attr = getAttribute ch "name"
-                  case attr of
-                    Nothing -> error "BUG: attribute 'name' missing from child of 'focusGroup'; \
-                                     \DTD should have disallowed this"
-                    Just entryName ->
-                        do
-                          case (mkName entryName) `elem` regNames of
-                            False -> error $ "Focus group error: widget name "
-                                       ++ show entryName
-                                       ++ " not found in interface"
-                            True -> do
-                              -- Since we know the name is valid for
-                              -- this interface, this lookup should
-                              -- always succeed.
-                              Just wName <- lookupFocusValue (mkName entryName)
-                              -- Get the focus method for this value.
-                              m <- lookupFocusMethod $ widgetName wName
-                              case m of
-                                Just (Merge fgName) ->
-                                     append $ act $ call "appendFocusGroup" [ expr nam
-                                                                            , expr fgName
-                                                                            ]
-                                -- Covers the Just Direct and Nothing
-                                -- cases (default is Direct so
-                                -- handlers don't have to register
-                                -- focus method unless it's Merge)
-                                _ -> append $ act $ call "addToFocusGroup" [ expr nam
-                                                                           , expr $ widgetName wName
-                                                                           ]
+handleFocusEntry :: A.Interface -> A.WidgetId -> Hs.Name -> GenM ()
+handleFocusEntry iface entryName fgName = do
+  case entryName `elem` (getNamedWidgetNames iface) of
+      False -> error $ "Focus group error: widget name "
+               ++ show entryName
+               ++ " not found in interface"
+      True -> do
+        -- Since we know the name is valid for this interface, this
+        -- lookup should always succeed.
+        Just wName <- lookupFocusValue (mkName entryName)
+        -- Get the focus method for this value.
+        m <- lookupFocusMethod $ widgetName wName
+        case m of
+          Just (Merge fgName') ->
+               append $ act $ call "appendFocusGroup" [ expr fgName
+                                                      , expr fgName'
+                                                      ]
+          -- Covers the Just Direct and Nothing cases (default is
+          -- Direct so handlers don't have to register focus method
+          -- unless it's Merge)
+          _ -> append $ act $ call "addToFocusGroup" [ expr fgName
+                                                     , expr $ widgetName wName
+                                                     ]

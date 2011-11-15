@@ -1,32 +1,18 @@
 module Graphics.Vty.Widgets.Builder
-    ( generateSourceForDocument
-    , validateAgainstDTD
-    , style
-    , mode
-    )
 where
 
-import System.IO
 import qualified Data.Map as Map
 import Control.Monad.State
 import Data.List (intercalate)
 import Data.Maybe
 
-import Text.XML.HaXml.Parse hiding (doctypedecl)
-import Text.XML.HaXml.Validate
-import Text.XML.HaXml.Types
-
 import qualified Language.Haskell.Exts as Hs
 
+import qualified Graphics.Vty.Widgets.Builder.AST as A
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
-import Graphics.Vty.Widgets.Builder.DTDGenerator
-import Graphics.Vty.Widgets.Builder.ValidateLib
-
-getSourceGenerator :: ElementHandler -> AnyElementSourceGenerator
-getSourceGenerator (WidgetElementHandler h _ _) = WSrc h
-getSourceGenerator (StructureElementHandler h _ _) = SSrc h
+import Graphics.Vty.Widgets.Builder.Handlers (handleDoc)
 
 style :: Hs.Style
 style = Hs.style { Hs.lineLength = 72 }
@@ -35,22 +21,20 @@ mode :: Hs.PPHsMode
 mode = Hs.defaultMode { Hs.doIndent = 2, Hs.spacing = True }
 
 generateSourceForDocument :: BuilderConfig
-                          -> ValidatedElement
-                          -> [ElementHandler]
+                          -> A.Doc
+                          -> [WidgetSpecHandler]
                           -> IO (Either String String)
-generateSourceForDocument config (Validated e) theHandlers = do
-  let (_, finalState) = runState (gen e $ mkName "root") initialState
+generateSourceForDocument config doc theHandlers = do
+  let (_, finalState) = runState (handleDoc doc) initialState
       initialState = GenState { nameCounters = Map.empty
                               , hsStatements = []
-                              , handlers = map (\h -> (elementName h, getSourceGenerator h)) theHandlers
+                              , handlers = map (\h -> (specType h, h)) theHandlers
                               , interfaceNames = []
                               , focusMethods = []
-                              , imports = []
                               , allWidgetNames = []
                               , registeredFieldNames = []
                               , focusValues = []
                               , paramNames = []
-                              , tempRegisteredNames = []
                               }
 
   -- If the user wants to generate a main function, we can't do that
@@ -66,37 +50,12 @@ generateSourceForDocument config (Validated e) theHandlers = do
       let moduleBody = generateModuleBody config finalState
           result = case generateModulePreamble config of
                      True -> Hs.prettyPrintStyleMode style mode $
-                             generateModule config finalState moduleBody
+                             generateModule config doc moduleBody
                      False -> concat $ map (Hs.prettyPrintStyleMode style mode) moduleBody
       return $ Right result
 
-validateAgainstDTD :: Handle
-                   -> FilePath
-                   -> [(FilePath, [ElementHandler])]
-                   -> IO (Either [String] ValidatedElement)
-validateAgainstDTD inputXmlHandle inputXmlPath elemInfo = do
-  masterDTD <- generateMasterDTD elemInfo
-  dtd <- case dtdParse' "<generated>" masterDTD of
-           Right (Just dtd) -> return dtd
-           Right Nothing -> error "No DTD found in generated DTD text!"
-           Left e -> error $ "Error parsing generated DTD: " ++ e
-
-  xmlContents <- hGetContents inputXmlHandle
-  case xmlParse' inputXmlPath xmlContents of
-    Left e -> error $ "Error parsing input XML "
-              ++ (show inputXmlPath) ++ ": " ++ e
-    Right (Document _ _ e _) -> do
-         case partialValidate dtd e of
-           [] -> do
-             let hs = concat $ map snd elemInfo
-             result <- doValidation e hs
-             case result of
-               [] -> return $ Right $ Validated e
-               es -> return $ Left es
-           es -> return $ Left es
-
-generateModule :: BuilderConfig -> GenState -> [Hs.Decl] -> Hs.Module
-generateModule config st moduleBody =
+generateModule :: BuilderConfig -> A.Doc -> [Hs.Decl] -> Hs.Module
+generateModule config doc moduleBody =
     let modName = if generateMain config
                   then "Main"
                   else moduleName config
@@ -117,7 +76,7 @@ generateModule config st moduleBody =
 
         theImports = [ mkImportDecl "Graphics.Vty" ["Button"]
                      , mkImportDecl "Graphics.Vty.Widgets.All" []
-                     ] ++ imports st
+                     ] ++ (map (\i -> mkImportDecl (A.importModuleName i) []) $ A.documentImports doc)
 
     in Hs.Module noLoc (Hs.ModuleName modName) [] Nothing theExports theImports moduleBody
 

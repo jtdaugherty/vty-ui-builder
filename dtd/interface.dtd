@@ -1,2 +1,0 @@
-<!ELEMENT interface ((%all;),focusGroup?)>
-<!ATTLIST interface name CDATA #REQUIRED>

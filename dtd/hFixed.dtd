@@ -1,4 +1,0 @@
-<!ELEMENT hFixed (%all;)>
-<!ATTLIST hFixed
-          width CDATA #REQUIRED
->

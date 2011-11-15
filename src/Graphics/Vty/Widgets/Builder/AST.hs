@@ -2,6 +2,7 @@ module Graphics.Vty.Widgets.Builder.AST
     ( Doc(..)
     , Param(..)
     , Interface(..)
+    , ModuleImport(..)
     , WidgetLike(..)
     , WidgetSpec(..)
     , WidgetSpecContent(..)
@@ -21,7 +22,8 @@ data SourceLocation =
 data Doc =
     Doc { documentInterfaces :: [Interface]
         , documentParams :: [Param]
-        , documentSharedElements :: [WidgetSpec]
+        , documentSharedWidgets :: [WidgetSpec]
+        , documentImports :: [ModuleImport]
         }
     deriving (Eq, Read, Show)
 
@@ -30,6 +32,11 @@ data Param =
           , paramType :: String
           , paramLocation :: SourceLocation
           }
+    deriving (Eq, Read, Show)
+
+data ModuleImport =
+    ModuleImport { importModuleName :: String
+                 }
     deriving (Eq, Read, Show)
 
 data Interface =
@@ -53,7 +60,7 @@ data WidgetSpec =
                }
     deriving (Eq, Read, Show)
 
-data WidgetSpecContent = Plain String SourceLocation
+data WidgetSpecContent = Text String SourceLocation
                        | Child WidgetLike
                          deriving (Eq, Read, Show)
 

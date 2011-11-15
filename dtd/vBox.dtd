@@ -1,4 +1,0 @@
-<!ELEMENT vBox ((%all;),(%all;)+)>
-<!ATTLIST vBox
-          spacing CDATA #IMPLIED
->

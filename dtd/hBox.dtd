@@ -1,4 +1,0 @@
-<!ELEMENT hBox ((%all;),(%all;)+)>
-<!ATTLIST hBox
-          spacing CDATA #IMPLIED
->

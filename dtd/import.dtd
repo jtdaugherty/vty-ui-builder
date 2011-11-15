@@ -1,4 +1,0 @@
-<!ELEMENT import EMPTY>
-<!ATTLIST import
-          module CDATA #REQUIRED
->

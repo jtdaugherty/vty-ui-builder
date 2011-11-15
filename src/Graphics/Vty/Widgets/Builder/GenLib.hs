@@ -1,7 +1,5 @@
 module Graphics.Vty.Widgets.Builder.GenLib
     ( gen
-    , elemChildren
-    , getString
     , append
     , newEntry
     , getAttribute
@@ -12,7 +10,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , lookupFocusMethod
     , declareWidget
     , withField
-    , addImport
     , mergeFocus
     , getWidgetStateType
     , lookupWidgetName
@@ -24,11 +21,12 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , parseType
     , nameStr
     , getFieldValueName
-    , getElementStringContent
+    , specChildren
+    , specChildWidgets
+    , getSpecStringContent
     , registerFieldValueName
-    , getTempRegisteredNames
-    , clearTempRegisteredNames
-    , putTempRegisteredName
+    , getNamedWidgetNames
+    , widgetLikeType
 
     -- Common names
     , collectionName
@@ -60,34 +58,28 @@ import Control.Applicative
 import Control.Monad.State
 import Data.Maybe
 import qualified Data.Map as Map
-import Text.XML.HaXml.Types
-import Text.XML.HaXml.Posn
-import Text.XML.HaXml.Combinators hiding (when)
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Util
+import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Language.Haskell.Exts as Hs
 
-gen :: Element Posn -> Hs.Name -> GenM ()
-gen e@(Elem (N n) _ _) nam = do
+gen :: A.WidgetLike -> Hs.Name -> GenM ()
+gen (A.Widget spec) nam = do
   hs <- gets handlers
-  case lookup n hs of
-    Nothing -> error $ "No handler for element type " ++ (show n)
+  case lookup (A.widgetType spec) hs of
+    Nothing -> error $ "No handler for widget type " ++ (show $ A.widgetType spec)
     Just handler -> do
-      case handler of
-        SSrc h -> h e nam
-        WSrc h -> do
-          result <- h e nam
+      result <- generateWidgetSource handler spec nam
 
-          -- Register the widget value name.
-          registerWidgetName $ resultWidgetName result
+      -- Register the widget value name.
+      registerWidgetName $ resultWidgetName result
 
-          -- If the element has an ID, use that to set up field
-          -- information so we know how to assign the widget to the
-          -- field.
-          case getAttribute e "id" of
-            Nothing -> return ()
-            Just newName -> do
+      -- If the element has an ID, use that to set up field
+      -- information so we know how to assign the widget to the field.
+      case getAttribute spec "id" of
+        Nothing -> return ()
+        Just newName -> do
                       let fieldValName = case fieldValueName result of
                                            Just fValName -> VName fValName
                                            Nothing -> WName $ resultWidgetName result
@@ -105,10 +97,39 @@ gen e@(Elem (N n) _ _) nam = do
                       -- generated source.
                       setFocusValue (mkName newName) $ resultWidgetName result
 
-          -- Use common attributes on the element to annotate it with
-          -- widget-agnostic properties.
-          annotateElement e nam
-gen _ _ = error "Got unsupported element structure"
+      -- Use common attributes on the element to annotate it with
+      -- widget-agnostic properties.
+      annotateWidget spec nam
+
+gen (A.Ref (A.Reference tgt)) nam = do
+  let target = mkName tgt
+
+  val <- getFieldValueName target
+
+  result <- case val of
+              Nothing -> do
+                result <- isValidParamName target
+                case result of
+                  False -> error $ "ref: target '" ++ tgt ++ "' invalid"
+                  True -> do
+                           typ <- getParamType target
+                           append $ mkLet [(nam, expr target)]
+                           return $ declareWidget nam typ
+              Just (WName valName) -> do
+                append $ mkLet [(nam, expr $ widgetName valName)]
+                typ <- getWidgetStateType $ widgetName valName
+                return $ declareWidget nam typ
+              Just (VName _) -> error $ "ref: target '" ++ tgt
+                                ++ "' references non-widget type"
+
+  registerWidgetName $ resultWidgetName result
+
+getNamedWidgetNames :: A.Interface -> [A.WidgetId]
+getNamedWidgetNames iface = catMaybes $ getNamedWidgetNames' (A.interfaceContent iface)
+    where
+      getNamedWidgetNames' (A.Ref _) = []
+      getNamedWidgetNames' (A.Widget spec) =
+          A.widgetId spec : (concat $ map getNamedWidgetNames' $ specChildren spec)
 
 lookupWidgetName :: Hs.Name -> GenM (Maybe WidgetName)
 lookupWidgetName nam = lookup nam <$> allWidgetNames <$> get
@@ -120,25 +141,9 @@ registerWidgetName wn =
 
 registerFieldValueName :: Hs.Name -> AnyName -> GenM ()
 registerFieldValueName fName valName = do
-  putTempRegisteredName fName
   modify $ \st ->
       st { registeredFieldNames = registeredFieldNames st ++ [(fName, valName)]
          }
-
-putTempRegisteredName :: Hs.Name -> GenM ()
-putTempRegisteredName n =
-    modify $ \st ->
-        st { tempRegisteredNames = n : tempRegisteredNames st
-           }
-
-getTempRegisteredNames :: GenM [Hs.Name]
-getTempRegisteredNames = tempRegisteredNames <$> get
-
-clearTempRegisteredNames :: GenM ()
-clearTempRegisteredNames =
-    modify $ \st ->
-        st { tempRegisteredNames = []
-           }
 
 getFieldValueName :: Hs.Name -> GenM (Maybe AnyName)
 getFieldValueName fName = lookup fName <$> registeredFieldNames <$> get
@@ -180,11 +185,8 @@ getParamType s = do
     Nothing -> error $ "Invalid parameter name: " ++ show s
     Just t -> return t
 
-getAttribute :: Element a -> String -> Maybe String
-getAttribute (Elem _ attrs _) attrName =
-    case lookup (N attrName) attrs of
-      Just (AttValue ((Left s):_)) -> Just s
-      _ -> Nothing
+getAttribute :: A.WidgetSpec -> String -> Maybe String
+getAttribute spec attrName = lookup attrName (A.widgetSpecAttributes spec)
 
 getIntAttributeValue :: String -> Maybe Int
 getIntAttributeValue s = do
@@ -208,7 +210,7 @@ registerInterface :: String -> InterfaceValues -> GenM ()
 registerInterface ifName vals = do
   st <- get
   -- It's important to append the interface information so that the
-  -- order of the interfaces in the XML is preserved in the generated
+  -- order of the interfaces in the AST is preserved in the generated
   -- code.
   put $ st { interfaceNames = interfaceNames st ++ [(ifName, vals)]
            }
@@ -283,11 +285,11 @@ mkLet pairs = Hs.LetStmt $ Hs.BDecls $ map mkDecl pairs
                         (Hs.UnGuardedRhs e)
                         (Hs.BDecls [])
 
-annotateElement :: Element a -> Hs.Name -> GenM ()
-annotateElement elemt nam = do
+annotateWidget :: A.WidgetSpec -> Hs.Name -> GenM ()
+annotateWidget spec nam = do
   -- Normal attribute override
-  let normalResult = ( getAttribute elemt "normalFg"
-                     , getAttribute elemt "normalBg"
+  let normalResult = ( getAttribute spec "normalFg"
+                     , getAttribute spec "normalBg"
                      )
   case attrsToExpr normalResult of
     Nothing -> return ()
@@ -295,8 +297,8 @@ annotateElement elemt nam = do
         append $ act $ call "setNormalAttribute" [expr nam, e]
 
   -- Focus attribute override
-  let focusResult = ( getAttribute elemt "focusFg"
-                    , getAttribute elemt "focusBg"
+  let focusResult = ( getAttribute spec "focusFg"
+                    , getAttribute spec "focusBg"
                     )
   case attrsToExpr focusResult of
     Nothing -> return ()
@@ -309,22 +311,39 @@ mkName = Hs.Ident
 mkSym :: String -> Hs.Name
 mkSym = Hs.Symbol
 
-elemChildren :: Element a -> [Element a]
-elemChildren (Elem _ _ cs) = map getElem contents
-    where
-      getElem (CElem e _) = e
-      getElem _ = error "BUG: getElem got a non-element!"
-      contents = concat $ map elm cs
+widgetLikeType :: A.WidgetLike -> String
+widgetLikeType (A.Ref _) = "ref"
+widgetLikeType (A.Widget w) = A.widgetType w
 
-getElementStringContent :: Element a -> String
-getElementStringContent (Elem _ _ cs) = concat $ map getStr cs
+specChildren :: A.WidgetSpec -> [A.WidgetLike]
+specChildren = map extractSpec . filter isChild . A.widgetSpecContents
     where
-      getStr (CString _ s _) = s
-      getStr _ = error "BUG: getStr got a non-string content value!"
+      extractSpec (A.Child s) = s
+      extractSpec _ = error "Bug"
 
-getString :: Content i -> String
-getString (CString _ s _) = s
-getString _ = error "Cannot get string from non-CString content"
+specChildWidgets :: A.WidgetSpec -> [A.WidgetSpec]
+specChildWidgets = map extractSpec . filter isChildSpec . A.widgetSpecContents
+    where
+      extractSpec (A.Child (A.Widget w)) = w
+      extractSpec _ = error "Bug"
+
+isChild :: A.WidgetSpecContent -> Bool
+isChild (A.Child _) = True
+isChild _ = False
+
+isChildSpec :: A.WidgetSpecContent -> Bool
+isChildSpec (A.Child (A.Widget _)) = True
+isChildSpec _ = False
+
+isString :: A.WidgetSpecContent -> Bool
+isString (A.Text _ _) = True
+isString _ = False
+
+getSpecStringContent :: A.WidgetSpec -> String
+getSpecStringContent = concat . map extractString . filter isString . A.widgetSpecContents
+    where
+      extractString (A.Text s _) = s
+      extractString _ = error "Bug"
 
 append :: Hs.Stmt -> GenM ()
 append stmt =
@@ -370,9 +389,6 @@ mkImportDecl name hidden =
                                        [] -> Nothing
                                        is -> Just (True, map (Hs.IVar . mkName) is)
                   }
-
-addImport :: String -> GenM ()
-addImport s = modify $ \st -> st { imports = imports st ++ [mkImportDecl s []] }
 
 registerParam :: Hs.Name -> Hs.Type -> GenM ()
 registerParam nam typ =

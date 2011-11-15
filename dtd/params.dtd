@@ -1,6 +1,0 @@
-<!ELEMENT params (param*)>
-<!ELEMENT param EMPTY>
-<!ATTLIST param
-          name CDATA #REQUIRED
-          type CDATA #REQUIRED
->
