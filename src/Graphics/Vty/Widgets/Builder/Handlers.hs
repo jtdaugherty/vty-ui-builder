@@ -1,6 +1,6 @@
 module Graphics.Vty.Widgets.Builder.Handlers
     ( handleDoc
-    , elementHandlers
+    , coreSpecHandlers
     )
 where
 
@@ -20,8 +20,8 @@ import Graphics.Vty.Widgets.Box
 
 import qualified Language.Haskell.Exts as Hs
 
-elementHandlers :: [WidgetSpecHandler]
-elementHandlers =
+coreSpecHandlers :: [WidgetSpecHandler]
+coreSpecHandlers =
     [ handleFormat
     , handleFormattedText
     , handleVBox
