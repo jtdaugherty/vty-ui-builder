@@ -9,6 +9,7 @@ module Graphics.Vty.Widgets.Builder.AST
     , Reference(..)
     , SourceLocation(..)
     , WidgetId
+    , noLoc
     )
 where
 
@@ -17,7 +18,18 @@ data SourceLocation =
                    , srcLine :: Int
                    , srcColumn :: Int
                    }
-    deriving (Eq, Read, Show)
+    deriving (Eq, Read)
+
+instance Show SourceLocation where
+    show loc = concat [ srcFile loc
+                      , ":"
+                      , show $ srcLine loc
+                      , ":"
+                      , show $ srcColumn loc
+                      ]
+
+noLoc :: SourceLocation
+noLoc = SourceLocation "" 0 0
 
 data Doc =
     Doc { documentInterfaces :: [Interface]
