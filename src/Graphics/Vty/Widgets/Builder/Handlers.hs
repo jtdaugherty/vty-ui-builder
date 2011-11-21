@@ -317,7 +317,8 @@ handlePad =
                                  return $ call func [mkInt realVal]
 
             when (null paddingExprs) $
-                 error "'pad' element requires at least one padding attribute"
+                 error $ show (A.widgetLocation e) ++
+                           ": 'pad' element requires at least one padding attribute"
 
             -- Construct padding expression from values
             let ex = foldl (\e1 e2 -> opApp e1 (mkName "pad") e2)
@@ -445,7 +446,8 @@ handleVFill =
           genSrc e nam = do
             let Just ch = getAttribute e "char"
 
-            when (null ch) $ error "Error: 'char' for 'vFill' must be non-empty"
+            when (null ch) $ error $ show (A.widgetLocation e) ++
+                     ": 'char' for 'vFill' must be non-empty"
 
             append $ bind nam "vFill" [mkChar $ head ch]
 
@@ -461,10 +463,12 @@ handleHFill =
             let Just ch = getAttribute e "char"
                 Just heightStr = getAttribute e "height"
 
-            when (null ch) $ error "Error: 'char' for 'hFill' must be non-empty"
+            when (null ch) $ error $ show (A.widgetLocation e) ++
+                     "'char' for 'hFill' must be non-empty"
 
             height <- case getIntAttributeValue heightStr of
-                        Nothing -> error "Error: 'height' of 'hFill' must be an integer"
+                        Nothing -> error $ show (A.widgetLocation e) ++
+                                   "'height' of 'hFill' must be an integer"
                         Just i -> return i
 
             append $ bind nam "hFill" [ mkChar $ head ch
@@ -579,15 +583,21 @@ handleBordered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "Bordered" [chType])
 
-genBox :: [A.WidgetLike] -> String -> Maybe Int -> Hs.Name -> GenM Hs.Name
-genBox es typ spacing rootName = do
+genBox :: A.SourceLocation
+       -> [A.WidgetLike]
+       -> String
+       -> Maybe Int
+       -> Hs.Name
+       -> GenM Hs.Name
+genBox loc es typ spacing rootName = do
   names <- forM es $
            \child -> do
               chname <- newEntry $ widgetLikeType child
               gen child chname
               return chname
 
-  let buildBox [] = error "BUG: box cannot be built from zero children"
+  let buildBox [] =
+          error "BUG: unexpected buildBox input (validation should have caught this)"
       buildBox [c] = return c
       buildBox (c1:c2:rest) = do
               nextName <- newEntry typ
@@ -622,7 +632,7 @@ handleVBox =
         where
           genSrc e nam = do
             let spacing = getIntAttributeValue =<< getAttribute e "spacing"
-            resultName <- genBox (specChildren e) "vBox" spacing nam
+            resultName <- genBox (A.widgetLocation e) (specChildren e) "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -637,7 +647,7 @@ handleBoxSized typ =
                 Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
                 spacing = getIntAttributeValue =<< getAttribute e "spacing"
 
-            resultName <- genBox (specChildren e) typ spacing nam
+            resultName <- genBox (A.widgetLocation e) (specChildren e) typ spacing nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
@@ -680,7 +690,7 @@ handleHBox =
         where
           genSrc e nam = do
             let spacing = getIntAttributeValue =<< getAttribute e "spacing"
-            resultName <- genBox (specChildren e) "hBox" spacing nam
+            resultName <- genBox (A.widgetLocation e) (specChildren e) "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
