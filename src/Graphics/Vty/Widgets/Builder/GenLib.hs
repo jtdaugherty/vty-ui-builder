@@ -68,7 +68,8 @@ gen :: A.WidgetLike -> Hs.Name -> GenM ()
 gen (A.Widget spec) nam = do
   hs <- gets handlers
   case lookup (A.widgetType spec) hs of
-    Nothing -> error $ "No handler for widget type " ++ (show $ A.widgetType spec)
+    Nothing -> error $ show (A.widgetLocation spec) ++
+               ": no handler for widget type " ++ (show $ A.widgetType spec)
     Just handler -> do
       result <- generateWidgetSource handler spec nam
 
@@ -101,7 +102,7 @@ gen (A.Widget spec) nam = do
       -- widget-agnostic properties.
       annotateWidget spec nam
 
-gen (A.Ref (A.Reference tgt)) nam = do
+gen (A.Ref (A.Reference tgt loc)) nam = do
   let target = mkName tgt
 
   val <- getFieldValueName target
@@ -110,7 +111,8 @@ gen (A.Ref (A.Reference tgt)) nam = do
               Nothing -> do
                 result <- isValidParamName target
                 case result of
-                  False -> error $ "ref: target '" ++ tgt ++ "' invalid"
+                  False -> error $ show loc ++
+                           ": ref: target '" ++ tgt ++ "' invalid"
                   True -> do
                            typ <- getParamType target
                            append $ mkLet [(nam, expr target)]
@@ -119,7 +121,8 @@ gen (A.Ref (A.Reference tgt)) nam = do
                 append $ mkLet [(nam, expr $ widgetName valName)]
                 typ <- getWidgetStateType $ widgetName valName
                 return $ declareWidget nam typ
-              Just (VName _) -> error $ "ref: target '" ++ tgt
+              Just (VName _) -> error $ show loc ++
+                                ": ref: target '" ++ tgt
                                 ++ "' references non-widget type"
 
   registerWidgetName $ resultWidgetName result

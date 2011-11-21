@@ -76,7 +76,7 @@ data WidgetSpecContent = Text String SourceLocation
                        | Child WidgetLike
                          deriving (Eq, Read, Show)
 
-data Reference = Reference WidgetId
+data Reference = Reference WidgetId SourceLocation
                  deriving (Eq, Read, Show)
 
 type WidgetId = String
