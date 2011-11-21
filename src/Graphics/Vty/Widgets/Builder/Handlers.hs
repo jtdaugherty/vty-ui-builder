@@ -66,17 +66,19 @@ handleDoc doc = do
   forM_ (A.documentInterfaces doc) $ \iface ->
       do
         nam <- newEntry "interface"
-        handleInterface iface nam
+        handleInterface iface doc nam
 
-handleInterface :: A.Interface -> Hs.Name -> GenM ()
-handleInterface iface nam = do
+handleInterface :: A.Interface -> A.Doc -> Hs.Name -> GenM ()
+handleInterface iface doc nam = do
   gen (A.interfaceContent iface) nam
 
   actName <- newEntry "act"
   fgName <- newEntry "focusGroup"
 
+  append $ bind fgName "newFocusGroup" []
+
   forM_ (A.interfaceFocusEntries iface) $ \w ->
-      handleFocusEntry iface w fgName
+      handleFocusEntry iface doc w fgName
 
   append $ bind actName "addToCollection" [ expr collectionName
                                           , expr nam
@@ -792,9 +794,14 @@ handleFormattedText =
             append $ bind nam "plainTextWithAttrs" [mkList pairExprList]
             return $ declareWidget nam (mkTyp "FormattedText" [])
 
-handleFocusEntry :: A.Interface -> A.WidgetId -> Hs.Name -> GenM ()
-handleFocusEntry iface entryName fgName = do
-  case entryName `elem` (getNamedWidgetNames iface) of
+handleFocusEntry :: A.Interface -> A.Doc -> A.WidgetId -> Hs.Name -> GenM ()
+handleFocusEntry iface doc entryName fgName = do
+  let ws = concat [ getNamedWidgetNames (A.interfaceContent iface)
+                  , sharedNames
+                  ]
+      sharedNames = concat $ map (getNamedWidgetNames . A.Widget) shared
+      shared = A.documentSharedWidgets doc
+  case entryName `elem` ws of
       False -> error $ "Focus group error: widget name "
                ++ show entryName
                ++ " not found in interface"

@@ -124,8 +124,8 @@ gen (A.Ref (A.Reference tgt)) nam = do
 
   registerWidgetName $ resultWidgetName result
 
-getNamedWidgetNames :: A.Interface -> [A.WidgetId]
-getNamedWidgetNames iface = catMaybes $ getNamedWidgetNames' (A.interfaceContent iface)
+getNamedWidgetNames :: A.WidgetLike -> [A.WidgetId]
+getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
     where
       getNamedWidgetNames' (A.Ref _) = []
       getNamedWidgetNames' (A.Widget spec) =
