@@ -27,6 +27,19 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , registerFieldValueName
     , getNamedWidgetNames
     , widgetLikeType
+    , specType
+    , doFullValidation
+    , doSpecValidation
+
+    -- Combinators for constructing data model values during
+    -- validation
+    , required
+    , requiredInt
+    , requiredChar
+    , optional
+    , optionalInt
+    , requiredEqual
+    , firstChild
 
     -- Common names
     , collectionName
@@ -54,7 +67,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     )
 where
 
-import Control.Applicative
+import Control.Applicative hiding (optional)
 import Control.Monad.State
 import Data.Maybe
 import qualified Data.Map as Map
@@ -63,6 +76,62 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Util
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Language.Haskell.Exts as Hs
+
+doFullValidation :: A.Doc
+                 -> [WidgetSpecHandler]
+                 -> [String]
+doFullValidation doc theHandlers =
+    -- Match up widget specs in the document with handlers
+    let handlersBySpecType = map (\s -> (specType s, s)) theHandlers
+        mapping = map (\s -> (s, lookup (A.widgetType s) handlersBySpecType)) $ allSpecs doc
+
+        mkMsg s = show (A.widgetLocation s) ++ ": unknown widget type " ++ show (A.widgetType s)
+
+        process (s, Nothing) = Just $ mkMsg s
+        process (s, Just h) = doSpecValidation h s
+
+        msgs = catMaybes $ map process mapping
+
+    in msgs
+
+allSpecs :: A.Doc -> [A.WidgetSpec]
+allSpecs doc =
+    concat [ A.documentSharedWidgets doc
+           , concat $ map interfaceSpecs $ A.documentInterfaces doc
+           ]
+        where
+          interfaceSpecs = wLikeSpecs . A.interfaceContent
+
+          wLikeSpecs (A.Ref _) = []
+          wLikeSpecs (A.Widget w) = w : subSpecs w
+
+          subSpecs spec =
+              concat $ map wSpecContentSpecs $ A.widgetSpecContents spec
+
+          wSpecContentSpecs (A.Text _ _) = []
+          wSpecContentSpecs (A.Child w) = wLikeSpecs w
+
+doSpecValidation :: WidgetSpecHandler
+                 -> A.WidgetSpec
+                 -> Maybe String
+doSpecValidation (WidgetSpecHandler _ doValidate _) spec =
+    case doValidate spec of
+      Left e -> Just e
+      Right _ -> Nothing
+
+generateWidgetSource :: WidgetSpecHandler
+                     -> A.WidgetSpec
+                     -> Hs.Name
+                     -> GenM WidgetHandlerResult
+generateWidgetSource (WidgetSpecHandler genSrc doValidate specTyp) spec nam = do
+  case doValidate spec of
+    Left e -> error $ "Error while generating widget source for type " ++ show specTyp ++
+              " (up-front validation should have prevented this):\n" ++ e
+    Right val -> genSrc spec nam val
+
+specType :: WidgetSpecHandler
+         -> String
+specType (WidgetSpecHandler _ _ t) = t
 
 gen :: A.WidgetLike -> Hs.Name -> GenM ()
 gen (A.Widget spec) nam = do
@@ -190,6 +259,65 @@ getParamType s = do
 
 getAttribute :: A.WidgetSpec -> String -> Maybe String
 getAttribute spec attrName = lookup attrName (A.widgetSpecAttributes spec)
+
+requiredEqual :: A.WidgetSpec -> String -> String -> Either String String
+requiredEqual spec attrName expected =
+    case required spec attrName of
+      Left e -> Left e
+      Right v -> if v == expected
+                 then Right v
+                 else Left $ "Attribute value must be " ++ show expected
+
+firstChild :: A.WidgetSpec -> Either String A.WidgetLike
+firstChild spec =
+    case specChildren spec of
+      (ch:_) -> Right ch
+      _ -> Left $ show (A.widgetLocation spec) ++ ": required first child element is missing"
+
+required :: A.WidgetSpec -> String -> Either String String
+required spec attrName =
+    case optional' spec attrName of
+      Nothing -> Left $ "attribute " ++ show attrName ++
+                 " required for widget type " ++
+                 show (A.widgetType spec)
+      Just val -> Right val
+
+optional :: A.WidgetSpec -> String -> Either String (Maybe String)
+optional spec nam = Right (optional' spec nam)
+
+optional' :: A.WidgetSpec -> String -> Maybe String
+optional' spec attrName =
+    lookup attrName (A.widgetSpecAttributes spec)
+
+getInt :: String -> Either String String -> Either String Int
+getInt attrName val =
+    case val of
+      Left e -> Left e
+      Right s ->
+          case reads s of
+            [] -> Left $ "Attribute " ++ show attrName ++
+                  " value must be an integer"
+            ((v,_):_) -> Right v
+
+requiredInt :: A.WidgetSpec -> String -> Either String Int
+requiredInt spec attrName = getInt attrName $ required spec attrName
+
+requiredChar :: A.WidgetSpec -> String -> Either String Char
+requiredChar spec attrName =
+    case required spec attrName of
+      Left e -> Left e
+      Right s ->
+          if null s
+          then Left $ "Attribute " ++ show attrName ++ " must be non-empty"
+          else if length s > 1
+               then Left $ "Attribute " ++ show attrName ++ " must be one character in length"
+               else Right $ head s
+
+optionalInt :: A.WidgetSpec -> String -> Either String (Maybe Int)
+optionalInt spec attrName =
+    case optional' spec attrName of
+      Nothing -> Right Nothing
+      Just val -> Just <$> getInt attrName (Right val)
 
 getIntAttributeValue :: String -> Maybe Int
 getIntAttributeValue s = do

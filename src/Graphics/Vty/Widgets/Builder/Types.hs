@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE GADTs, TypeSynonymInstances #-}
 module Graphics.Vty.Widgets.Builder.Types
     ( GenState(..)
     , GenM
@@ -9,7 +9,6 @@ module Graphics.Vty.Widgets.Builder.Types
     , FocusMethod(..)
     , WidgetSpecHandler(..)
     , WidgetHandlerResult(..)
-    , WidgetSourceGenerator
     )
 where
 
@@ -62,14 +61,21 @@ data FocusMethod = Direct WidgetName -- The name of the widget which
                                  -- that should be merged into the
                                  -- primary focus group.
 
-data WidgetSpecHandler =
-    WidgetSpecHandler { generateWidgetSource :: WidgetSourceGenerator
-                      , specType :: String
-                      }
+-- A spec handler provides a validation routine.  The validation
+-- routine is responsible for constructing a concrete data value
+-- containing the validated widget state, and the state value will be
+-- passed to the source generation routine.  This way, it should never
+-- have to re-do (and thus skew from) the logic of the validation
+-- routine.  Using a GADT allows us to capture this requirement
+-- without worrying about the concrete types used by different spec
+-- handlers; this just ensures that they are internally consistent.
+data WidgetSpecHandler where
+    WidgetSpecHandler :: (WidgetSpec -> Hs.Name -> a -> GenM WidgetHandlerResult)
+                      -> (WidgetSpec -> Either String a)
+                      -> String
+                      -> WidgetSpecHandler
 
 type GenM a = State GenState a
-
-type WidgetSourceGenerator = WidgetSpec -> Hs.Name -> GenM WidgetHandlerResult
 
 data WidgetHandlerResult =
     WidgetHandlerResult { resultWidgetName :: WidgetName
