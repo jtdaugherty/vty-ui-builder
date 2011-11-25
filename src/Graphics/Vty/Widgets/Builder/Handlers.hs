@@ -98,8 +98,8 @@ handleParam p =
 handleCheckBox :: WidgetSpecHandler
 handleCheckBox =
     WidgetSpecHandler { generateWidgetSource = genSrc
-                         , specType = "checkBox"
-                         }
+                      , specType = "checkBox"
+                      }
         where
           genSrc e nam = do
             let Just label = getAttribute e "label"
