@@ -583,13 +583,12 @@ handleBordered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "Bordered" [chType])
 
-genBox :: A.SourceLocation
-       -> [A.WidgetLike]
+genBox :: [A.WidgetLike]
        -> String
        -> Maybe Int
        -> Hs.Name
        -> GenM Hs.Name
-genBox loc es typ spacing rootName = do
+genBox es typ spacing rootName = do
   names <- forM es $
            \child -> do
               chname <- newEntry $ widgetLikeType child
@@ -632,7 +631,7 @@ handleVBox =
         where
           genSrc e nam = do
             let spacing = getIntAttributeValue =<< getAttribute e "spacing"
-            resultName <- genBox (A.widgetLocation e) (specChildren e) "vBox" spacing nam
+            resultName <- genBox (specChildren e) "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -647,7 +646,7 @@ handleBoxSized typ =
                 Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSize
                 spacing = getIntAttributeValue =<< getAttribute e "spacing"
 
-            resultName <- genBox (A.widgetLocation e) (specChildren e) typ spacing nam
+            resultName <- genBox (specChildren e) typ spacing nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
@@ -690,7 +689,7 @@ handleHBox =
         where
           genSrc e nam = do
             let spacing = getIntAttributeValue =<< getAttribute e "spacing"
-            resultName <- genBox (A.widgetLocation e) (specChildren e) "hBox" spacing nam
+            resultName <- genBox (specChildren e) "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
