@@ -8,6 +8,8 @@ module Graphics.Vty.Widgets.Builder.AST
     , WidgetSpecContent(..)
     , Reference(..)
     , SourceLocation(..)
+    , Element(..)
+    , ElementContent(..)
     , WidgetId
     , noLoc
     )
@@ -72,8 +74,21 @@ data WidgetSpec =
                }
     deriving (Eq, Read, Show)
 
+data Element =
+    Element { elementType :: String
+            , elementAttributes :: [(String, String)]
+            , elementContents :: [ElementContent]
+            , elementLocation :: SourceLocation
+            }
+    deriving (Eq, Read, Show)
+
+data ElementContent = ElemText String SourceLocation
+                    | ElemChild Element
+                      deriving (Eq, Read, Show)
+
 data WidgetSpecContent = Text String SourceLocation
-                       | Child WidgetLike
+                       | ChildWidgetLike WidgetLike
+                       | ChildElement Element
                          deriving (Eq, Read, Show)
 
 data Reference = Reference WidgetId SourceLocation

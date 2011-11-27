@@ -21,9 +21,9 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , parseType
     , nameStr
     , getFieldValueName
-    , specChildren
     , specChildWidgets
-    , getSpecStringContent
+    , specChildElements
+    , getElementStringContent
     , registerFieldValueName
     , getNamedWidgetNames
     , widgetLikeType
@@ -39,7 +39,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , optional
     , optionalInt
     , requiredEqual
-    , firstChild
+    , firstChildWidget
 
     -- Common names
     , collectionName
@@ -108,8 +108,9 @@ allSpecs doc =
           subSpecs spec =
               concat $ map wSpecContentSpecs $ A.widgetSpecContents spec
 
+          wSpecContentSpecs (A.ChildWidgetLike w) = wLikeSpecs w
           wSpecContentSpecs (A.Text _ _) = []
-          wSpecContentSpecs (A.Child w) = wLikeSpecs w
+          wSpecContentSpecs (A.ChildElement _) = []
 
 doSpecValidation :: WidgetSpecHandler
                  -> A.WidgetSpec
@@ -201,7 +202,7 @@ getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
     where
       getNamedWidgetNames' (A.Ref _) = []
       getNamedWidgetNames' (A.Widget spec) =
-          A.widgetId spec : (concat $ map getNamedWidgetNames' $ specChildren spec)
+          A.widgetId spec : (concat $ map getNamedWidgetNames' $ specChildWidgets spec)
 
 lookupWidgetName :: Hs.Name -> GenM (Maybe WidgetName)
 lookupWidgetName nam = lookup nam <$> allWidgetNames <$> get
@@ -268,9 +269,9 @@ requiredEqual spec attrName expected =
                  then Right v
                  else Left $ "Attribute value must be " ++ show expected
 
-firstChild :: A.WidgetSpec -> Either String A.WidgetLike
-firstChild spec =
-    case specChildren spec of
+firstChildWidget :: A.WidgetSpec -> Either String A.WidgetLike
+firstChildWidget spec =
+    case specChildWidgets spec of
       (ch:_) -> Right ch
       _ -> Left $ show (A.widgetLocation spec) ++ ": required first child element is missing"
 
@@ -446,35 +447,36 @@ widgetLikeType :: A.WidgetLike -> String
 widgetLikeType (A.Ref _) = "ref"
 widgetLikeType (A.Widget w) = A.widgetType w
 
-specChildren :: A.WidgetSpec -> [A.WidgetLike]
-specChildren = map extractSpec . filter isChild . A.widgetSpecContents
+specChildWidgets :: A.WidgetSpec -> [A.WidgetLike]
+specChildWidgets =
+    concat . map extractSpec . filter isChildWidgetLike . A.widgetSpecContents
     where
-      extractSpec (A.Child s) = s
-      extractSpec _ = error "Bug"
+      extractSpec (A.ChildWidgetLike s) = [s]
+      extractSpec (A.ChildElement _) = []
+      extractSpec (A.Text _ _) = []
 
-specChildWidgets :: A.WidgetSpec -> [A.WidgetSpec]
-specChildWidgets = map extractSpec . filter isChildSpec . A.widgetSpecContents
+specChildElements :: A.WidgetSpec -> [A.Element]
+specChildElements =
+    concat . map extractSpec . filter isChildElement . A.widgetSpecContents
     where
-      extractSpec (A.Child (A.Widget w)) = w
-      extractSpec _ = error "Bug"
+      extractSpec (A.ChildElement e) = [e]
+      extractSpec (A.ChildWidgetLike _) = []
+      extractSpec (A.Text _ _) = []
 
-isChild :: A.WidgetSpecContent -> Bool
-isChild (A.Child _) = True
-isChild _ = False
+isChildWidgetLike :: A.WidgetSpecContent -> Bool
+isChildWidgetLike (A.ChildWidgetLike _) = True
+isChildWidgetLike _ = False
 
-isChildSpec :: A.WidgetSpecContent -> Bool
-isChildSpec (A.Child (A.Widget _)) = True
-isChildSpec _ = False
+isChildElement :: A.WidgetSpecContent -> Bool
+isChildElement (A.ChildElement _) = True
+isChildElement _ = False
 
-isString :: A.WidgetSpecContent -> Bool
-isString (A.Text _ _) = True
-isString _ = False
-
-getSpecStringContent :: A.WidgetSpec -> String
-getSpecStringContent = concat . map extractString . filter isString . A.widgetSpecContents
+getElementStringContent :: A.Element -> String
+getElementStringContent =
+    concat . map elemText . A.elementContents
     where
-      extractString (A.Text s _) = s
-      extractString _ = error "Bug"
+      elemText (A.ElemText s _) = s
+      elemText _ = []
 
 append :: Hs.Stmt -> GenM ()
 append stmt =

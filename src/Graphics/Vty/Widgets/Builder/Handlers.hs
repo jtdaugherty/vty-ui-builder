@@ -140,7 +140,7 @@ handleStringList =
                          <*> optional s "cursorBg"
 
           genSrc e nam (cursorFg, cursorBg) = do
-            let strs = map getSpecStringContent $ specChildWidgets e
+            let strs = map getElementStringContent $ specChildElements e
                 attrExpr = case attrsToExpr (cursorFg, cursorBg) of
                              Nothing -> defAttr
                              Just ex -> ex
@@ -175,7 +175,7 @@ handleVLimit =
         where
           doValidate s = (,)
                          <$> requiredInt s "height"
-                         <*> firstChild s
+                         <*> firstChildWidget s
 
           genSrc _ nam (height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -192,7 +192,7 @@ handleHLimit =
         where
           doValidate s = (,)
                          <$> requiredInt s "width"
-                         <*> firstChild s
+                         <*> firstChildWidget s
 
           genSrc _ nam (width, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -210,7 +210,7 @@ handleBoxLimit =
           doValidate s = (,,)
                          <$> (requiredInt s "width")
                          <*> (requiredInt s "height")
-                         <*> firstChild s
+                         <*> firstChildWidget s
 
           genSrc _ nam (width, height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -230,7 +230,7 @@ handleVFixed =
         where
           doValidate s = (,)
                          <$> requiredInt s "height"
-                         <*> firstChild s
+                         <*> firstChildWidget s
 
           genSrc _ nam (height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -247,7 +247,7 @@ handleHFixed =
         where
           doValidate s = (,)
                          <$> requiredInt s "width"
-                         <*> firstChild s
+                         <*> firstChildWidget s
 
           genSrc _ nam (width, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -265,7 +265,7 @@ handleBoxFixed =
           doValidate s = (,,)
                          <$> requiredInt s "width"
                          <*> requiredInt s "height"
-                         <*> firstChild s
+                         <*> firstChildWidget s
 
           genSrc _ nam (width, height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -307,7 +307,7 @@ handlePad =
                    Right pInfo ->
                        if pInfo == noPadding
                        then Left "element requires at least one padding attribute"
-                       else (,) <$> pure pInfo <*> firstChild s
+                       else (,) <$> pure pInfo <*> firstChildWidget s
 
           genSrc _ nam (padding, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -370,7 +370,7 @@ handleDialog =
         where
           doValidation s = (,)
                            <$> required s "title"
-                           <*> firstChild s
+                           <*> firstChildWidget s
 
           genSrc _ nam (title, ch) = do
             chNam <- newEntry $ widgetLikeType ch
@@ -397,7 +397,7 @@ handleCentered :: WidgetSpecHandler
 handleCentered =
     WidgetSpecHandler genSrc doValidation "centered"
         where
-          doValidation = firstChild
+          doValidation = firstChildWidget
 
           genSrc _ nam ch = do
             chNam <- newEntry $ widgetLikeType ch
@@ -412,7 +412,7 @@ handleHCentered :: WidgetSpecHandler
 handleHCentered =
     WidgetSpecHandler genSrc doValidation "hCentered"
         where
-          doValidation = firstChild
+          doValidation = firstChildWidget
 
           genSrc _ nam ch = do
             chNam <- newEntry $ widgetLikeType ch
@@ -427,7 +427,7 @@ handleVCentered :: WidgetSpecHandler
 handleVCentered =
     WidgetSpecHandler genSrc doValidation "vCentered"
         where
-          doValidation = firstChild
+          doValidation = firstChildWidget
 
           genSrc _ nam ch = do
             chNam <- newEntry $ widgetLikeType ch
@@ -546,7 +546,7 @@ handleBordered :: WidgetSpecHandler
 handleBordered =
     WidgetSpecHandler genSrc doValidation "bordered"
         where
-          doValidation = firstChild
+          doValidation = firstChildWidget
 
           genSrc _ nam ch = do
             chNam <- newEntry $ widgetLikeType ch
@@ -604,7 +604,7 @@ handleVBox =
           doValidation s = optionalInt s "spacing"
 
           genSrc e nam spacing = do
-            resultName <- genBox (specChildren e) "vBox" spacing nam
+            resultName <- genBox (specChildWidgets e) "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -619,7 +619,7 @@ handleBoxSized typ =
           genSrc e nam (spacing, boxSz) = do
             let Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSz
 
-            resultName <- genBox (specChildren e) typ spacing nam
+            resultName <- genBox (specChildWidgets e) typ spacing nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
@@ -652,7 +652,7 @@ handleHBox =
           doValidation s = optionalInt s "spacing"
 
           genSrc e nam spacing = do
-            resultName <- genBox (specChildren e) "hBox" spacing nam
+            resultName <- genBox (specChildWidgets e) "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -662,7 +662,7 @@ handleFormat =
         where
           doValidation s = (,)
                            <$> required s "name"
-                           <*> firstChild s
+                           <*> firstChildWidget s
 
           genSrc _ nam (formatName, ch) = do
             gen ch nam
@@ -703,12 +703,14 @@ handleFormattedText =
                 processContent ex c =
                     case c of
                       A.Text s _ -> [(Right $ stripWhitespace s, ex)]
-                      A.Child (A.Widget w) ->
+                      A.ChildWidgetLike (A.Widget w) ->
                           case A.widgetType w of
                             "br" -> [(Left "\n", ex)]
                             "attr" -> processAttr w
                             badName -> error $ "Got unsupported child of attr: " ++ badName
-                      A.Child (A.Ref _) -> error "Got unsupported child of attr: reference"
+                      A.ChildWidgetLike (A.Ref _) -> error "Got unsupported child of attr: reference"
+                      A.ChildElement elm -> error $ "Got unsupported child of attr: non-widget element "
+                                            ++ show (A.elementType elm)
 
                 processAttr :: A.WidgetSpec -> [(Either String String, Hs.Exp)]
                 processAttr attr =
