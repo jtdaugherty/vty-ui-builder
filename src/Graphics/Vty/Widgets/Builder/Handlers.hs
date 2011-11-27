@@ -8,6 +8,7 @@ where
 import Control.Applicative hiding (optional)
 import Control.Monad
 import Data.Maybe
+import Data.Either
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -78,8 +79,8 @@ handleInterface iface doc nam = do
 
   append $ bind fgName "newFocusGroup" []
 
-  forM_ (A.interfaceFocusEntries iface) $ \w ->
-      handleFocusEntry iface doc w fgName
+  forM_ (A.interfaceFocusEntries iface) $ \info ->
+      handleFocusEntry iface doc info fgName
 
   append $ bind actName "addToCollection" [ expr collectionName
                                           , expr nam
@@ -306,7 +307,8 @@ handlePad =
                    Left e -> Left e
                    Right pInfo ->
                        if pInfo == noPadding
-                       then Left "element requires at least one padding attribute"
+                       then Left $ Error (A.widgetLocation s)
+                                "element requires at least one padding attribute"
                        else (,) <$> pure pInfo <*> firstChildWidget s
 
           genSrc _ nam (padding, ch) = do
@@ -632,10 +634,11 @@ handleHBoxSized = handleBoxSized "hBox"
 handleVBoxSized :: WidgetSpecHandler
 handleVBoxSized = handleBoxSized "vBox"
 
-boxSize :: A.WidgetSpec -> Either String ChildSizePolicy
+boxSize :: A.WidgetSpec -> Either Error ChildSizePolicy
 boxSize s = getPercentSize
             <|> getDualSize
-            <|> Left "Either a percentage or first/second size policy must be specified for this box"
+            <|> (Left (Error (A.widgetLocation s)
+                 "Either a percentage or first/second size policy must be specified for this box"))
     where
       getPercentSize = Percentage <$> requiredInt s "percent"
 
@@ -689,38 +692,41 @@ defAttr = expr $ mkName "def_attr"
 
 handleFormattedText :: WidgetSpecHandler
 handleFormattedText =
-    WidgetSpecHandler genSrc (const $ return ()) "fText"
+    WidgetSpecHandler genSrc doValidation "fText"
         where
-          genSrc e nam _ = do
-            -- For each entry in the contents list: If it is a string,
-            -- give it the default attribute and put it in a list.  If
-            -- it is an Attr element, recurse on it, building another
-            -- list of (string, attr) to merge.
+          isWhitespace = (`elem` " \t\n")
 
-            -- Left: do not strip whitespace
-            -- Right: do strip whitespace
-            let processSpecContent :: Hs.Exp -> A.WidgetSpecContent -> [(Either String String, Hs.Exp)]
+          doValidation s = pairs
+              where
+                -- For each entry in the contents list: If it is a
+                -- string, give it the default attribute and put it in
+                -- a list.  If it is an Attr element, recurse on it,
+                -- building another list of (string, attr) to merge.
+
+                -- Left: do not strip whitespace
+                -- Right: do strip whitespace
+                processSpecContent :: Hs.Exp -> A.WidgetSpecContent -> Either Error [(Either String String, Hs.Exp)]
                 processSpecContent ex c =
                     case c of
-                      A.Text s _ -> [(Right $ stripWhitespace s, ex)]
+                      A.Text str _ -> Right [(Right $ stripWhitespace str, ex)]
                       A.ChildElement elm ->
                           case A.elementType elm of
-                            "br" -> [(Left "\n", ex)]
+                            "br" -> Right [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> error $ "Got unsupported child of attr: " ++ badName
-                      A.ChildWidgetLike _ -> error "Got unsupported child of attr: widget-like"
+                            badName -> Left $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
+                      A.ChildWidgetLike _ -> Left $ Error (A.widgetLocation s) "got unsupported child of attr: widget-like"
 
-                processElemContent :: Hs.Exp -> A.ElementContent -> [(Either String String, Hs.Exp)]
+                processElemContent :: Hs.Exp -> A.ElementContent -> Either Error [(Either String String, Hs.Exp)]
                 processElemContent ex c =
                     case c of
-                      A.ElemText s _ -> [(Right $ stripWhitespace s, ex)]
+                      A.ElemText str _ -> Right [(Right $ stripWhitespace str, ex)]
                       A.ElemChild elm ->
                           case A.elementType elm of
-                            "br" -> [(Left "\n", ex)]
+                            "br" -> Right [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> error $ "Got unsupported child of attr: " ++ badName
+                            badName -> Left $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
 
-                processAttr :: A.Element -> [(Either String String, Hs.Exp)]
+                processAttr :: A.Element -> Either Error [(Either String String, Hs.Exp)]
                 processAttr elm =
                     let attrResult = ( elemAttribute elm "fg"
                                      , elemAttribute elm "bg"
@@ -728,9 +734,26 @@ handleFormattedText =
                         attrExpr = case attrsToExpr attrResult of
                                      Nothing -> defAttr
                                      Just ex -> ex
-                    in concat $ map (processElemContent attrExpr) $ A.elementContents elm
+                        results = map (processElemContent attrExpr) $ A.elementContents elm
 
-                collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
+                    in if null $ lefts results
+                       then Right $ concat $ rights results
+                       else Left $ head $ lefts results
+
+                stripWhitespace :: [Char] -> [Char]
+                stripWhitespace (c1:c2:cs) = if isWhitespace c1 && isWhitespace c2
+                                             then stripWhitespace (c2:cs)
+                                             else c1 : (stripWhitespace (c2:cs))
+                stripWhitespace ls = ls
+
+                pairs :: Either Error [(Either String String, Hs.Exp)]
+                pairs = let results = map (processSpecContent defAttr) $ A.widgetSpecContents s
+                        in if null $ lefts results
+                           then Right $ concat $ rights results
+                           else Left $ head $ lefts results
+
+          genSrc _ nam pairs = do
+            let collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
                 collapse [] = []
                 collapse [p] = [p]
                 collapse ((Right s1, e1):(Right s2, e2):es) =
@@ -738,9 +761,6 @@ handleFormattedText =
                     then collapse ((Right $ s1 ++ s2, e1) : es)
                     else (Right s1, e1) : collapse ((Right s2, e2):es)
                 collapse (p:ps) = p : collapse ps
-
-                pairs :: [(Either String String, Hs.Exp)]
-                pairs = concat $ map (processSpecContent defAttr) $ A.widgetSpecContents e
 
                 collapsed :: [(Either String String, Hs.Exp)]
                 collapsed = collapse pairs
@@ -750,7 +770,6 @@ handleFormattedText =
                                          , ex
                                          ]
 
-                isWhitespace = (`elem` " \t\n")
                 headTrimmed ((Right s, attr):rest) = (Right $ dropWhile isWhitespace s, attr) : rest
                 headTrimmed es = es
 
@@ -764,24 +783,20 @@ handleFormattedText =
 
                 pairExprList = map pairExpr $ normStrings $ tailTrimmed $ headTrimmed collapsed
 
-                stripWhitespace :: [Char] -> [Char]
-                stripWhitespace (c1:c2:cs) = if isWhitespace c1 && isWhitespace c2
-                                             then stripWhitespace (c2:cs)
-                                             else c1 : (stripWhitespace (c2:cs))
-                stripWhitespace ls = ls
-
             append $ bind nam "plainTextWithAttrs" [mkList pairExprList]
             return $ declareWidget nam (mkTyp "FormattedText" [])
 
-handleFocusEntry :: A.Interface -> A.Doc -> A.WidgetId -> Hs.Name -> GenM ()
-handleFocusEntry iface doc entryName fgName = do
+handleFocusEntry :: A.Interface -> A.Doc -> (A.WidgetId, A.SourceLocation)
+                 -> Hs.Name
+                 -> GenM ()
+handleFocusEntry iface doc (entryName, loc) fgName = do
   let ws = concat [ getNamedWidgetNames (A.interfaceContent iface)
                   , sharedNames
                   ]
       sharedNames = concat $ map (getNamedWidgetNames . A.Widget) shared
       shared = A.documentSharedWidgets doc
   case entryName `elem` ws of
-      False -> error $ "Focus group error: widget name "
+      False -> putError loc $ "Focus group error: widget name "
                ++ show entryName
                ++ " not found in interface"
       True -> do

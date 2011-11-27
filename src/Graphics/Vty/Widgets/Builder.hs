@@ -23,7 +23,7 @@ mode = Hs.defaultMode { Hs.doIndent = 2, Hs.spacing = True }
 generateSourceForDocument :: BuilderConfig
                           -> A.Doc
                           -> [WidgetSpecHandler]
-                          -> IO (Either [String] String)
+                          -> IO (Either [Error] String)
 generateSourceForDocument config doc theHandlers =
     let validationResult = doFullValidation doc theHandlers
     in if not $ null validationResult
@@ -39,27 +39,31 @@ generateSourceForDocument config doc theHandlers =
                                      , registeredFieldNames = []
                                      , focusValues = []
                                      , paramNames = []
+                                     , errorMessages = []
                                      }
 
-         -- If the user wants to generate a main function, we can't do
-         -- that if the generated collection constructor function
-         -- takes parameters because we don't have values to provide
-         -- for them.
-         case generateMain config && (not $ null $ paramNames finalState) of
-           True -> return $ Left [
-                    concat
-                    [ "configuration indicates that a 'main' should be generated, "
-                    , "but parameters are required to construct the interface. "
-                    , "Turn off 'main' generation to generate the interface source."
-                    ]
-                   ]
-           False -> do
-              let moduleBody = generateModuleBody config finalState
-                  result = case generateModulePreamble config of
-                             True -> Hs.prettyPrintStyleMode style mode $
-                                     generateModule config doc moduleBody
-                             False -> concat $ map (Hs.prettyPrintStyleMode style mode) moduleBody
-              return $ Right result
+         case errorMessages finalState of
+           [] -> do
+              -- If the user wants to generate a main function, we
+              -- can't do that if the generated collection constructor
+              -- function takes parameters because we don't have
+              -- values to provide for them.
+              case generateMain config && (not $ null $ paramNames finalState) of
+                True -> return $ Left [
+                         Error A.noLoc $ concat
+                                   [ "configuration indicates that a 'main' should be generated, "
+                                   , "but parameters are required to construct the interface. "
+                                   , "Turn off 'main' generation to generate the interface source."
+                                   ]
+                        ]
+                False -> do
+                   let moduleBody = generateModuleBody config finalState
+                       result = case generateModulePreamble config of
+                                  True -> Hs.prettyPrintStyleMode style mode $
+                                          generateModule config doc moduleBody
+                                  False -> concat $ map (Hs.prettyPrintStyleMode style mode) moduleBody
+                   return $ Right result
+           msgs -> return $ Left msgs
 
 generateModule :: BuilderConfig -> A.Doc -> [Hs.Decl] -> Hs.Module
 generateModule config doc moduleBody =

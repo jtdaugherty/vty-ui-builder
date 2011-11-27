@@ -31,6 +31,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , specType
     , doFullValidation
     , doSpecValidation
+    , putError
 
     -- Combinators for constructing data model values during
     -- validation
@@ -80,7 +81,7 @@ import qualified Language.Haskell.Exts as Hs
 
 doFullValidation :: A.Doc
                  -> [WidgetSpecHandler]
-                 -> [String]
+                 -> [Error]
 doFullValidation doc theHandlers =
     -- Match up widget specs in the document with handlers
     let handlersBySpecType = map (\s -> (specType s, s)) theHandlers
@@ -88,7 +89,7 @@ doFullValidation doc theHandlers =
 
         mkMsg s = show (A.widgetLocation s) ++ ": unknown widget type " ++ show (A.widgetType s)
 
-        process (s, Nothing) = Just $ mkMsg s
+        process (s, Nothing) = Just $ Error (A.widgetLocation s) $ mkMsg s
         process (s, Just h) = doSpecValidation h s
 
         msgs = catMaybes $ map process mapping
@@ -115,7 +116,7 @@ allSpecs doc =
 
 doSpecValidation :: WidgetSpecHandler
                  -> A.WidgetSpec
-                 -> Maybe String
+                 -> Maybe Error
 doSpecValidation (WidgetSpecHandler _ doValidate _) spec =
     case doValidate spec of
       Left e -> Just e
@@ -128,7 +129,7 @@ generateWidgetSource :: WidgetSpecHandler
 generateWidgetSource (WidgetSpecHandler genSrc doValidate specTyp) spec nam = do
   case doValidate spec of
     Left e -> error $ "Error while generating widget source for type " ++ show specTyp ++
-              " (up-front validation should have prevented this):\n" ++ e
+              " (up-front validation should have prevented this): " ++ show e
     Right val -> genSrc spec nam val
 
 specType :: WidgetSpecHandler
@@ -208,6 +209,10 @@ getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
 lookupWidgetName :: Hs.Name -> GenM (Maybe WidgetName)
 lookupWidgetName nam = lookup nam <$> allWidgetNames <$> get
 
+putError :: A.SourceLocation -> String -> GenM ()
+putError loc s =
+    modify $ \st -> st { errorMessages = errorMessages st ++ [Error loc s] }
+
 registerWidgetName :: WidgetName -> GenM ()
 registerWidgetName wn =
     modify $ \st ->
@@ -265,64 +270,68 @@ getAttribute spec attrName = lookup attrName (A.widgetSpecAttributes spec)
 elemAttribute :: A.Element -> String -> Maybe String
 elemAttribute e attrName = lookup attrName (A.elementAttributes e)
 
-requiredEqual :: A.WidgetSpec -> String -> String -> Either String String
+requiredEqual :: A.WidgetSpec -> String -> String -> Either Error String
 requiredEqual spec attrName expected =
     case required spec attrName of
       Left e -> Left e
       Right v -> if v == expected
                  then Right v
-                 else Left $ "Attribute value must be " ++ show expected
+                 else Left $ Error (A.widgetLocation spec) $
+                          "Attribute value for attribute " ++
+                          show attrName ++ " must be " ++ show expected
 
-firstChildWidget :: A.WidgetSpec -> Either String A.WidgetLike
+firstChildWidget :: A.WidgetSpec -> Either Error A.WidgetLike
 firstChildWidget spec =
     case specChildWidgets spec of
       (ch:_) -> Right ch
-      _ -> Left $ show (A.widgetLocation spec) ++ ": required first child element is missing"
+      _ -> Left $ Error (A.widgetLocation spec) "required first child widget is missing"
 
-required :: A.WidgetSpec -> String -> Either String String
+required :: A.WidgetSpec -> String -> Either Error String
 required spec attrName =
     case optional' spec attrName of
-      Nothing -> Left $ "attribute " ++ show attrName ++
-                 " required for widget type " ++
-                 show (A.widgetType spec)
+      Nothing -> Left $ Error (A.widgetLocation spec) $
+                 "attribute " ++ show attrName ++ " required"
       Just val -> Right val
 
-optional :: A.WidgetSpec -> String -> Either String (Maybe String)
+optional :: A.WidgetSpec -> String -> Either Error (Maybe String)
 optional spec nam = Right (optional' spec nam)
 
 optional' :: A.WidgetSpec -> String -> Maybe String
 optional' spec attrName =
     lookup attrName (A.widgetSpecAttributes spec)
 
-getInt :: String -> Either String String -> Either String Int
-getInt attrName val =
+getInt :: A.WidgetSpec -> String -> Either Error String -> Either Error Int
+getInt spec attrName val =
     case val of
       Left e -> Left e
       Right s ->
           case reads s of
-            [] -> Left $ "Attribute " ++ show attrName ++
+            [] -> Left $ Error (A.widgetLocation spec) $
+                  "Attribute " ++ show attrName ++
                   " value must be an integer"
             ((v,_):_) -> Right v
 
-requiredInt :: A.WidgetSpec -> String -> Either String Int
-requiredInt spec attrName = getInt attrName $ required spec attrName
+requiredInt :: A.WidgetSpec -> String -> Either Error Int
+requiredInt spec attrName = getInt spec attrName $ required spec attrName
 
-requiredChar :: A.WidgetSpec -> String -> Either String Char
+requiredChar :: A.WidgetSpec -> String -> Either Error Char
 requiredChar spec attrName =
     case required spec attrName of
       Left e -> Left e
       Right s ->
           if null s
-          then Left $ "Attribute " ++ show attrName ++ " must be non-empty"
+          then Left $ Error (A.widgetLocation spec) $
+                   "Attribute " ++ show attrName ++ " must be non-empty"
           else if length s > 1
-               then Left $ "Attribute " ++ show attrName ++ " must be one character in length"
+               then Left $ Error (A.widgetLocation spec) $
+                        "Attribute " ++ show attrName ++ " must be one character in length"
                else Right $ head s
 
-optionalInt :: A.WidgetSpec -> String -> Either String (Maybe Int)
+optionalInt :: A.WidgetSpec -> String -> Either Error (Maybe Int)
 optionalInt spec attrName =
     case optional' spec attrName of
       Nothing -> Right Nothing
-      Just val -> Just <$> getInt attrName (Right val)
+      Just val -> Just <$> getInt spec attrName (Right val)
 
 getIntAttributeValue :: String -> Maybe Int
 getIntAttributeValue s = do

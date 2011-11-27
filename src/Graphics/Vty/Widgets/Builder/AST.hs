@@ -56,7 +56,7 @@ data ModuleImport =
 data Interface =
     Interface { interfaceName :: String
               , interfaceContent :: WidgetLike
-              , interfaceFocusEntries :: [WidgetId]
+              , interfaceFocusEntries :: [(WidgetId, SourceLocation)]
               , interfaceLocation :: SourceLocation
               }
     deriving (Eq, Read, Show)
