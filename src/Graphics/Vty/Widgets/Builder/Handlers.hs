@@ -699,28 +699,36 @@ handleFormattedText =
 
             -- Left: do not strip whitespace
             -- Right: do strip whitespace
-            let processContent :: Hs.Exp -> A.WidgetSpecContent -> [(Either String String, Hs.Exp)]
-                processContent ex c =
+            let processSpecContent :: Hs.Exp -> A.WidgetSpecContent -> [(Either String String, Hs.Exp)]
+                processSpecContent ex c =
                     case c of
                       A.Text s _ -> [(Right $ stripWhitespace s, ex)]
-                      A.ChildWidgetLike (A.Widget w) ->
-                          case A.widgetType w of
+                      A.ChildElement elm ->
+                          case A.elementType elm of
                             "br" -> [(Left "\n", ex)]
-                            "attr" -> processAttr w
+                            "attr" -> processAttr elm
                             badName -> error $ "Got unsupported child of attr: " ++ badName
-                      A.ChildWidgetLike (A.Ref _) -> error "Got unsupported child of attr: reference"
-                      A.ChildElement elm -> error $ "Got unsupported child of attr: non-widget element "
-                                            ++ show (A.elementType elm)
+                      A.ChildWidgetLike _ -> error "Got unsupported child of attr: widget-like"
 
-                processAttr :: A.WidgetSpec -> [(Either String String, Hs.Exp)]
-                processAttr attr =
-                    let attrResult = ( getAttribute attr "fg"
-                                     , getAttribute attr "bg"
+                processElemContent :: Hs.Exp -> A.ElementContent -> [(Either String String, Hs.Exp)]
+                processElemContent ex c =
+                    case c of
+                      A.ElemText s _ -> [(Right $ stripWhitespace s, ex)]
+                      A.ElemChild elm ->
+                          case A.elementType elm of
+                            "br" -> [(Left "\n", ex)]
+                            "attr" -> processAttr elm
+                            badName -> error $ "Got unsupported child of attr: " ++ badName
+
+                processAttr :: A.Element -> [(Either String String, Hs.Exp)]
+                processAttr elm =
+                    let attrResult = ( elemAttribute elm "fg"
+                                     , elemAttribute elm "bg"
                                      )
                         attrExpr = case attrsToExpr attrResult of
                                      Nothing -> defAttr
                                      Just ex -> ex
-                    in concat $ map (processContent attrExpr) $ A.widgetSpecContents attr
+                    in concat $ map (processElemContent attrExpr) $ A.elementContents elm
 
                 collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
                 collapse [] = []
@@ -732,7 +740,7 @@ handleFormattedText =
                 collapse (p:ps) = p : collapse ps
 
                 pairs :: [(Either String String, Hs.Exp)]
-                pairs = concat $ map (processContent defAttr) $ A.widgetSpecContents e
+                pairs = concat $ map (processSpecContent defAttr) $ A.widgetSpecContents e
 
                 collapsed :: [(Either String String, Hs.Exp)]
                 collapsed = collapse pairs

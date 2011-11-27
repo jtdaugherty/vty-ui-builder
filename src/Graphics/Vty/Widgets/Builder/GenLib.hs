@@ -3,6 +3,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , append
     , newEntry
     , getAttribute
+    , elemAttribute
     , getIntAttributeValue
     , attrsToExpr
     , registerInterface
@@ -260,6 +261,9 @@ getParamType s = do
 
 getAttribute :: A.WidgetSpec -> String -> Maybe String
 getAttribute spec attrName = lookup attrName (A.widgetSpecAttributes spec)
+
+elemAttribute :: A.Element -> String -> Maybe String
+elemAttribute e attrName = lookup attrName (A.elementAttributes e)
 
 requiredEqual :: A.WidgetSpec -> String -> String -> Either String String
 requiredEqual spec attrName expected =
