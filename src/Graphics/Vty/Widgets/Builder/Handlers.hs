@@ -599,14 +599,28 @@ genBox es typ spacing rootName = do
   append $ mkLet [(rootName, expr resultName)]
   return resultName
 
+boxChildWidgets :: A.WidgetSpec -> Either Error [A.WidgetLike]
+boxChildWidgets s =
+    case specChildWidgets s of
+      es@(_:_:_) -> return es
+      _ -> Left $ Error (A.widgetLocation s) "Box must have at least two children"
+
+sizedBoxChildWidgets :: A.WidgetSpec -> Either Error [A.WidgetLike]
+sizedBoxChildWidgets s =
+    case specChildWidgets s of
+      es@[_,_] -> return es
+      _ -> Left $ Error (A.widgetLocation s) "Sized box must have exactly two children"
+
 handleVBox :: WidgetSpecHandler
 handleVBox =
     WidgetSpecHandler genSrc doValidation "vBox"
         where
-          doValidation s = optionalInt s "spacing"
+          doValidation s = (,)
+                           <$> optionalInt s "spacing"
+                           <*> boxChildWidgets s
 
-          genSrc e nam spacing = do
-            resultName <- genBox (specChildWidgets e) "vBox" spacing nam
+          genSrc _ nam (spacing, chs) = do
+            resultName <- genBox chs "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -614,14 +628,15 @@ handleBoxSized :: String -> WidgetSpecHandler
 handleBoxSized typ =
     WidgetSpecHandler genSrc doValidation (typ ++ "-sized")
         where
-          doValidation s = (,)
+          doValidation s = (,,)
                            <$> optionalInt s "spacing"
                            <*> boxSize s
+                           <*> sizedBoxChildWidgets s
 
-          genSrc e nam (spacing, boxSz) = do
+          genSrc _ nam (spacing, boxSz, chs) = do
             let Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSz
 
-            resultName <- genBox (specChildWidgets e) typ spacing nam
+            resultName <- genBox chs typ spacing nam
             append $ act $ call "setBoxChildSizePolicy" [ expr nam
                                                         , parsedSizeExpr
                                                         ]
@@ -652,10 +667,12 @@ handleHBox :: WidgetSpecHandler
 handleHBox =
     WidgetSpecHandler genSrc doValidation "hBox"
         where
-          doValidation s = optionalInt s "spacing"
+          doValidation s = (,)
+                           <$> optionalInt s "spacing"
+                           <*> boxChildWidgets s
 
-          genSrc e nam spacing = do
-            resultName <- genBox (specChildWidgets e) "hBox" spacing nam
+          genSrc _ nam (spacing, chs) = do
+            resultName <- genBox chs "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
