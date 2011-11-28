@@ -20,10 +20,13 @@ style = Hs.style { Hs.lineLength = 72 }
 mode :: Hs.PPHsMode
 mode = Hs.defaultMode { Hs.doIndent = 2, Hs.spacing = True }
 
+prettyPrintSource :: Hs.Module -> String
+prettyPrintSource = Hs.prettyPrintStyleMode style mode
+
 generateSourceForDocument :: BuilderConfig
                           -> A.Doc
                           -> [WidgetSpecHandler]
-                          -> IO (Either [Error] String)
+                          -> IO (Either [Error] Hs.Module)
 generateSourceForDocument config doc theHandlers =
     let validationResult = doFullValidation doc theHandlers
     in if not $ null validationResult
@@ -58,10 +61,7 @@ generateSourceForDocument config doc theHandlers =
                         ]
                 False -> do
                    let moduleBody = generateModuleBody config finalState
-                       result = case generateModulePreamble config of
-                                  True -> Hs.prettyPrintStyleMode style mode $
-                                          generateModule config doc moduleBody
-                                  False -> concat $ map (Hs.prettyPrintStyleMode style mode) moduleBody
+                       result = generateModule config doc moduleBody
                    return $ Right result
            msgs -> return $ Left msgs
 
