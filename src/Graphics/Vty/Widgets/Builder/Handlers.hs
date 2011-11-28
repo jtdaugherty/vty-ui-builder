@@ -672,7 +672,7 @@ handleFormat =
             tempNam <- newEntry "formattedText"
             append $ bind tempNam "getTextFormatter" [expr nam]
             append $ act $ call "setTextFormatter" [ expr nam
-                                                   , parens (opApp (expr tempNam) (mkSym "&.&") (expr $ mkName formatName))
+                                                   , parens (opApp (expr tempNam) (mkName "mappend") (expr $ mkName formatName))
                                                    ]
 
             -- NB: this is a no-op because the child element handler

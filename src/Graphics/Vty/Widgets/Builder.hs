@@ -87,6 +87,7 @@ generateModule config doc moduleBody =
 
         theImports = [ mkImportDecl "Graphics.Vty" ["Button"]
                      , mkImportDecl "Graphics.Vty.Widgets.All" []
+                     , mkImportDecl "Data.Monoid" []
                      ] ++ (map (\i -> mkImportDecl (A.importModuleName i) []) $ A.documentImports doc)
 
     in Hs.Module noLoc (Hs.ModuleName modName) [] Nothing theExports theImports moduleBody
