@@ -92,7 +92,7 @@ data FocusMethod = Direct WidgetName -- The name of the widget which
 -- without worrying about the concrete types used by different spec
 -- handlers; this just ensures that they are internally consistent.
 data WidgetSpecHandler where
-    WidgetSpecHandler :: (WidgetSpec -> Hs.Name -> a -> GenM WidgetHandlerResult)
+    WidgetSpecHandler :: (Hs.Name -> a -> GenM WidgetHandlerResult)
                       -> (WidgetSpec -> ValidateM a)
                       -> String
                       -> WidgetSpecHandler

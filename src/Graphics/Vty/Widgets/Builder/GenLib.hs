@@ -170,7 +170,7 @@ generateWidgetSource (WidgetSpecHandler genSrc validator specTyp) spec st nam = 
   case runValidation (validator spec) st of
     ValidationError e -> error $ "Error while generating widget source for type " ++ show specTyp ++
                          " (up-front validation should have prevented this): " ++ show e
-    Valid val -> genSrc spec nam val
+    Valid val -> genSrc nam val
 
 specType :: WidgetSpecHandler
          -> String

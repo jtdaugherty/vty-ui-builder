@@ -106,7 +106,7 @@ handleCheckBox =
                          <$> required s "label"
                          <*> optional s "radioGroup"
 
-          genSrc _ nam (label, rg) = do
+          genSrc nam (label, rg) = do
             append $ bind nam "newCheckbox" [mkString label]
 
             case rg of
@@ -140,13 +140,12 @@ handleStringList =
                          <$> optional s "cursorFg"
                          <*> optional s "cursorBg"
 
-          genSrc e nam (cursorFg, cursorBg) = do
-            let strs = map getElementStringContent $ specChildElements e
-                attrExpr = case attrsToExpr (cursorFg, cursorBg) of
+          genSrc nam (cursorFg, cursorBg) = do
+            let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
                              Nothing -> defAttr
                              Just ex -> ex
 
-            append $ bind nam "newStringList" [attrExpr, mkList $ map mkString strs]
+            append $ bind nam "newStringList" [attrExpr, mkList []]
             return $ declareWidget nam $ parseType "List String FormattedText"
 
 handleList :: WidgetSpecHandler
@@ -160,7 +159,7 @@ handleList =
                          <*> required s "keyType"
                          <*> required s "elemType"
 
-          genSrc _ nam (cursorFg, cursorBg, keyType, elemType) = do
+          genSrc nam (cursorFg, cursorBg, keyType, elemType) = do
             let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
                              Nothing -> defAttr
                              Just ex -> ex
@@ -178,7 +177,7 @@ handleVLimit =
                          <$> requiredInt s "height"
                          <*> firstChildWidget s
 
-          genSrc _ nam (height, ch) = do
+          genSrc nam (height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
@@ -195,7 +194,7 @@ handleHLimit =
                          <$> requiredInt s "width"
                          <*> firstChildWidget s
 
-          genSrc _ nam (width, ch) = do
+          genSrc nam (width, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
@@ -213,7 +212,7 @@ handleBoxLimit =
                          <*> (requiredInt s "height")
                          <*> firstChildWidget s
 
-          genSrc _ nam (width, height, ch) = do
+          genSrc nam (width, height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
@@ -233,7 +232,7 @@ handleVFixed =
                          <$> requiredInt s "height"
                          <*> firstChildWidget s
 
-          genSrc _ nam (height, ch) = do
+          genSrc nam (height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
@@ -250,7 +249,7 @@ handleHFixed =
                          <$> requiredInt s "width"
                          <*> firstChildWidget s
 
-          genSrc _ nam (width, ch) = do
+          genSrc nam (width, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
@@ -268,7 +267,7 @@ handleBoxFixed =
                          <*> requiredInt s "height"
                          <*> firstChildWidget s
 
-          genSrc _ nam (width, height, ch) = do
+          genSrc nam (width, height, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
@@ -308,7 +307,7 @@ handlePad =
                                    "element requires at least one padding attribute" else
                 (,) <$> pure pInfo <*> firstChildWidget s
 
-          genSrc _ nam (padding, ch) = do
+          genSrc nam (padding, ch) = do
             chNam <- newEntry (widgetLikeType ch)
             gen ch chNam
 
@@ -345,7 +344,7 @@ handleDirBrowser =
         where
           doValidation s = optional s "skin"
 
-          genSrc _ nam skin = do
+          genSrc nam skin = do
             let Just skinName = skin <|> Just "defaultBrowserSkin"
 
             browserName <- newEntry "browser"
@@ -371,7 +370,7 @@ handleDialog =
                            <$> required s "title"
                            <*> firstChildWidget s
 
-          genSrc _ nam (title, ch) = do
+          genSrc nam (title, ch) = do
             chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
@@ -398,7 +397,7 @@ handleCentered =
         where
           doValidation = firstChildWidget
 
-          genSrc _ nam ch = do
+          genSrc nam ch = do
             chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
@@ -413,7 +412,7 @@ handleHCentered =
         where
           doValidation = firstChildWidget
 
-          genSrc _ nam ch = do
+          genSrc nam ch = do
             chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
@@ -428,7 +427,7 @@ handleVCentered =
         where
           doValidation = firstChildWidget
 
-          genSrc _ nam ch = do
+          genSrc nam ch = do
             chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
@@ -443,7 +442,7 @@ handleVFill =
         where
           doValidation s = requiredChar s "char"
 
-          genSrc _ nam ch = do
+          genSrc nam ch = do
             append $ bind nam "vFill" [mkChar ch]
             return $ declareWidget nam (mkTyp "VFill" [])
 
@@ -455,7 +454,7 @@ handleHFill =
                            <$> requiredChar s "char"
                            <*> requiredInt s "height"
 
-          genSrc _ nam (ch, height) = do
+          genSrc nam (ch, height) = do
             append $ bind nam "hFill" [ mkChar ch
                                       , mkInt height
                                       ]
@@ -471,7 +470,7 @@ handleProgressBar =
                            <*> required s "incompleteColor"
                            <*> optionalInt s "progress"
 
-          genSrc _ nam (compColor, incompColor, prog) = do
+          genSrc nam (compColor, incompColor, prog) = do
             barName <- newEntry "progressBar"
             append $ bind barName "newProgressBar" [ expr $ mkName compColor
                                                    , expr $ mkName incompColor
@@ -496,7 +495,7 @@ handleButton =
         where
           doValidation s = required s "label"
 
-          genSrc _ nam label = do
+          genSrc nam label = do
             buttonName <- newEntry "button"
 
             append $ bind buttonName "newButton" [mkString label]
@@ -514,7 +513,7 @@ handleEdit =
         where
           doValidation e = optional e "contents"
 
-          genSrc _ nam contents = do
+          genSrc nam contents = do
             append $ bind nam "editWidget" []
 
             case contents of
@@ -529,7 +528,7 @@ handleHBorder :: WidgetSpecHandler
 handleHBorder =
     WidgetSpecHandler genSrc (const $ return ()) "hBorder"
         where
-          genSrc _ nam _ = do
+          genSrc nam _ = do
             append $ bind nam "hBorder" []
             return $ declareWidget nam (mkTyp "HBorder" [])
 
@@ -537,7 +536,7 @@ handleVBorder :: WidgetSpecHandler
 handleVBorder =
     WidgetSpecHandler genSrc (const $ return ()) "vBorder"
         where
-          genSrc _ nam _ = do
+          genSrc nam _ = do
             append $ bind nam "vBorder" []
             return $ declareWidget nam (mkTyp "VBorder" [])
 
@@ -547,7 +546,7 @@ handleBordered =
         where
           doValidation = firstChildWidget
 
-          genSrc _ nam ch = do
+          genSrc nam ch = do
             chNam <- newEntry $ widgetLikeType ch
             gen ch chNam
 
@@ -616,7 +615,7 @@ handleVBox =
                            <$> optionalInt s "spacing"
                            <*> boxChildWidgets s
 
-          genSrc _ nam (spacing, chs) = do
+          genSrc nam (spacing, chs) = do
             resultName <- genBox chs "vBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
@@ -630,7 +629,7 @@ handleBoxSized typ =
                            <*> boxSize s
                            <*> sizedBoxChildWidgets s
 
-          genSrc _ nam (spacing, boxSz, chs) = do
+          genSrc nam (spacing, boxSz, chs) = do
             let Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSz
 
             resultName <- genBox chs typ spacing nam
@@ -668,7 +667,7 @@ handleHBox =
                            <$> optionalInt s "spacing"
                            <*> boxChildWidgets s
 
-          genSrc _ nam (spacing, chs) = do
+          genSrc nam (spacing, chs) = do
             resultName <- genBox chs "hBox" spacing nam
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
@@ -679,7 +678,7 @@ handleWrap =
         where
           doValidation s = requireWidgetType "fText" =<< firstChildWidget s
 
-          genSrc _ nam ch = do
+          genSrc nam ch = do
             gen ch nam
             tempNam <- newEntry "formattedText"
             append $ bind tempNam "getTextFormatter" [expr nam]
@@ -764,7 +763,7 @@ handleFormattedText =
                            then return $ concat $ rights results
                            else failValidation $ head $ lefts results
 
-          genSrc _ nam pairs = do
+          genSrc nam pairs = do
             let collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
                 collapse [] = []
                 collapse [p] = [p]
