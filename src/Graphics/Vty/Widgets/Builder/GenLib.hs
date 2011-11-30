@@ -1,24 +1,19 @@
+{-# OPTIONS_GHC -w #-}
 module Graphics.Vty.Widgets.Builder.GenLib
     ( gen
     , append
     , newEntry
-    , getAttribute
     , elemAttribute
-    , getIntAttributeValue
     , attrsToExpr
     , registerInterface
-    , lookupInterface
     , lookupFocusMethod
     , declareWidget
     , withField
     , mergeFocus
     , getWidgetStateType
-    , lookupWidgetName
     , registerWidgetName
     , lookupFocusValue
     , registerParam
-    , isValidParamName
-    , getParamType
     , parseType
     , nameStr
     , getFieldValueName
@@ -30,7 +25,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , widgetLikeType
     , specType
     , doFullValidation
-    , doSpecValidation
     , putError
 
     -- Combinators for constructing data model values during
@@ -58,7 +52,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , mkList
     , parens
     , mkName
-    , mkSym
     , mkString
     , mkInt
     , mkChar
@@ -206,9 +199,6 @@ getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
       getNamedWidgetNames' (A.Widget spec) =
           A.widgetId spec : (concat $ map getNamedWidgetNames' $ specChildWidgets spec)
 
-lookupWidgetName :: Hs.Name -> GenM (Maybe WidgetName)
-lookupWidgetName nam = lookup nam <$> allWidgetNames <$> get
-
 putError :: A.SourceLocation -> String -> GenM ()
 putError loc s =
     modify $ \st -> st { errorMessages = errorMessages st ++ [Error loc s] }
@@ -333,12 +323,6 @@ optionalInt spec attrName =
       Nothing -> Right Nothing
       Just val -> Just <$> getInt spec attrName (Right val)
 
-getIntAttributeValue :: String -> Maybe Int
-getIntAttributeValue s = do
-  case reads s of
-    [] -> Nothing
-    ((i,_):_) -> return i
-
 attrsToExpr :: (Maybe String, Maybe String) -> Maybe Hs.Exp
 attrsToExpr (Nothing, Nothing) = Nothing
 attrsToExpr (Just fg, Nothing) = Just $ call "fgColor" [expr $ mkName fg]
@@ -347,9 +331,6 @@ attrsToExpr (Just fg, Just bg) = Just $ opApp
                                  (expr $ mkName fg)
                                  (mkName "on")
                                  (expr $ mkName bg)
-
-lookupInterface :: String -> GenM (Maybe InterfaceValues)
-lookupInterface ifName = lookup ifName <$> interfaceNames <$> get
 
 registerInterface :: String -> InterfaceValues -> GenM ()
 registerInterface ifName vals = do
@@ -452,9 +433,6 @@ annotateWidget spec nam = do
 
 mkName :: String -> Hs.Name
 mkName = Hs.Ident
-
-mkSym :: String -> Hs.Name
-mkSym = Hs.Symbol
 
 widgetLikeType :: A.WidgetLike -> String
 widgetLikeType (A.Ref _) = "ref"
