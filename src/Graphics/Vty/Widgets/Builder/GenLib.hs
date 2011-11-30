@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -w #-}
 module Graphics.Vty.Widgets.Builder.GenLib
     ( gen
     , append
