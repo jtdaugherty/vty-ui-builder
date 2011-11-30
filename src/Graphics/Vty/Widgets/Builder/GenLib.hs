@@ -87,7 +87,7 @@ doFullValidation doc theHandlers =
             handlersBySpecType = map (\s -> (specType s, s)) theHandlers
             mapping = map (\s -> (s, lookup (A.widgetType s) handlersBySpecType)) $ allSpecs doc
 
-            mkMsg s = show (A.widgetLocation s) ++ ": unknown widget type " ++ show (A.widgetType s)
+            mkMsg s = "unknown widget type " ++ show (A.widgetType s)
 
             process (s, Nothing) = Just $ Error (A.widgetLocation s) $ mkMsg s
             process (s, Just h) = doSpecValidation h s st
