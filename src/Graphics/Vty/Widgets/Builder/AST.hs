@@ -36,7 +36,7 @@ noLoc = SourceLocation "" 0 0
 data Doc =
     Doc { documentInterfaces :: [Interface]
         , documentParams :: [Param]
-        , documentSharedWidgets :: [WidgetSpec]
+        , documentSharedWidgets :: [(WidgetId, WidgetSpec)]
         , documentImports :: [ModuleImport]
         }
     deriving (Eq, Read, Show)

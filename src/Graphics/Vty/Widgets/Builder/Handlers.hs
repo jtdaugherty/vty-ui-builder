@@ -58,7 +58,7 @@ coreSpecHandlers =
 handleDoc :: A.Doc -> GenM ()
 handleDoc doc = do
   mapM_ handleParam $ A.documentParams doc
-  forM_ (A.documentSharedWidgets doc) $ \spec ->
+  forM_ (A.documentSharedWidgets doc) $ \(_, spec) ->
       do
         nam <- newEntry $ A.widgetType spec
         gen (A.Widget spec) nam
@@ -806,7 +806,7 @@ handleFocusEntry iface doc (entryName, loc) fgName = do
                   , sharedNames
                   ]
       sharedNames = concat $ map (getNamedWidgetNames . A.Widget) shared
-      shared = A.documentSharedWidgets doc
+      shared = map snd $ A.documentSharedWidgets doc
   case entryName `elem` ws of
       False -> putError loc $ "Focus group error: widget name "
                ++ show entryName

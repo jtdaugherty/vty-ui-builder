@@ -146,7 +146,7 @@ allWidgetLikes iface = A.interfaceContent iface :
 
 allSpecs :: A.Doc -> [A.WidgetSpec]
 allSpecs doc =
-    concat [ A.documentSharedWidgets doc
+    concat [ map snd $ A.documentSharedWidgets doc
            , catMaybes $ map getSpec $ concat $ map allWidgetLikes $ A.documentInterfaces doc
            ]
         where
