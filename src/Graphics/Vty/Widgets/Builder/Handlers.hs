@@ -810,7 +810,7 @@ handleFocusEntry iface doc (entryName, loc) fgName = do
   case entryName `elem` ws of
       False -> putError loc $ "Focus group error: widget name "
                ++ show entryName
-               ++ " not found in interface"
+               ++ " not found in interface " ++ show (A.interfaceName iface)
       True -> do
         -- Since we know the name is valid for this interface, this
         -- lookup should always succeed.
