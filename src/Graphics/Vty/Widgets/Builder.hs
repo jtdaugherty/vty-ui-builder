@@ -27,43 +27,44 @@ generateSourceForDocument :: BuilderConfig
                           -> A.Doc
                           -> [WidgetSpecHandler]
                           -> IO (Either [Error] Hs.Module)
-generateSourceForDocument config doc theHandlers =
-    let validationResult = doFullValidation doc theHandlers
-    in if not $ null validationResult
-       then return $ Left validationResult
-       else do
-         let (_, finalState) = runState (handleDoc doc) initialState
-             initialState = GenState { nameCounters = Map.empty
-                                     , hsStatements = []
-                                     , handlers = map (\h -> (specType h, h)) theHandlers
-                                     , interfaceNames = []
-                                     , focusMethods = []
-                                     , allWidgetNames = []
-                                     , registeredFieldNames = []
-                                     , focusValues = []
-                                     , paramNames = []
-                                     , errorMessages = []
-                                     }
+generateSourceForDocument config doc theHandlers = do
+  case doFullValidation doc theHandlers of
+    Left es -> return $ Left es
+    Right valState ->
+        do
+          let (_, finalState) = runState (handleDoc doc) initialState
+              initialState = GenState { nameCounters = Map.empty
+                                      , hsStatements = []
+                                      , handlers = map (\h -> (specType h, h)) theHandlers
+                                      , interfaceNames = []
+                                      , focusMethods = []
+                                      , allWidgetNames = []
+                                      , registeredFieldNames = []
+                                      , focusValues = []
+                                      , paramNames = []
+                                      , errorMessages = []
+                                      , validationState = valState
+                                      }
 
-         case errorMessages finalState of
-           [] -> do
-              -- If the user wants to generate a main function, we
-              -- can't do that if the generated collection constructor
-              -- function takes parameters because we don't have
-              -- values to provide for them.
-              case generateMain config && (not $ null $ paramNames finalState) of
-                True -> return $ Left [
-                         Error A.noLoc $ concat
-                                   [ "configuration indicates that a 'main' should be generated, "
-                                   , "but parameters are required to construct the interface. "
-                                   , "Turn off 'main' generation to generate the interface source."
-                                   ]
-                        ]
-                False -> do
-                   let moduleBody = generateModuleBody config finalState
-                       result = generateModule config doc moduleBody
-                   return $ Right result
-           msgs -> return $ Left msgs
+          case errorMessages finalState of
+            [] -> do
+               -- If the user wants to generate a main function, we
+               -- can't do that if the generated collection
+               -- constructor function takes parameters because we
+               -- don't have values to provide for them.
+               case generateMain config && (not $ null $ paramNames finalState) of
+                 True -> return $ Left [
+                             Error A.noLoc $ concat
+                             [ "configuration indicates that a 'main' should be generated, "
+                             , "but parameters are required to construct the interface. "
+                             , "Turn off 'main' generation to generate the interface source."
+                             ]
+                            ]
+                 False -> do
+                       let moduleBody = generateModuleBody config finalState
+                           result = generateModule config doc moduleBody
+                       return $ Right result
+            msgs -> return $ Left msgs
 
 generateModule :: BuilderConfig -> A.Doc -> [Hs.Decl] -> Hs.Module
 generateModule config doc moduleBody =

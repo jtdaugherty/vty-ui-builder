@@ -10,9 +10,18 @@ module Graphics.Vty.Widgets.Builder.Types
     , WidgetSpecHandler(..)
     , WidgetHandlerResult(..)
     , Error(..)
+
+    -- Validation
+    , ValidateM(..)
+    , Validated(..)
+    , ValidationState(..)
+    , failValidation
+    , getResolvedRefs
+    , getValidParams
     )
 where
 
+import Control.Applicative
 import Control.Monad.State
 import qualified Data.Map as Map
 import qualified Language.Haskell.Exts.Syntax as Hs
@@ -64,6 +73,7 @@ data GenState =
              , focusValues :: [(Hs.Name, WidgetName)]
              , paramNames :: [(Hs.Name, Hs.Type)]
              , errorMessages :: [Error]
+             , validationState :: ValidationState
              }
 
 data FocusMethod = Direct WidgetName -- The name of the widget which
@@ -83,7 +93,7 @@ data FocusMethod = Direct WidgetName -- The name of the widget which
 -- handlers; this just ensures that they are internally consistent.
 data WidgetSpecHandler where
     WidgetSpecHandler :: (WidgetSpec -> Hs.Name -> a -> GenM WidgetHandlerResult)
-                      -> (WidgetSpec -> Either Error a)
+                      -> (WidgetSpec -> ValidateM a)
                       -> String
                       -> WidgetSpecHandler
 
@@ -93,3 +103,52 @@ data WidgetHandlerResult =
     WidgetHandlerResult { resultWidgetName :: WidgetName
                         , fieldValueName :: Maybe ValueName
                         }
+
+data ValidationState =
+    ValidationState { validParams :: [String]
+                    , resolvedRefs :: [(Hs.Name, WidgetSpec)]
+                    }
+
+data ValidateM a =
+    ValidateM { runValidation :: ValidationState -> Validated a }
+
+data Validated a = Valid a
+                 | ValidationError Error
+
+instance Functor Validated where
+    fmap f (Valid a) = Valid $ f a
+    fmap _ (ValidationError e) = ValidationError e
+
+instance Functor ValidateM where
+    fmap f act = ValidateM $ \st -> f <$> (runValidation act st)
+
+instance Monad ValidateM where
+    act >>= f =
+        ValidateM $ \st ->
+            case runValidation act st of
+              ValidationError e -> ValidationError e
+              Valid a -> runValidation (f a) st
+
+    return a = ValidateM $ const (Valid a)
+    fail = ValidateM . const . ValidationError . Error noLoc
+
+instance Applicative ValidateM where
+    pure = return
+    (<*>) = ap
+
+instance Alternative ValidateM where
+    empty = ValidateM $ const $ ValidationError $ Error noLoc "-"
+    a <|> b =
+        ValidateM $ \st ->
+            case runValidation a st of
+              Valid val -> Valid val
+              ValidationError _ -> runValidation b st
+
+failValidation :: Error -> ValidateM a
+failValidation = ValidateM . const . ValidationError
+
+getValidParams :: ValidateM [String]
+getValidParams = ValidateM (Valid . validParams)
+
+getResolvedRefs :: ValidateM [(Hs.Name, WidgetSpec)]
+getResolvedRefs = ValidateM (Valid . resolvedRefs)

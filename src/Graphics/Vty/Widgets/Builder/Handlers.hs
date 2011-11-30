@@ -294,22 +294,19 @@ handlePad :: WidgetSpecHandler
 handlePad =
     WidgetSpecHandler genSrc doValidate "pad"
         where
-          doValidate s =
-              let result = PadInfo
-                           <$> optionalInt s "top"
-                           <*> optionalInt s "bottom"
-                           <*> optionalInt s "left"
-                           <*> optionalInt s "right"
-                           <*> optionalInt s "leftRight"
-                           <*> optionalInt s "topBottom"
-                           <*> optionalInt s "all"
-              in case result of
-                   Left e -> Left e
-                   Right pInfo ->
-                       if pInfo == noPadding
-                       then Left $ Error (A.widgetLocation s)
-                                "element requires at least one padding attribute"
-                       else (,) <$> pure pInfo <*> firstChildWidget s
+          doValidate s = do
+            pInfo <- PadInfo
+                     <$> optionalInt s "top"
+                     <*> optionalInt s "bottom"
+                     <*> optionalInt s "left"
+                     <*> optionalInt s "right"
+                     <*> optionalInt s "leftRight"
+                     <*> optionalInt s "topBottom"
+                     <*> optionalInt s "all"
+            if pInfo == noPadding then
+                failValidation $ Error (A.widgetLocation s)
+                                   "element requires at least one padding attribute" else
+                (,) <$> pure pInfo <*> firstChildWidget s
 
           genSrc _ nam (padding, ch) = do
             chNam <- newEntry (widgetLikeType ch)
@@ -599,17 +596,17 @@ genBox es typ spacing rootName = do
   append $ mkLet [(rootName, expr resultName)]
   return resultName
 
-boxChildWidgets :: A.WidgetSpec -> Either Error [A.WidgetLike]
+boxChildWidgets :: A.WidgetSpec -> ValidateM [A.WidgetLike]
 boxChildWidgets s =
     case specChildWidgets s of
       es@(_:_:_) -> return es
-      _ -> Left $ Error (A.widgetLocation s) "Box must have at least two children"
+      _ -> failValidation $ Error (A.widgetLocation s) "Box must have at least two children"
 
-sizedBoxChildWidgets :: A.WidgetSpec -> Either Error [A.WidgetLike]
+sizedBoxChildWidgets :: A.WidgetSpec -> ValidateM [A.WidgetLike]
 sizedBoxChildWidgets s =
     case specChildWidgets s of
       es@[_,_] -> return es
-      _ -> Left $ Error (A.widgetLocation s) "Sized box must have exactly two children"
+      _ -> failValidation $ Error (A.widgetLocation s) "Sized box must have exactly two children"
 
 handleVBox :: WidgetSpecHandler
 handleVBox =
@@ -649,10 +646,10 @@ handleHBoxSized = handleBoxSized "hBox"
 handleVBoxSized :: WidgetSpecHandler
 handleVBoxSized = handleBoxSized "vBox"
 
-boxSize :: A.WidgetSpec -> Either Error ChildSizePolicy
+boxSize :: A.WidgetSpec -> ValidateM ChildSizePolicy
 boxSize s = getPercentSize
             <|> getDualSize
-            <|> (Left (Error (A.widgetLocation s)
+            <|> (failValidation (Error (A.widgetLocation s)
                  "Either a percentage or first/second size policy must be specified for this box"))
     where
       getPercentSize = Percentage <$> requiredInt s "percent"
@@ -763,11 +760,11 @@ handleFormattedText =
                                              else c1 : (stripWhitespace (c2:cs))
                 stripWhitespace ls = ls
 
-                pairs :: Either Error [(Either String String, Hs.Exp)]
+                pairs :: ValidateM [(Either String String, Hs.Exp)]
                 pairs = let results = map (processSpecContent defAttr) $ A.widgetSpecContents s
                         in if null $ lefts results
-                           then Right $ concat $ rights results
-                           else Left $ head $ lefts results
+                           then return $ concat $ rights results
+                           else failValidation $ head $ lefts results
 
           genSrc _ nam pairs = do
             let collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
