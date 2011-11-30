@@ -37,6 +37,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , optionalInt
     , requiredEqual
     , firstChildWidget
+    , requireWidgetType
 
     -- Common names
     , collectionName
@@ -96,7 +97,7 @@ doFullValidation doc theHandlers =
 
 mkValidationState :: A.Doc -> Either Error ValidationState
 mkValidationState doc =
-    ValidationState params <$> (resolvedRefs $ allRefs doc)
+    ValidationState params <$> (resolveRefs $ allRefs doc)
         where
           params = map A.paramName $ A.documentParams doc
 
@@ -107,11 +108,11 @@ mkValidationState doc =
                             ]
 
           -- Use allRefs, report error if a reference cannot be resolved
-          resolvedRefs :: [(A.Interface, [A.Reference])] -> Either Error [(Hs.Name, A.WidgetSpec)]
-          resolvedRefs [] = return []
-          resolvedRefs ((iface, rs):rest) = do
+          resolveRefs :: [(A.Interface, [A.Reference])] -> Either Error [(Hs.Name, A.WidgetSpec)]
+          resolveRefs [] = return []
+          resolveRefs ((iface, rs):rest) = do
             a <- resolve iface rs
-            b <- resolvedRefs rest
+            b <- resolveRefs rest
             return $ a ++ b
 
           resolve :: A.Interface -> [A.Reference] -> Either Error [(Hs.Name, A.WidgetSpec)]
@@ -316,6 +317,24 @@ requiredEqual spec attrName expected = do
       failValidation $ Error (A.widgetLocation spec) $
                          "Attribute value for attribute " ++
                          show attrName ++ " must be " ++ show expected
+
+requireWidgetType :: String -> A.WidgetLike -> ValidateM A.WidgetLike
+requireWidgetType typ wl@(A.Ref (A.Reference nam loc)) = do
+  refs <- getResolvedRefs
+  -- Assume the lookup will succeed, since all references are valid in
+  -- this monad.
+  let Just targetSpec = lookup (mkName nam) refs
+  if A.widgetType targetSpec == typ then
+      return wl else
+      failValidation $ Error loc $ "Expected a reference to a widget of type " ++
+                     show typ ++ ", got a reference to type " ++
+                              (show $ A.widgetType targetSpec)
+requireWidgetType typ wl@(A.Widget spec) =
+    if A.widgetType spec == typ then
+        return wl else
+        failValidation $ Error (A.widgetLocation spec) $ "Expected a widget of type " ++
+                       show typ ++ ", got a widget of type " ++
+                                (show $ A.widgetType spec)
 
 firstChildWidget :: A.WidgetSpec -> ValidateM A.WidgetLike
 firstChildWidget spec =

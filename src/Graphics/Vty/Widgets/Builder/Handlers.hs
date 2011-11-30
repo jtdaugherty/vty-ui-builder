@@ -24,7 +24,7 @@ import qualified Language.Haskell.Exts as Hs
 
 coreSpecHandlers :: [WidgetSpecHandler]
 coreSpecHandlers =
-    [ handleFormat
+    [ handleWrap
     , handleFormattedText
     , handleVBox
     , handleHBox
@@ -673,20 +673,18 @@ handleHBox =
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleFormat :: WidgetSpecHandler
-handleFormat =
-    WidgetSpecHandler genSrc doValidation "format"
+handleWrap :: WidgetSpecHandler
+handleWrap =
+    WidgetSpecHandler genSrc doValidation "wrap"
         where
-          doValidation s = (,)
-                           <$> required s "name"
-                           <*> firstChildWidget s
+          doValidation s = requireWidgetType "fText" =<< firstChildWidget s
 
-          genSrc _ nam (formatName, ch) = do
+          genSrc _ nam ch = do
             gen ch nam
             tempNam <- newEntry "formattedText"
             append $ bind tempNam "getTextFormatter" [expr nam]
             append $ act $ call "setTextFormatter" [ expr nam
-                                                   , parens (opApp (expr tempNam) (mkName "mappend") (expr $ mkName formatName))
+                                                   , parens (opApp (expr tempNam) (mkName "mappend") (expr $ mkName "wrap"))
                                                    ]
 
             -- NB: this is a no-op because the child element handler
