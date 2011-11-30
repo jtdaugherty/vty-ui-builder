@@ -122,8 +122,14 @@ mkValidationState doc =
                   specs <- resolve iface rest
                   return $ (mkName nam, spec) : specs
                 Nothing ->
-                    Left $ Error loc $ "No widget with ID " ++ show nam
-                                       ++ " is shared or exists in interface " ++ (show $ A.interfaceName iface)
+                    case nam `elem` (map A.paramName $ A.documentParams doc) of
+                      True -> resolve iface rest -- Can't get a spec,
+                                                 -- but it's a valid
+                                                 -- reference.
+                      False ->
+                          Left $ Error loc $ "No widget with ID " ++ show nam
+                                   ++ " is shared, is a parameter, or exists in interface " ++
+                                          (show $ A.interfaceName iface)
 
 allRefs :: A.Doc -> [(A.Interface, [A.Reference])]
 allRefs doc = [ (iface, catMaybes $ map getRef $ allWidgetLikes iface)
@@ -575,8 +581,11 @@ mkImportDecl name hidden =
                   }
 
 registerParam :: Hs.Name -> Hs.Type -> GenM ()
-registerParam nam typ =
-    modify $ \st -> st { paramNames = paramNames st ++ [(nam, typ)] }
+registerParam nam typ = do
+  modify $ \st -> st { paramNames = paramNames st ++ [(nam, typ)] }
+  setFocusValue nam $ WidgetName { widgetName = nam
+                                 , widgetType = typ
+                                 }
 
 parseType :: String -> Hs.Type
 parseType s =

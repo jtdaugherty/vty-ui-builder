@@ -803,6 +803,7 @@ handleFocusEntry :: A.Interface -> A.Doc -> (A.WidgetId, A.SourceLocation)
 handleFocusEntry iface doc (entryName, loc) fgName = do
   let ws = concat [ getNamedWidgetNames (A.interfaceContent iface)
                   , sharedNames
+                  , map A.paramName $ A.documentParams doc
                   ]
       sharedNames = concat $ map (getNamedWidgetNames . A.Widget) shared
       shared = map snd $ A.documentSharedWidgets doc
