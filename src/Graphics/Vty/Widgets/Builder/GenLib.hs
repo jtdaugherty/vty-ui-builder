@@ -2,7 +2,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     ( gen
     , append
     , newEntry
-    , elemAttribute
     , attrsToExpr
     , registerInterface
     , lookupFocusMethod
@@ -16,8 +15,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , parseType
     , nameStr
     , getFieldValueName
-    , specChildWidgets
-    , specChildElements
     , getElementStringContent
     , registerFieldValueName
     , getNamedWidgetNames
@@ -26,6 +23,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , doFullValidation
     , putError
     , mkValidationState
+    , getAttribute
 
     -- Combinators for constructing data model values during
     -- validation
@@ -36,9 +34,11 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , optionalInt
     , requiredEqual
     , firstChildWidget
+    , elementsByName
     , requireWidgetType
     , requireValidColor
     , validColors
+    , elemName
 
     -- Common names
     , collectionName
@@ -278,7 +278,7 @@ getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
     where
       getNamedWidgetNames' (A.Ref _) = []
       getNamedWidgetNames' (A.Widget spec) =
-          A.widgetId spec : (concat $ map getNamedWidgetNames' $ specChildWidgets spec)
+          A.widgetId spec : (concat $ map getNamedWidgetNames' $ A.getChildWidgetLikes spec)
 
 putError :: A.SourceLocation -> String -> GenM ()
 putError loc s =
@@ -335,18 +335,25 @@ getParamType s = do
     Nothing -> error $ "Invalid parameter name: " ++ show s
     Just t -> return t
 
-getAttribute :: A.WidgetSpec -> String -> Maybe String
-getAttribute spec attrName = lookup attrName (A.widgetSpecAttributes spec)
+elementsByName :: String -> [A.Element] -> [A.Element]
+elementsByName n es = filter ((== n) . A.elementType) es
 
-elemAttribute :: A.Element -> String -> Maybe String
-elemAttribute e attrName = lookup attrName (A.elementAttributes e)
+getAttribute :: (A.HasAttributes a) => a -> String -> Maybe String
+getAttribute val attrName = lookup attrName (A.getAttributes val)
 
-requiredEqual :: A.WidgetSpec -> String -> String -> ValidateM String
+elemName :: A.Element -> String -> ValidateM A.Element
+elemName e s =
+    if A.elementType e == s
+    then return e
+    else failValidation $ Error (A.elementLocation e) $ "expected element of type "
+             ++ show s ++ ", got " ++ show (A.elementType e)
+
+requiredEqual :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> String -> ValidateM String
 requiredEqual spec attrName expected = do
   v <- required spec attrName
   if v == expected then
       return v else
-      failValidation $ Error (A.widgetLocation spec) $
+      failValidation $ Error (A.getSourceLocation spec) $
                          "Attribute value for attribute " ++
                          show attrName ++ " must be " ++ show expected
 
@@ -397,51 +404,48 @@ validColors =
     , "bright_blue"
     ]
 
-firstChildWidget :: A.WidgetSpec -> ValidateM A.WidgetLike
-firstChildWidget spec =
-    case specChildWidgets spec of
+firstChildWidget :: (A.HasChildWidgetLikes a, A.HasSourceLocation a) => a -> ValidateM A.WidgetLike
+firstChildWidget val =
+    case A.getChildWidgetLikes val of
       (ch:_) -> return ch
-      _ -> failValidation $ Error (A.widgetLocation spec) "required first child widget is missing"
+      _ -> failValidation $ Error (A.getSourceLocation val) "required first child widget is missing"
 
-required :: A.WidgetSpec -> String -> ValidateM String
-required spec attrName =
-    case optional' spec attrName of
-      Nothing -> failValidation $ Error (A.widgetLocation spec) $
+required :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> ValidateM String
+required thing attrName =
+    case getAttribute thing attrName of
+      Nothing -> failValidation $ Error (A.getSourceLocation thing) $
                  "attribute " ++ show attrName ++ " required"
       Just val -> return val
 
-optional :: A.WidgetSpec -> String -> ValidateM (Maybe String)
-optional spec attr = return $ optional' spec attr
+optional :: (A.HasAttributes a) => a -> String -> ValidateM (Maybe String)
+optional val attr = return $ getAttribute val attr
 
-optional' :: A.WidgetSpec -> String -> Maybe String
-optional' spec attrName =
-    lookup attrName (A.widgetSpecAttributes spec)
-
-getInt :: A.WidgetSpec -> String -> String -> ValidateM Int
-getInt spec attrName val =
+getInt :: (A.HasSourceLocation a) => a -> String -> String -> ValidateM Int
+getInt thing attrName val =
     case reads val of
-      [] -> failValidation $ Error (A.widgetLocation spec) $
+      [] -> failValidation $ Error (A.getSourceLocation thing) $
             "Attribute " ++ show attrName ++
             " value must be an integer"
       ((v,_):_) -> return v
 
-requiredInt :: A.WidgetSpec -> String -> ValidateM Int
-requiredInt spec attrName = required spec attrName >>= getInt spec attrName
+requiredInt :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> ValidateM Int
+requiredInt thing attrName = required thing attrName >>= getInt thing attrName
 
-requiredChar :: A.WidgetSpec -> String -> ValidateM Char
-requiredChar spec attrName = do
-  s <- required spec attrName
+requiredChar :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> ValidateM Char
+requiredChar val attrName = do
+  s <- required val attrName
   case null s of
-    True -> failValidation $ Error (A.widgetLocation spec) $
+    True -> failValidation $ Error (A.getSourceLocation val) $
             "Attribute " ++ show attrName ++ " must be non-empty"
     False -> if length s == 1 then
                  return $ head s else
-                 failValidation $ Error (A.widgetLocation spec) $
+                 failValidation $ Error (A.getSourceLocation val) $
                    "Attribute " ++ show attrName ++ " must be one character in length"
 
-optionalInt :: A.WidgetSpec -> String -> ValidateM (Maybe Int)
+optionalInt :: (A.HasAttributes a, A.HasSourceLocation a) =>
+               a -> String -> ValidateM (Maybe Int)
 optionalInt spec attrName =
-    case optional' spec attrName of
+    case getAttribute spec attrName of
       Just v -> Just <$> getInt spec attrName v
       Nothing -> return Nothing
 
@@ -559,30 +563,6 @@ mkName = Hs.Ident
 widgetLikeType :: A.WidgetLike -> String
 widgetLikeType (A.Ref _) = "ref"
 widgetLikeType (A.Widget w) = A.widgetType w
-
-specChildWidgets :: A.WidgetSpec -> [A.WidgetLike]
-specChildWidgets =
-    concat . map extractSpec . filter isChildWidgetLike . A.widgetSpecContents
-    where
-      extractSpec (A.ChildWidgetLike s) = [s]
-      extractSpec (A.ChildElement _) = []
-      extractSpec (A.Text _ _) = []
-
-specChildElements :: A.WidgetSpec -> [A.Element]
-specChildElements =
-    concat . map extractSpec . filter isChildElement . A.widgetSpecContents
-    where
-      extractSpec (A.ChildElement e) = [e]
-      extractSpec (A.ChildWidgetLike _) = []
-      extractSpec (A.Text _ _) = []
-
-isChildWidgetLike :: A.WidgetSpecContent -> Bool
-isChildWidgetLike (A.ChildWidgetLike _) = True
-isChildWidgetLike _ = False
-
-isChildElement :: A.WidgetSpecContent -> Bool
-isChildElement (A.ChildElement _) = True
-isChildElement _ = False
 
 getElementStringContent :: A.Element -> String
 getElementStringContent =

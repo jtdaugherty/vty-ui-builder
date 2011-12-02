@@ -8,6 +8,8 @@ where
 import Control.Applicative hiding (optional)
 import Control.Monad
 import Data.Maybe
+import Data.Traversable (for)
+import Data.List (nub)
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -17,6 +19,13 @@ import qualified Graphics.Vty.Widgets.Builder.AST as A
 import Graphics.Vty.Widgets.Box
     ( ChildSizePolicy(..)
     , IndividualPolicy(..)
+    )
+import Graphics.Vty.Widgets.Table
+    ( BorderStyle(..)
+    , BorderFlag(..)
+    , ColumnSpec(..)
+    , ColumnSize(..)
+    , column
     )
 
 import qualified Language.Haskell.Exts as Hs
@@ -52,6 +61,7 @@ coreSpecHandlers =
     , handleVFixed
     , handleHFixed
     , handleBoxFixed
+    , handleTable
     ]
 
 handleDoc :: A.Doc -> GenM ()
@@ -600,13 +610,13 @@ genBox es typ spacing rootName = do
 
 boxChildWidgets :: A.WidgetSpec -> ValidateM [A.WidgetLike]
 boxChildWidgets s =
-    case specChildWidgets s of
+    case A.getChildWidgetLikes s of
       es@(_:_:_) -> return es
       _ -> failValidation $ Error (A.widgetLocation s) "Box must have at least two children"
 
 sizedBoxChildWidgets :: A.WidgetSpec -> ValidateM [A.WidgetLike]
 sizedBoxChildWidgets s =
-    case specChildWidgets s of
+    case A.getChildWidgetLikes s of
       es@[_,_] -> return es
       _ -> failValidation $ Error (A.widgetLocation s) "Sized box must have exactly two children"
 
@@ -745,8 +755,8 @@ handleFormattedText =
                 processAttr elm = do
                   let loc = A.elementLocation elm
                   attrResult <- (,)
-                                <$> (requireValidColor loc $ elemAttribute elm "fg")
-                                <*> (requireValidColor loc $ elemAttribute elm "bg")
+                                <$> (requireValidColor loc $ getAttribute elm "fg")
+                                <*> (requireValidColor loc $ getAttribute elm "bg")
 
                   let attrExpr = case attrsToExpr attrResult of
                                    Nothing -> defAttr
@@ -832,3 +842,124 @@ handleFocusEntry iface doc (entryName, loc) fgName = do
           _ -> append $ act $ call "addToFocusGroup" [ expr fgName
                                                      , expr $ widgetName wName
                                                      ]
+
+data TableInfo =
+    TableInfo { rows :: [RowInfo]
+              , borderStyle :: BorderStyle
+              , columnSpecs :: [ColumnSpec]
+              }
+    deriving (Show)
+
+data RowInfo =
+    RowInfo { cells :: [A.WidgetLike]
+            }
+    deriving (Show)
+
+toAST :: (Show a) => a -> Hs.Exp
+toAST thing = parsed
+    where
+      Hs.ParseOk parsed = Hs.parse $ show thing
+
+handleTable :: WidgetSpecHandler
+handleTable =
+    WidgetSpecHandler genSrc doValidation "table"
+        where
+          doValidation s = do
+            specs <- getColumnSpecs s
+            rs <- getRows s
+
+            when (null specs) $
+                 failValidation $ Error (A.getSourceLocation s)
+                                    "table must have at least one column specification"
+
+            when (null rs) $
+                 failValidation $ Error (A.getSourceLocation s)
+                                    "table must have at least one row"
+
+            when (length specs /= (length $ cells $ head rs)) $
+                 failValidation $ Error (A.getSourceLocation s) $
+                                    "number of column specifications must match the number of columns (" ++ (show $ length $ cells $ head rs) ++ ")"
+
+            TableInfo <$> pure rs
+                          <*> getBorderStyle s
+                          <*> pure specs
+
+          getColumnSpecs s =
+              concat <$> (for (elementsByName "columns" $ A.getChildElements s)
+                              validateColumnSpecs)
+
+          validateColumnSpecs e =
+              for (elementsByName "column" $ A.getChildElements e)
+                  validateColumnSpec
+
+          validateColumnSpec e =
+              column <$> ((requiredEqual e "size" "auto" *> pure ColAuto)
+                          <|> (ColFixed <$> requiredInt e "size"))
+
+          getBorderStyle s = do
+            attr <- optional s "borderStyle"
+            case attr of
+              Nothing -> return BorderFull
+              Just val ->
+                  case val of
+                    "none" -> return BorderNone
+                    "full" -> return BorderFull
+                    flagStr -> BorderPartial <$> (parsedFlags s $ splitOn ',' flagStr)
+
+          parsedFlags s flgs =
+              forM flgs $ \f ->
+                  case lookup f borderFlags of
+                    Just val -> return val
+                    Nothing -> failValidation $ Error (A.widgetLocation s) $
+                               "invalid border style flag " ++ show f ++ ", valid choices are 'none', "
+                              ++ "'full', or a comma-separated list of " ++ show (map fst borderFlags)
+
+          borderFlags = [ ("rows", Rows)
+                        , ("columns", Columns)
+                        , ("edges", Edges)
+                        ]
+
+          getRows s = do
+            rs <- validateRows s
+            if (length $ nub (map (length . cells) rs)) /= 1 then
+                failValidation $ Error (A.widgetLocation s) $ "all rows must have the same number of cells" else
+                if nub (map (length . cells) rs) == [0] then
+                    failValidation $ Error (A.widgetLocation s) "all rows must contain at least one cell" else
+                    return rs
+
+          validateRows s =
+              for (elementsByName "row" $ A.getChildElements s)
+                  validateRow
+
+          validateRow e =
+              RowInfo <$> validateCells e
+
+          validateCells e =
+              for (A.getChildElements e) $ \c ->
+                  elemName c "cell" *> firstChildWidget c
+
+          genSrc nam table = do
+            let parsedBorderStyle = toAST $ borderStyle table
+
+                colSpecExprs :: [Hs.Exp]
+                colSpecExprs = foreach (columnSpecs table) $ \spec ->
+                               call "column" [toAST $ columnSize spec]
+
+            append $ bind nam "newTable" [mkList colSpecExprs, parsedBorderStyle]
+
+            let buildRow [] = error "BUG: validation should prevent empty table rows"
+                buildRow [w] = mkCell w
+                buildRow (w:ws) = opApp (mkCell w) (mkName "mappend") $ buildRow ws
+
+                mkCell w = parens $ call "mkRow" [call "customCell" [expr w]]
+
+            -- Since the types of the cells can vary, we have to use .|.
+            forM_ (rows table) $ \row ->
+                do
+                  cellWidgetNames <- forM (cells row) $ \cell -> do
+                                       cellName <- newEntry "cell"
+                                       gen cell cellName
+                                       return cellName
+                  append $ act $ call "addRow" [expr nam, buildRow cellWidgetNames]
+
+            return $ declareWidget nam (mkTyp "Table" [])

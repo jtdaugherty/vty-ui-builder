@@ -11,9 +11,15 @@ module Graphics.Vty.Widgets.Builder.AST
     , Element(..)
     , ElementContent(..)
     , WidgetId
+    , HasAttributes(..)
+    , HasChildElements(..)
+    , HasChildWidgetLikes(..)
+    , HasSourceLocation(..)
     , noLoc
     )
 where
+
+import Data.Maybe (catMaybes)
 
 data SourceLocation =
     SourceLocation { srcFile :: FilePath
@@ -96,3 +102,51 @@ data Reference = Reference WidgetId SourceLocation
                  deriving (Eq, Read, Show)
 
 type WidgetId = String
+
+class HasAttributes a where
+    getAttributes :: a -> [(String, String)]
+
+class HasChildWidgetLikes a where
+    getChildWidgetLikes :: a -> [WidgetLike]
+
+class HasChildElements a where
+    getChildElements :: a -> [Element]
+
+class HasSourceLocation a where
+    getSourceLocation :: a -> SourceLocation
+
+instance HasAttributes Element where
+    getAttributes = elementAttributes
+
+instance HasAttributes WidgetSpec where
+    getAttributes = widgetSpecAttributes
+
+instance HasChildWidgetLikes Element where
+    getChildWidgetLikes e = catMaybes $ map getWL $ elementContents e
+        where
+          getWL (ElemChildWidgetLike w) = Just w
+          getWL _ = Nothing
+
+instance HasChildWidgetLikes WidgetSpec where
+    getChildWidgetLikes e = catMaybes $ map getWL $ widgetSpecContents e
+        where
+          getWL (ChildWidgetLike w) = Just w
+          getWL _ = Nothing
+
+instance HasChildElements Element where
+    getChildElements e = catMaybes $ map getWL $ elementContents e
+        where
+          getWL (ElemChild el) = Just el
+          getWL _ = Nothing
+
+instance HasChildElements WidgetSpec where
+    getChildElements e = catMaybes $ map getWL $ widgetSpecContents e
+        where
+          getWL (ChildElement el) = Just el
+          getWL _ = Nothing
+
+instance HasSourceLocation Element where
+    getSourceLocation = elementLocation
+
+instance HasSourceLocation WidgetSpec where
+    getSourceLocation = widgetLocation
