@@ -135,9 +135,11 @@ handleStringList =
     WidgetSpecHandler genSrc doValidate "stringList"
 
         where
+          loc = A.widgetLocation
+
           doValidate s = (,)
-                         <$> optional s "cursorFg"
-                         <*> optional s "cursorBg"
+                         <$> (requireValidColor (loc s) =<< optional s "cursorFg")
+                         <*> (requireValidColor (loc s) =<< optional s "cursorBg")
 
           genSrc nam (cursorFg, cursorBg) = do
             let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
@@ -152,9 +154,11 @@ handleList =
     WidgetSpecHandler genSrc doValidate "list"
 
         where
+          loc = A.widgetLocation
+
           doValidate s = (,,,)
-                         <$> optional s "cursorFg"
-                         <*> optional s "cursorBg"
+                         <$> (requireValidColor (loc s) =<< optional s "cursorFg")
+                         <*> (requireValidColor (loc s) =<< optional s "cursorBg")
                          <*> required s "keyType"
                          <*> required s "elemType"
 
