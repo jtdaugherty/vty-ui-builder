@@ -169,8 +169,12 @@ allWidgetLikes iface = A.interfaceContent iface :
       wLikes (A.Widget w) = concat $ map contentWLs $ A.widgetSpecContents w
 
       contentWLs (A.Text _ _) = []
-      contentWLs (A.ChildElement _) = []
+      contentWLs (A.ChildElement e) = concat $ map elemWLs $ A.elementContents e
       contentWLs (A.ChildWidgetLike w) = w : wLikes w
+
+      elemWLs (A.ElemText _ _) = []
+      elemWLs (A.ElemChild e) = concat $ map elemWLs $ A.elementContents e
+      elemWLs (A.ElemChildWidgetLike w) = w : wLikes w
 
 allSpecs :: A.Doc -> [A.WidgetSpec]
 allSpecs doc =

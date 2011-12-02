@@ -727,12 +727,13 @@ handleFormattedText =
                           case A.elementType elm of
                             "br" -> return [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> failValidation $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
-                      A.ChildWidgetLike _ -> failValidation $ Error (A.widgetLocation s) "got unsupported child of attr: widget-like"
+                            badName -> failValidation $ Error (A.widgetLocation s) $ "got unsupported child of fText: " ++ badName
+                      A.ChildWidgetLike _ -> failValidation $ Error (A.widgetLocation s) "got unsupported child of fText: widget-like"
 
                 processElemContent :: Hs.Exp -> A.ElementContent -> ValidateM [(Either String String, Hs.Exp)]
                 processElemContent ex c =
                     case c of
+                      A.ElemChildWidgetLike _ -> failValidation $ Error (A.widgetLocation s) "got unsupported child of attr: widget-like"
                       A.ElemText str _ -> return [(Right $ stripWhitespace str, ex)]
                       A.ElemChild elm ->
                           case A.elementType elm of

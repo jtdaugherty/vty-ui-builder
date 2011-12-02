@@ -84,6 +84,7 @@ data Element =
 
 data ElementContent = ElemText String SourceLocation
                     | ElemChild Element
+                    | ElemChildWidgetLike WidgetLike
                       deriving (Eq, Read, Show)
 
 data WidgetSpecContent = Text String SourceLocation
