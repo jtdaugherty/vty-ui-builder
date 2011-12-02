@@ -37,6 +37,8 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , requiredEqual
     , firstChildWidget
     , requireWidgetType
+    , requireValidColor
+    , validColors
 
     -- Common names
     , collectionName
@@ -65,6 +67,7 @@ where
 
 import Control.Applicative hiding (optional)
 import Control.Monad.State
+import Data.List (nub)
 import Data.Maybe
 import qualified Data.Map as Map
 
@@ -78,7 +81,7 @@ doFullValidation :: A.Doc
                  -> Either [Error] ValidationState
 doFullValidation doc theHandlers =
     case mkValidationState doc of
-      Left e -> Left [e]
+      Left es -> Left es
       Right st -> if null msgs
                   then Right st
                   else Left msgs
@@ -94,9 +97,9 @@ doFullValidation doc theHandlers =
 
             msgs = catMaybes $ map process mapping
 
-mkValidationState :: A.Doc -> Either Error ValidationState
+mkValidationState :: A.Doc -> Either [Error] ValidationState
 mkValidationState doc =
-    ValidationState params <$> (resolveRefs $ allRefs doc)
+    checkValidRefTargets *> (ValidationState params <$> (resolveRefs $ allRefs doc))
         where
           params = map A.paramName $ A.documentParams doc
 
@@ -106,15 +109,34 @@ mkValidationState doc =
                               | s <- allSpecs doc, isJust $ A.widgetId s
                             ]
 
+          -- Group each valid reference target (widget ID) with the
+          -- list of specs which claimed the ID.  Right now the IDs
+          -- must be unique over the whole document, so if any ID maps
+          -- to more than one widget spec, that's illegal.
+          mapping = [ (wId, snd <$> filter ((== wId) . fst) validRefTargets)
+                     | wId <- nub $ map fst validRefTargets
+                    ]
+
+          duplicateRefs = filter ((> 1) . length . snd)
+
+          checkValidRefTargets :: Either [Error] ()
+          checkValidRefTargets = case duplicateRefs mapping of
+                                   [] -> Right ()
+                                   dups -> Left $ concat $ map mkErrors dups
+          mkErrors (wId, specs) =
+              [ Error (A.widgetLocation s) $ "Duplicate widget ID " ++ show wId ++ " defined"
+                | s <- specs
+              ]
+
           -- Use allRefs, report error if a reference cannot be resolved
-          resolveRefs :: [(A.Interface, [A.Reference])] -> Either Error [(Hs.Name, A.WidgetSpec)]
+          resolveRefs :: [(A.Interface, [A.Reference])] -> Either [Error] [(Hs.Name, A.WidgetSpec)]
           resolveRefs [] = return []
           resolveRefs ((iface, rs):rest) = do
             a <- resolve iface rs
             b <- resolveRefs rest
             return $ a ++ b
 
-          resolve :: A.Interface -> [A.Reference] -> Either Error [(Hs.Name, A.WidgetSpec)]
+          resolve :: A.Interface -> [A.Reference] -> Either [Error] [(Hs.Name, A.WidgetSpec)]
           resolve _ [] = return []
           resolve iface ((A.Reference nam loc):rest) =
               case lookup nam validRefTargets of
@@ -127,9 +149,10 @@ mkValidationState doc =
                                                  -- but it's a valid
                                                  -- reference.
                       False ->
-                          Left $ Error loc $ "No widget with ID " ++ show nam
+                          Left [Error loc $ "No widget with ID " ++ show nam
                                    ++ " is shared, is a parameter, or exists in interface " ++
                                           (show $ A.interfaceName iface)
+                               ]
 
 allRefs :: A.Doc -> [(A.Interface, [A.Reference])]
 allRefs doc = [ (iface, catMaybes $ map getRef $ allWidgetLikes iface)
@@ -340,6 +363,35 @@ requireWidgetType typ wl@(A.Widget spec) =
         failValidation $ Error (A.widgetLocation spec) $ "Expected a widget of type " ++
                        show typ ++ ", got a widget of type " ++
                                 (show $ A.widgetType spec)
+
+requireValidColor :: A.SourceLocation -> Maybe String -> ValidateM (Maybe String)
+requireValidColor loc s =
+    case s of
+      Nothing -> return Nothing
+      Just c -> if c `elem` validColors
+                then return $ Just c
+                else failValidation $ Error loc $ "Color " ++ show c ++
+                         " invalid, must be one of " ++ show validColors
+
+validColors :: [String]
+validColors =
+    [ "red"
+    , "green"
+    , "yellow"
+    , "blue"
+    , "magenta"
+    , "cyan"
+    , "white"
+    , "black"
+    , "bright_red"
+    , "bright_green"
+    , "bright_yellow"
+    , "bright_black"
+    , "bright_magenta"
+    , "bright_cyan"
+    , "bright_white"
+    , "bright_blue"
+    ]
 
 firstChildWidget :: A.WidgetSpec -> ValidateM A.WidgetLike
 firstChildWidget spec =

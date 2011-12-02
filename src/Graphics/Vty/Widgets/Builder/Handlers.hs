@@ -8,7 +8,6 @@ where
 import Control.Applicative hiding (optional)
 import Control.Monad
 import Data.Maybe
-import Data.Either
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -716,40 +715,41 @@ handleFormattedText =
 
                 -- Left: do not strip whitespace
                 -- Right: do strip whitespace
-                processSpecContent :: Hs.Exp -> A.WidgetSpecContent -> Either Error [(Either String String, Hs.Exp)]
+                processSpecContent :: Hs.Exp -> A.WidgetSpecContent -> ValidateM [(Either String String, Hs.Exp)]
                 processSpecContent ex c =
                     case c of
-                      A.Text str _ -> Right [(Right $ stripWhitespace str, ex)]
+                      A.Text str _ -> return [(Right $ stripWhitespace str, ex)]
                       A.ChildElement elm ->
                           case A.elementType elm of
-                            "br" -> Right [(Left "\n", ex)]
+                            "br" -> return [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> Left $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
-                      A.ChildWidgetLike _ -> Left $ Error (A.widgetLocation s) "got unsupported child of attr: widget-like"
+                            badName -> failValidation $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
+                      A.ChildWidgetLike _ -> failValidation $ Error (A.widgetLocation s) "got unsupported child of attr: widget-like"
 
-                processElemContent :: Hs.Exp -> A.ElementContent -> Either Error [(Either String String, Hs.Exp)]
+                processElemContent :: Hs.Exp -> A.ElementContent -> ValidateM [(Either String String, Hs.Exp)]
                 processElemContent ex c =
                     case c of
-                      A.ElemText str _ -> Right [(Right $ stripWhitespace str, ex)]
+                      A.ElemText str _ -> return [(Right $ stripWhitespace str, ex)]
                       A.ElemChild elm ->
                           case A.elementType elm of
-                            "br" -> Right [(Left "\n", ex)]
+                            "br" -> return [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> Left $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
+                            badName -> failValidation $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
 
-                processAttr :: A.Element -> Either Error [(Either String String, Hs.Exp)]
-                processAttr elm =
-                    let attrResult = ( elemAttribute elm "fg"
-                                     , elemAttribute elm "bg"
-                                     )
-                        attrExpr = case attrsToExpr attrResult of
-                                     Nothing -> defAttr
-                                     Just ex -> ex
-                        results = map (processElemContent attrExpr) $ A.elementContents elm
+                processAttr :: A.Element -> ValidateM [(Either String String, Hs.Exp)]
+                processAttr elm = do
+                  let loc = A.elementLocation elm
+                  attrResult <- (,)
+                                <$> (requireValidColor loc $ elemAttribute elm "fg")
+                                <*> (requireValidColor loc $ elemAttribute elm "bg")
 
-                    in if null $ lefts results
-                       then Right $ concat $ rights results
-                       else Left $ head $ lefts results
+                  let attrExpr = case attrsToExpr attrResult of
+                                   Nothing -> defAttr
+                                   Just ex -> ex
+
+                  results <- mapM (processElemContent attrExpr) $ A.elementContents elm
+
+                  return $ concat $ results
 
                 stripWhitespace :: [Char] -> [Char]
                 stripWhitespace (c1:c2:cs) = if isWhitespace c1 && isWhitespace c2
@@ -758,10 +758,9 @@ handleFormattedText =
                 stripWhitespace ls = ls
 
                 pairs :: ValidateM [(Either String String, Hs.Exp)]
-                pairs = let results = map (processSpecContent defAttr) $ A.widgetSpecContents s
-                        in if null $ lefts results
-                           then return $ concat $ rights results
-                           else failValidation $ head $ lefts results
+                pairs = do
+                  results <- mapM (processSpecContent defAttr) $ A.widgetSpecContents s
+                  return $ concat $ results
 
           genSrc nam pairs = do
             let collapse :: [(Either String String, Hs.Exp)] -> [(Either String String, Hs.Exp)]
