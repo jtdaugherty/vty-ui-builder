@@ -49,3 +49,14 @@ Library
     Graphics.Vty.Widgets.Builder.Handlers.Borders
     Graphics.Vty.Widgets.Builder.Handlers.Fills
     Graphics.Vty.Widgets.Builder.Handlers.Centered
+    Graphics.Vty.Widgets.Builder.Handlers.Limits
+    Graphics.Vty.Widgets.Builder.Handlers.Fixed
+    Graphics.Vty.Widgets.Builder.Handlers.Pad
+    Graphics.Vty.Widgets.Builder.Handlers.Table
+    Graphics.Vty.Widgets.Builder.Handlers.List
+    Graphics.Vty.Widgets.Builder.Handlers.Text
+    Graphics.Vty.Widgets.Builder.Handlers.Edit
+    Graphics.Vty.Widgets.Builder.Handlers.Button
+    Graphics.Vty.Widgets.Builder.Handlers.ProgressBar
+    Graphics.Vty.Widgets.Builder.Handlers.Dialog
+    Graphics.Vty.Widgets.Builder.Handlers.DirBrowser

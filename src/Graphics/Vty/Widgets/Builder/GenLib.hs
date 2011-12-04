@@ -28,6 +28,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , setFocusValue
 
     -- Helper functions for source generation
+    , defAttr
     , toAST
     , call
     , bind
@@ -58,6 +59,9 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Util
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Language.Haskell.Exts as Hs
+
+defAttr :: Hs.Exp
+defAttr = expr $ mkName "def_attr"
 
 toAST :: (Show a) => a -> Hs.Exp
 toAST thing = parsed
