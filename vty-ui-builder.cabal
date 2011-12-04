@@ -60,3 +60,4 @@ Library
     Graphics.Vty.Widgets.Builder.Handlers.ProgressBar
     Graphics.Vty.Widgets.Builder.Handlers.Dialog
     Graphics.Vty.Widgets.Builder.Handlers.DirBrowser
+    Graphics.Vty.Widgets.Builder.Handlers.CheckBox
