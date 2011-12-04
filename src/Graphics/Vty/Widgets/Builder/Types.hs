@@ -18,6 +18,9 @@ module Graphics.Vty.Widgets.Builder.Types
     , failValidation
     , getResolvedRefs
     , getValidParams
+
+    -- Misc
+    , specType
     )
 where
 
@@ -152,3 +155,7 @@ getValidParams = ValidateM (Valid . validParams)
 
 getResolvedRefs :: ValidateM [(Hs.Name, WidgetElement)]
 getResolvedRefs = ValidateM (Valid . resolvedRefs)
+
+specType :: WidgetElementHandler
+         -> String
+specType (WidgetElementHandler _ _ t) = t

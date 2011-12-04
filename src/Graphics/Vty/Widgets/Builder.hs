@@ -13,6 +13,7 @@ import qualified Graphics.Vty.Widgets.Builder.Names as Names
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
+import Graphics.Vty.Widgets.Builder.Validation (doFullValidation)
 import Graphics.Vty.Widgets.Builder.Handlers (handleDoc)
 
 style :: Hs.Style

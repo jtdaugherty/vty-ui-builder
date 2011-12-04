@@ -1,5 +1,9 @@
 module Graphics.Vty.Widgets.Builder.Validation
-    ( required
+    (
+    doFullValidation
+
+    -- Validation functions
+    , required
     , requiredInt
     , requiredChar
     , optional
@@ -15,7 +19,11 @@ module Graphics.Vty.Widgets.Builder.Validation
     )
 where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>),(*>))
+import Data.List (nub)
+import Data.Maybe
+
+import qualified Language.Haskell.Exts as Hs
 
 import Graphics.Vty.Widgets.Builder.Types
 import qualified Graphics.Vty.Widgets.Builder.AST as A
@@ -25,6 +33,122 @@ import Graphics.Vty.Widgets.Builder.GenLib
     , widgetElementName
     , getChildWidgetLikes
     )
+
+doFullValidation :: A.Doc
+                 -> [WidgetElementHandler]
+                 -> Either [Error] ValidationState
+doFullValidation doc theHandlers =
+    case mkValidationState doc of
+      Left es -> Left es
+      Right st -> if null msgs
+                  then Right st
+                  else Left msgs
+          where
+            -- Match up widget specs in the document with handlers
+            handlersBySpecType = map (\s -> (specType s, s)) theHandlers
+            mapping = map (\s -> (s, lookup (widgetElementName s) handlersBySpecType)) $ allSpecs doc
+
+            mkMsg s = "unknown widget type " ++ show (widgetElementName s)
+
+            process (s, Nothing) = Just $ Error (A.sourceLocation s) $ mkMsg s
+            process (s, Just h) = doSpecValidation h s st
+
+            msgs = catMaybes $ map process mapping
+
+mkValidationState :: A.Doc -> Either [Error] ValidationState
+mkValidationState doc =
+    checkValidRefTargets *> (ValidationState params <$> (resolveRefs $ allRefs doc))
+        where
+          params = map A.paramName $ A.documentParams doc
+
+          -- Find all the widget specs that have IDs, i.e., those
+          -- which may be referenced.
+          validRefTargets = [ (fromJust $ A.widgetId s, s)
+                              | s <- allSpecs doc, isJust $ A.widgetId s
+                            ]
+
+          -- Group each valid reference target (widget ID) with the
+          -- list of specs which claimed the ID.  Right now the IDs
+          -- must be unique over the whole document, so if any ID maps
+          -- to more than one widget spec, that's illegal.
+          mapping = [ (wId, snd <$> filter ((== wId) . fst) validRefTargets)
+                     | wId <- nub $ map fst validRefTargets
+                    ]
+
+          duplicateRefs = filter ((> 1) . length . snd)
+
+          checkValidRefTargets :: Either [Error] ()
+          checkValidRefTargets = case duplicateRefs mapping of
+                                   [] -> Right ()
+                                   dups -> Left $ concat $ map mkErrors dups
+          mkErrors (wId, specs) =
+              [ Error (A.sourceLocation s) $ "Duplicate widget ID " ++ show wId ++ " defined"
+                | s <- specs
+              ]
+
+          -- Use allRefs, report error if a reference cannot be resolved
+          resolveRefs :: [(A.Interface, [A.Reference])] -> Either [Error] [(Hs.Name, A.WidgetElement)]
+          resolveRefs [] = return []
+          resolveRefs ((iface, rs):rest) = do
+            a <- resolve iface rs
+            b <- resolveRefs rest
+            return $ a ++ b
+
+          resolve :: A.Interface -> [A.Reference] -> Either [Error] [(Hs.Name, A.WidgetElement)]
+          resolve _ [] = return []
+          resolve iface ((A.Reference nam loc):rest) =
+              case lookup nam validRefTargets of
+                Just spec -> do
+                  specs <- resolve iface rest
+                  return $ (mkName nam, spec) : specs
+                Nothing ->
+                    case nam `elem` (map A.paramName $ A.documentParams doc) of
+                      True -> resolve iface rest -- Can't get a spec,
+                                                 -- but it's a valid
+                                                 -- reference.
+                      False ->
+                          Left [Error loc $ "No widget with ID " ++ show nam
+                                   ++ " is shared, is a parameter, or exists in interface " ++
+                                          (show $ A.interfaceName iface)
+                               ]
+
+allRefs :: A.Doc -> [(A.Interface, [A.Reference])]
+allRefs doc = [ (iface, catMaybes $ map getRef $ allWidgetLikes iface)
+                    | iface <- A.documentInterfaces doc ]
+    where
+      getRef (A.Ref r) = Just r
+      getRef (A.Widget _) = Nothing
+
+allWidgetLikes :: A.Interface -> [A.WidgetLike]
+allWidgetLikes iface = A.interfaceContent iface :
+                       (wLikes $ A.interfaceContent iface)
+    where
+      wLikes (A.Ref _) = []
+      wLikes (A.Widget w) = elementWLs $ A.getElement w
+
+      elementWLs = concat . map elemWLs . A.elementContents
+
+      elemWLs (A.Text _ _) = []
+      elemWLs (A.ChildElement e) = elementWLs e
+      elemWLs (A.ChildWidgetLike w) = w : wLikes w
+
+allSpecs :: A.Doc -> [A.WidgetElement]
+allSpecs doc =
+    concat [ map snd $ A.documentSharedWidgets doc
+           , catMaybes $ map getSpec $ concat $ map allWidgetLikes $ A.documentInterfaces doc
+           ]
+        where
+          getSpec (A.Ref _) = Nothing
+          getSpec (A.Widget w) = Just w
+
+doSpecValidation :: WidgetElementHandler
+                 -> A.WidgetElement
+                 -> ValidationState
+                 -> Maybe Error
+doSpecValidation (WidgetElementHandler _ validator _) spec st =
+    case runValidation (validator $ A.getElement spec) st of
+      ValidationError e -> Just e
+      Valid _ -> Nothing
 
 required :: (A.HasSourceLocation a, A.IsElement a) =>
             a -> String -> ValidateM String
