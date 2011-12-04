@@ -6,8 +6,6 @@ where
 
 data BuilderConfig =
     BuilderConfig { moduleName :: String
-                  , generateImports :: Bool
-                  , generateModulePreamble :: Bool
                   , generateMain :: Bool
                   , generateInterfaceType :: Bool
                   , generateInterfaceBuilder :: Bool
@@ -16,8 +14,6 @@ data BuilderConfig =
 
 defaultConfig :: BuilderConfig
 defaultConfig = BuilderConfig { moduleName = "Interface"
-                              , generateImports = True
-                              , generateModulePreamble = True
                               , generateMain = False
                               , generateInterfaceType = True
                               , generateInterfaceBuilder = True
