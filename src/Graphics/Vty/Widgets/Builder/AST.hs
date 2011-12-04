@@ -4,20 +4,17 @@ module Graphics.Vty.Widgets.Builder.AST
     , Interface(..)
     , ModuleImport(..)
     , WidgetLike(..)
-    , WidgetSpec(..)
-    , WidgetSpecContent(..)
+    , WidgetElement(..)
     , Reference(..)
     , SourceLocation(..)
     , Element(..)
     , ElementContent(..)
     , WidgetId
-    , ElementData(..)
+    , IsElement(..)
     , HasSourceLocation(..)
     , noLoc
     )
 where
-
-import Data.Maybe (catMaybes)
 
 data SourceLocation =
     SourceLocation { srcFile :: FilePath
@@ -40,7 +37,7 @@ noLoc = SourceLocation "" 0 0
 data Doc =
     Doc { documentInterfaces :: [Interface]
         , documentParams :: [Param]
-        , documentSharedWidgets :: [(WidgetId, WidgetSpec)]
+        , documentSharedWidgets :: [(WidgetId, WidgetElement)]
         , documentImports :: [ModuleImport]
         }
     deriving (Eq, Read, Show)
@@ -66,82 +63,56 @@ data Interface =
     deriving (Eq, Read, Show)
 
 data WidgetLike = Ref Reference
-                | Widget WidgetSpec
+                | Widget WidgetElement
                   deriving (Eq, Read, Show)
 
-data WidgetSpec =
-    WidgetSpec { widgetType :: String
-               , widgetId :: Maybe String
-               , widgetSpecAttributes :: [(String, String)]
-               , widgetSpecContents :: [WidgetSpecContent]
-               , widgetLocation :: SourceLocation
-               }
+data WidgetElement =
+    WidgetElement { widgetId :: Maybe String
+                  , widgetElement :: Element
+                  }
     deriving (Eq, Read, Show)
 
 data Element =
-    Element { elementType :: String
+    Element { elementName :: String
             , elementAttributes :: [(String, String)]
             , elementContents :: [ElementContent]
             , elementLocation :: SourceLocation
             }
     deriving (Eq, Read, Show)
 
-data ElementContent = ElemText String SourceLocation
-                    | ElemChild Element
-                    | ElemChildWidgetLike WidgetLike
+data ElementContent = Text String SourceLocation
+                    | ChildElement Element
+                    | ChildWidgetLike WidgetLike
                       deriving (Eq, Read, Show)
-
-data WidgetSpecContent = Text String SourceLocation
-                       | ChildWidgetLike WidgetLike
-                       | ChildElement Element
-                         deriving (Eq, Read, Show)
 
 data Reference = Reference WidgetId SourceLocation
                  deriving (Eq, Read, Show)
 
 type WidgetId = String
 
-class ElementData a where
-    getAttributes :: a -> [(String, String)]
-    getChildWidgetLikes :: a -> [WidgetLike]
-    getChildElements :: a -> [Element]
+class IsElement a where
+    getElement :: a -> Element
+
+instance IsElement Element where
+    getElement = id
+
+instance IsElement WidgetElement where
+    getElement = widgetElement
 
 class HasSourceLocation a where
-    getSourceLocation :: a -> SourceLocation
-
-instance ElementData Element where
-    getAttributes = elementAttributes
-    getChildWidgetLikes e = catMaybes $ map getWL $ elementContents e
-        where
-          getWL (ElemChildWidgetLike w) = Just w
-          getWL _ = Nothing
-    getChildElements e = catMaybes $ map getWL $ elementContents e
-        where
-          getWL (ElemChild el) = Just el
-          getWL _ = Nothing
-
-instance ElementData WidgetSpec where
-    getAttributes = widgetSpecAttributes
-    getChildWidgetLikes e = catMaybes $ map getWL $ widgetSpecContents e
-        where
-          getWL (ChildWidgetLike w) = Just w
-          getWL _ = Nothing
-    getChildElements e = catMaybes $ map getWL $ widgetSpecContents e
-        where
-          getWL (ChildElement el) = Just el
-          getWL _ = Nothing
+    sourceLocation :: a -> SourceLocation
 
 instance HasSourceLocation Element where
-    getSourceLocation = elementLocation
+    sourceLocation = elementLocation
 
-instance HasSourceLocation WidgetSpec where
-    getSourceLocation = widgetLocation
+instance HasSourceLocation WidgetElement where
+    sourceLocation = sourceLocation . getElement
 
 instance HasSourceLocation Param where
-    getSourceLocation = paramLocation
+    sourceLocation = paramLocation
 
 instance HasSourceLocation Interface where
-    getSourceLocation = interfaceLocation
+    sourceLocation = interfaceLocation
 
 instance HasSourceLocation Reference where
-    getSourceLocation (Reference _ loc) = loc
+    sourceLocation (Reference _ loc) = loc

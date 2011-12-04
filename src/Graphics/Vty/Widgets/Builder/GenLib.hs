@@ -18,31 +18,16 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getElementStringContent
     , registerFieldValueName
     , getNamedWidgetNames
-    , widgetLikeType
+    , widgetLikeName
     , specType
     , doFullValidation
     , putError
     , mkValidationState
     , getAttribute
-
-    -- Combinators for constructing data model values during
-    -- validation
-    , required
-    , requiredInt
-    , requiredChar
-    , optional
-    , optionalInt
-    , requiredEqual
-    , firstChildWidget
-    , elementsByName
-    , requireWidgetType
-    , requireValidColor
-    , validColors
-    , elemName
-
-    -- Common names
-    , collectionName
-    , uiElementsName
+    , getAttributes
+    , getChildWidgetLikes
+    , getChildElements
+    , widgetElementName
 
     -- Helper functions for source generation
     , call
@@ -76,8 +61,26 @@ import Graphics.Vty.Widgets.Builder.Util
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Language.Haskell.Exts as Hs
 
+widgetElementName :: A.WidgetElement -> String
+widgetElementName = A.elementName . A.getElement
+
+getAttributes :: (A.IsElement e) => e -> [(String, String)]
+getAttributes = A.elementAttributes . A.getElement
+
+getChildWidgetLikes :: (A.IsElement e) => e -> [A.WidgetLike]
+getChildWidgetLikes = catMaybes . map getWL . A.elementContents . A.getElement
+    where
+      getWL (A.ChildWidgetLike w) = Just w
+      getWL _ = Nothing
+
+getChildElements :: (A.IsElement e) => e -> [A.Element]
+getChildElements = catMaybes . map getEls . A.elementContents . A.getElement
+    where
+      getEls (A.ChildElement el) = Just el
+      getEls _ = Nothing
+
 doFullValidation :: A.Doc
-                 -> [WidgetSpecHandler]
+                 -> [WidgetElementHandler]
                  -> Either [Error] ValidationState
 doFullValidation doc theHandlers =
     case mkValidationState doc of
@@ -88,11 +91,11 @@ doFullValidation doc theHandlers =
           where
             -- Match up widget specs in the document with handlers
             handlersBySpecType = map (\s -> (specType s, s)) theHandlers
-            mapping = map (\s -> (s, lookup (A.widgetType s) handlersBySpecType)) $ allSpecs doc
+            mapping = map (\s -> (s, lookup (widgetElementName s) handlersBySpecType)) $ allSpecs doc
 
-            mkMsg s = "unknown widget type " ++ show (A.widgetType s)
+            mkMsg s = "unknown widget type " ++ show (widgetElementName s)
 
-            process (s, Nothing) = Just $ Error (A.widgetLocation s) $ mkMsg s
+            process (s, Nothing) = Just $ Error (A.sourceLocation s) $ mkMsg s
             process (s, Just h) = doSpecValidation h s st
 
             msgs = catMaybes $ map process mapping
@@ -124,19 +127,19 @@ mkValidationState doc =
                                    [] -> Right ()
                                    dups -> Left $ concat $ map mkErrors dups
           mkErrors (wId, specs) =
-              [ Error (A.widgetLocation s) $ "Duplicate widget ID " ++ show wId ++ " defined"
+              [ Error (A.sourceLocation s) $ "Duplicate widget ID " ++ show wId ++ " defined"
                 | s <- specs
               ]
 
           -- Use allRefs, report error if a reference cannot be resolved
-          resolveRefs :: [(A.Interface, [A.Reference])] -> Either [Error] [(Hs.Name, A.WidgetSpec)]
+          resolveRefs :: [(A.Interface, [A.Reference])] -> Either [Error] [(Hs.Name, A.WidgetElement)]
           resolveRefs [] = return []
           resolveRefs ((iface, rs):rest) = do
             a <- resolve iface rs
             b <- resolveRefs rest
             return $ a ++ b
 
-          resolve :: A.Interface -> [A.Reference] -> Either [Error] [(Hs.Name, A.WidgetSpec)]
+          resolve :: A.Interface -> [A.Reference] -> Either [Error] [(Hs.Name, A.WidgetElement)]
           resolve _ [] = return []
           resolve iface ((A.Reference nam loc):rest) =
               case lookup nam validRefTargets of
@@ -166,17 +169,15 @@ allWidgetLikes iface = A.interfaceContent iface :
                        (wLikes $ A.interfaceContent iface)
     where
       wLikes (A.Ref _) = []
-      wLikes (A.Widget w) = concat $ map contentWLs $ A.widgetSpecContents w
+      wLikes (A.Widget w) = elementWLs $ A.getElement w
 
-      contentWLs (A.Text _ _) = []
-      contentWLs (A.ChildElement e) = concat $ map elemWLs $ A.elementContents e
-      contentWLs (A.ChildWidgetLike w) = w : wLikes w
+      elementWLs = concat . map elemWLs . A.elementContents
 
-      elemWLs (A.ElemText _ _) = []
-      elemWLs (A.ElemChild e) = concat $ map elemWLs $ A.elementContents e
-      elemWLs (A.ElemChildWidgetLike w) = w : wLikes w
+      elemWLs (A.Text _ _) = []
+      elemWLs (A.ChildElement e) = elementWLs e
+      elemWLs (A.ChildWidgetLike w) = w : wLikes w
 
-allSpecs :: A.Doc -> [A.WidgetSpec]
+allSpecs :: A.Doc -> [A.WidgetElement]
 allSpecs doc =
     concat [ map snd $ A.documentSharedWidgets doc
            , catMaybes $ map getSpec $ concat $ map allWidgetLikes $ A.documentInterfaces doc
@@ -185,36 +186,36 @@ allSpecs doc =
           getSpec (A.Ref _) = Nothing
           getSpec (A.Widget w) = Just w
 
-doSpecValidation :: WidgetSpecHandler
-                 -> A.WidgetSpec
+doSpecValidation :: WidgetElementHandler
+                 -> A.WidgetElement
                  -> ValidationState
                  -> Maybe Error
-doSpecValidation (WidgetSpecHandler _ validator _) spec st =
-    case runValidation (validator spec) st of
+doSpecValidation (WidgetElementHandler _ validator _) spec st =
+    case runValidation (validator $ A.getElement spec) st of
       ValidationError e -> Just e
       Valid _ -> Nothing
 
-generateWidgetSource :: WidgetSpecHandler
-                     -> A.WidgetSpec
+generateWidgetSource :: WidgetElementHandler
+                     -> A.WidgetElement
                      -> ValidationState
                      -> Hs.Name
                      -> GenM WidgetHandlerResult
-generateWidgetSource (WidgetSpecHandler genSrc validator specTyp) spec st nam = do
-  case runValidation (validator spec) st of
+generateWidgetSource (WidgetElementHandler genSrc validator specTyp) spec st nam = do
+  case runValidation (validator $ A.getElement spec) st of
     ValidationError e -> error $ "Error while generating widget source for type " ++ show specTyp ++
                          " (up-front validation should have prevented this): " ++ show e
     Valid val -> genSrc nam val
 
-specType :: WidgetSpecHandler
+specType :: WidgetElementHandler
          -> String
-specType (WidgetSpecHandler _ _ t) = t
+specType (WidgetElementHandler _ _ t) = t
 
 gen :: A.WidgetLike -> Hs.Name -> GenM ()
 gen (A.Widget spec) nam = do
   hs <- gets handlers
-  case lookup (A.widgetType spec) hs of
-    Nothing -> error $ show (A.widgetLocation spec) ++
-               ": no handler for widget type " ++ (show $ A.widgetType spec)
+  case lookup (widgetElementName spec) hs of
+    Nothing -> error $ show (A.sourceLocation spec) ++
+               ": no handler for widget type " ++ (show $ widgetElementName spec)
     Just handler -> do
       st <- gets validationState
       result <- generateWidgetSource handler spec st nam
@@ -278,7 +279,7 @@ getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
     where
       getNamedWidgetNames' (A.Ref _) = []
       getNamedWidgetNames' (A.Widget spec) =
-          A.widgetId spec : (concat $ map getNamedWidgetNames' $ A.getChildWidgetLikes spec)
+          A.widgetId spec : (concat $ map getNamedWidgetNames' $ getChildWidgetLikes spec)
 
 putError :: A.SourceLocation -> String -> GenM ()
 putError loc s =
@@ -335,119 +336,8 @@ getParamType s = do
     Nothing -> error $ "Invalid parameter name: " ++ show s
     Just t -> return t
 
-elementsByName :: String -> [A.Element] -> [A.Element]
-elementsByName n es = filter ((== n) . A.elementType) es
-
-getAttribute :: (A.ElementData a) => a -> String -> Maybe String
-getAttribute val attrName = lookup attrName (A.getAttributes val)
-
-elemName :: A.Element -> String -> ValidateM A.Element
-elemName e s =
-    if A.elementType e == s
-    then return e
-    else failValidation $ Error (A.elementLocation e) $ "expected element of type "
-             ++ show s ++ ", got " ++ show (A.elementType e)
-
-requiredEqual :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> String -> ValidateM String
-requiredEqual spec attrName expected = do
-  v <- required spec attrName
-  if v == expected then
-      return v else
-      failValidation $ Error (A.getSourceLocation spec) $
-                         "Attribute value for attribute " ++
-                         show attrName ++ " must be " ++ show expected
-
-requireWidgetType :: String -> A.WidgetLike -> ValidateM A.WidgetLike
-requireWidgetType typ wl@(A.Ref (A.Reference nam loc)) = do
-  refs <- getResolvedRefs
-  -- Assume the lookup will succeed, since all references are valid in
-  -- this monad.
-  let Just targetSpec = lookup (mkName nam) refs
-  if A.widgetType targetSpec == typ then
-      return wl else
-      failValidation $ Error loc $ "Expected a reference to a widget of type " ++
-                     show typ ++ ", got a reference to type " ++
-                              (show $ A.widgetType targetSpec)
-requireWidgetType typ wl@(A.Widget spec) =
-    if A.widgetType spec == typ then
-        return wl else
-        failValidation $ Error (A.widgetLocation spec) $ "Expected a widget of type " ++
-                       show typ ++ ", got a widget of type " ++
-                                (show $ A.widgetType spec)
-
-requireValidColor :: A.SourceLocation -> Maybe String -> ValidateM (Maybe String)
-requireValidColor loc s =
-    case s of
-      Nothing -> return Nothing
-      Just c -> if c `elem` validColors
-                then return $ Just c
-                else failValidation $ Error loc $ "Color " ++ show c ++
-                         " invalid, must be one of " ++ show validColors
-
-validColors :: [String]
-validColors =
-    [ "red"
-    , "green"
-    , "yellow"
-    , "blue"
-    , "magenta"
-    , "cyan"
-    , "white"
-    , "black"
-    , "bright_red"
-    , "bright_green"
-    , "bright_yellow"
-    , "bright_black"
-    , "bright_magenta"
-    , "bright_cyan"
-    , "bright_white"
-    , "bright_blue"
-    ]
-
-firstChildWidget :: (A.ElementData a, A.HasSourceLocation a) => a -> ValidateM A.WidgetLike
-firstChildWidget val =
-    case A.getChildWidgetLikes val of
-      (ch:_) -> return ch
-      _ -> failValidation $ Error (A.getSourceLocation val) "required first child widget is missing"
-
-required :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> ValidateM String
-required thing attrName =
-    case getAttribute thing attrName of
-      Nothing -> failValidation $ Error (A.getSourceLocation thing) $
-                 "attribute " ++ show attrName ++ " required"
-      Just val -> return val
-
-optional :: (A.ElementData a) => a -> String -> ValidateM (Maybe String)
-optional val attr = return $ getAttribute val attr
-
-getInt :: (A.HasSourceLocation a) => a -> String -> String -> ValidateM Int
-getInt thing attrName val =
-    case reads val of
-      [] -> failValidation $ Error (A.getSourceLocation thing) $
-            "Attribute " ++ show attrName ++
-            " value must be an integer"
-      ((v,_):_) -> return v
-
-requiredInt :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> ValidateM Int
-requiredInt thing attrName = required thing attrName >>= getInt thing attrName
-
-requiredChar :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> ValidateM Char
-requiredChar val attrName = do
-  s <- required val attrName
-  case null s of
-    True -> failValidation $ Error (A.getSourceLocation val) $
-            "Attribute " ++ show attrName ++ " must be non-empty"
-    False -> if length s == 1 then
-                 return $ head s else
-                 failValidation $ Error (A.getSourceLocation val) $
-                   "Attribute " ++ show attrName ++ " must be one character in length"
-
-optionalInt :: (A.ElementData a, A.HasSourceLocation a) =>
-               a -> String -> ValidateM (Maybe Int)
-optionalInt spec attrName =
-    case getAttribute spec attrName of
-      Just v -> Just <$> getInt spec attrName v
-      Nothing -> return Nothing
+getAttribute :: (A.IsElement a) => a -> String -> Maybe String
+getAttribute val attrName = lookup attrName (getAttributes val)
 
 attrsToExpr :: (Maybe String, Maybe String) -> Maybe Hs.Exp
 attrsToExpr (Nothing, Nothing) = Nothing
@@ -537,7 +427,7 @@ mkLet pairs = Hs.LetStmt $ Hs.BDecls $ map mkDecl pairs
                         (Hs.UnGuardedRhs e)
                         (Hs.BDecls [])
 
-annotateWidget :: A.WidgetSpec -> Hs.Name -> GenM ()
+annotateWidget :: A.WidgetElement -> Hs.Name -> GenM ()
 annotateWidget spec nam = do
   -- Normal attribute override
   let normalResult = ( getAttribute spec "normalFg"
@@ -560,15 +450,15 @@ annotateWidget spec nam = do
 mkName :: String -> Hs.Name
 mkName = Hs.Ident
 
-widgetLikeType :: A.WidgetLike -> String
-widgetLikeType (A.Ref _) = "ref"
-widgetLikeType (A.Widget w) = A.widgetType w
+widgetLikeName :: A.WidgetLike -> String
+widgetLikeName (A.Ref _) = "ref"
+widgetLikeName (A.Widget w) = widgetElementName w
 
 getElementStringContent :: A.Element -> String
 getElementStringContent =
     concat . map elemText . A.elementContents
     where
-      elemText (A.ElemText s _) = s
+      elemText (A.Text s _) = s
       elemText _ = []
 
 append :: Hs.Stmt -> GenM ()
@@ -628,9 +518,3 @@ parseType s =
     case Hs.parse s of
       Hs.ParseOk val -> val
       Hs.ParseFailed _ msg -> error $ "Error parsing type string '" ++ s ++ "': " ++ msg
-
-collectionName :: Hs.Name
-collectionName = mkName "c"
-
-uiElementsName :: Hs.Name
-uiElementsName = mkName "elems"

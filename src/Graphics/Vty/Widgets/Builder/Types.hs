@@ -7,7 +7,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , WidgetName(..)
     , InterfaceValues(..)
     , FocusMethod(..)
-    , WidgetSpecHandler(..)
+    , WidgetElementHandler(..)
     , WidgetHandlerResult(..)
     , Error(..)
 
@@ -65,7 +65,7 @@ data InterfaceValues =
 data GenState =
     GenState { nameCounters :: Map.Map String Int
              , hsStatements :: [Hs.Stmt]
-             , handlers :: [(String, WidgetSpecHandler)]
+             , handlers :: [(String, WidgetElementHandler)]
              , allWidgetNames :: [(Hs.Name, WidgetName)]
              , registeredFieldNames :: [(Hs.Name, AnyName)]
              , interfaceNames :: [(String, InterfaceValues)]
@@ -91,11 +91,11 @@ data FocusMethod = Direct WidgetName -- The name of the widget which
 -- routine.  Using a GADT allows us to capture this requirement
 -- without worrying about the concrete types used by different spec
 -- handlers; this just ensures that they are internally consistent.
-data WidgetSpecHandler where
-    WidgetSpecHandler :: (Hs.Name -> a -> GenM WidgetHandlerResult)
-                      -> (WidgetSpec -> ValidateM a)
-                      -> String
-                      -> WidgetSpecHandler
+data WidgetElementHandler where
+    WidgetElementHandler :: (Hs.Name -> a -> GenM WidgetHandlerResult)
+                         -> (Element -> ValidateM a)
+                         -> String
+                         -> WidgetElementHandler
 
 type GenM a = State GenState a
 
@@ -106,7 +106,7 @@ data WidgetHandlerResult =
 
 data ValidationState =
     ValidationState { validParams :: [String]
-                    , resolvedRefs :: [(Hs.Name, WidgetSpec)]
+                    , resolvedRefs :: [(Hs.Name, WidgetElement)]
                     }
 
 data ValidateM a =
@@ -150,5 +150,5 @@ failValidation = ValidateM . const . ValidationError
 getValidParams :: ValidateM [String]
 getValidParams = ValidateM (Valid . validParams)
 
-getResolvedRefs :: ValidateM [(Hs.Name, WidgetSpec)]
+getResolvedRefs :: ValidateM [(Hs.Name, WidgetElement)]
 getResolvedRefs = ValidateM (Valid . resolvedRefs)

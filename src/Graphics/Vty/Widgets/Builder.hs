@@ -9,6 +9,7 @@ import Data.Maybe
 import qualified Language.Haskell.Exts as Hs
 
 import qualified Graphics.Vty.Widgets.Builder.AST as A
+import qualified Graphics.Vty.Widgets.Builder.Names as Names
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -25,7 +26,7 @@ prettyPrintSource = Hs.prettyPrintStyleMode style mode
 
 generateSourceForDocument :: BuilderConfig
                           -> A.Doc
-                          -> [WidgetSpecHandler]
+                          -> [WidgetElementHandler]
                           -> IO (Either [Error] Hs.Module)
 generateSourceForDocument config doc theHandlers = do
   case doFullValidation doc theHandlers of
@@ -95,9 +96,9 @@ generateModule config doc moduleBody =
 
 generateModuleBody :: BuilderConfig -> GenState -> [Hs.Decl]
 generateModuleBody config st =
-    let main = mkMain $ concat [ [tBind [collectionName, mkName "values"] "buildCollection" []]
+    let main = mkMain $ concat [ [tBind [Names.collectionName, mkName "values"] "buildCollection" []]
                                , mkKeyHandlers st
-                               , [act $ call "runUi" [expr collectionName, expr $ mkName "defaultContext"]]
+                               , [act $ call "runUi" [expr Names.collectionName, expr $ mkName "defaultContext"]]
                                ]
 
         moduleBody = concat [ if generateInterfaceType config then [mkInterfaceType st] else []
@@ -145,8 +146,8 @@ mkBuilderFunction st =
        , Hs.FunBind [ Hs.Match noLoc (Hs.Ident "buildCollection") theParamNames Nothing
                                    (Hs.UnGuardedRhs (Hs.Do $ hsStatements st
                                                                  ++ [ mkElementsValue st
-                                                                    , act $ call "return" [ mkTup [ expr collectionName
-                                                                                                  , expr uiElementsName
+                                                                    , act $ call "return" [ mkTup [ expr Names.collectionName
+                                                                                                  , expr Names.uiElementsName
                                                                                                   ]
                                                                                           ]
                                                                     ]
@@ -234,4 +235,4 @@ mkElementsValue st =
         elemsValue :: Hs.Exp
         elemsValue = Hs.RecConstr (Hs.UnQual $ mkName "InterfaceElements")
                      fields
-    in mkLet [(uiElementsName, elemsValue)]
+    in mkLet [(Names.uiElementsName, elemsValue)]

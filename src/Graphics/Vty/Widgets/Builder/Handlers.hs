@@ -15,6 +15,8 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util
 import qualified Graphics.Vty.Widgets.Builder.AST as A
+import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.Names as Names
 
 import Graphics.Vty.Widgets.Box
     ( ChildSizePolicy(..)
@@ -30,7 +32,7 @@ import Graphics.Vty.Widgets.Table
 
 import qualified Language.Haskell.Exts as Hs
 
-coreSpecHandlers :: [WidgetSpecHandler]
+coreSpecHandlers :: [WidgetElementHandler]
 coreSpecHandlers =
     [ handleWrap
     , handleFormattedText
@@ -69,10 +71,10 @@ handleDoc doc = do
   mapM_ handleParam $ A.documentParams doc
   forM_ (A.documentSharedWidgets doc) $ \(_, spec) ->
       do
-        nam <- newEntry $ A.widgetType spec
+        nam <- newEntry $ widgetElementName spec
         gen (A.Widget spec) nam
 
-  append $ bind collectionName "newCollection" []
+  append $ bind Names.collectionName "newCollection" []
 
   forM_ (A.documentInterfaces doc) $ \iface ->
       do
@@ -91,7 +93,7 @@ handleInterface iface doc nam = do
   forM_ (A.interfaceFocusEntries iface) $ \info ->
       handleFocusEntry iface doc info fgName
 
-  append $ bind actName "addToCollection" [ expr collectionName
+  append $ bind actName "addToCollection" [ expr Names.collectionName
                                           , expr nam
                                           , expr fgName
                                           ]
@@ -106,14 +108,14 @@ handleParam :: A.Param -> GenM ()
 handleParam p =
     registerParam (mkName $ A.paramName p) (parseType $ A.paramType p)
 
-handleCheckBox :: WidgetSpecHandler
+handleCheckBox :: WidgetElementHandler
 handleCheckBox =
-    WidgetSpecHandler genSrc doValidate "checkBox"
+    WidgetElementHandler genSrc doValidate "checkBox"
 
         where
           doValidate s = (,)
-                         <$> required s "label"
-                         <*> optional s "radioGroup"
+                         <$> V.required s "label"
+                         <*> V.optional s "radioGroup"
 
           genSrc nam (label, rg) = do
             append $ bind nam "newCheckbox" [mkString label]
@@ -140,16 +142,18 @@ handleCheckBox =
 
             return $ declareWidget nam (mkTyp "CheckBox" [mkTyp "Bool" []])
 
-handleStringList :: WidgetSpecHandler
+handleStringList :: WidgetElementHandler
 handleStringList =
-    WidgetSpecHandler genSrc doValidate "stringList"
+    WidgetElementHandler genSrc doValidate "stringList"
 
         where
-          loc = A.widgetLocation
+          loc = A.sourceLocation
 
           doValidate s = (,)
-                         <$> (requireValidColor (loc s) =<< optional s "cursorFg")
-                         <*> (requireValidColor (loc s) =<< optional s "cursorBg")
+                         <$> (V.requireValidColor (loc s) =<<
+                              V.optional s "cursorFg")
+                         <*> (V.requireValidColor (loc s) =<<
+                              V.optional s "cursorBg")
 
           genSrc nam (cursorFg, cursorBg) = do
             let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
@@ -159,18 +163,20 @@ handleStringList =
             append $ bind nam "newStringList" [attrExpr, mkList []]
             return $ declareWidget nam $ parseType "List String FormattedText"
 
-handleList :: WidgetSpecHandler
+handleList :: WidgetElementHandler
 handleList =
-    WidgetSpecHandler genSrc doValidate "list"
+    WidgetElementHandler genSrc doValidate "list"
 
         where
-          loc = A.widgetLocation
+          loc = A.sourceLocation
 
           doValidate s = (,,,)
-                         <$> (requireValidColor (loc s) =<< optional s "cursorFg")
-                         <*> (requireValidColor (loc s) =<< optional s "cursorBg")
-                         <*> required s "keyType"
-                         <*> required s "elemType"
+                         <$> (V.requireValidColor (loc s) =<<
+                              V.optional s "cursorFg")
+                         <*> (V.requireValidColor (loc s) =<<
+                              V.optional s "cursorBg")
+                         <*> V.required s "keyType"
+                         <*> V.required s "elemType"
 
           genSrc nam (cursorFg, cursorBg, keyType, elemType) = do
             let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
@@ -181,17 +187,17 @@ handleList =
             return $ declareWidget nam $ parseType $ "List (" ++ keyType ++
                        ") (" ++ elemType ++ ")"
 
-handleVLimit :: WidgetSpecHandler
+handleVLimit :: WidgetElementHandler
 handleVLimit =
-    WidgetSpecHandler genSrc doValidate "vLimit"
+    WidgetElementHandler genSrc doValidate "vLimit"
 
         where
           doValidate s = (,)
-                         <$> requiredInt s "height"
-                         <*> firstChildWidget s
+                         <$> V.requiredInt s "height"
+                         <*> V.firstChildWidget s
 
           genSrc nam (height, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -199,16 +205,16 @@ handleVLimit =
             return $ declareWidget nam $
                    parseType $ "VLimit (" ++ Hs.prettyPrint chType ++ ")"
 
-handleHLimit :: WidgetSpecHandler
+handleHLimit :: WidgetElementHandler
 handleHLimit =
-    WidgetSpecHandler genSrc doValidate "hLimit"
+    WidgetElementHandler genSrc doValidate "hLimit"
         where
           doValidate s = (,)
-                         <$> requiredInt s "width"
-                         <*> firstChildWidget s
+                         <$> V.requiredInt s "width"
+                         <*> V.firstChildWidget s
 
           genSrc nam (width, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -216,17 +222,17 @@ handleHLimit =
             return $ declareWidget nam $
                    parseType $ "HLimit (" ++ Hs.prettyPrint chType ++ ")"
 
-handleBoxLimit :: WidgetSpecHandler
+handleBoxLimit :: WidgetElementHandler
 handleBoxLimit =
-    WidgetSpecHandler genSrc doValidate "boxLimit"
+    WidgetElementHandler genSrc doValidate "boxLimit"
         where
           doValidate s = (,,)
-                         <$> (requiredInt s "width")
-                         <*> (requiredInt s "height")
-                         <*> firstChildWidget s
+                         <$> (V.requiredInt s "width")
+                         <*> (V.requiredInt s "height")
+                         <*> V.firstChildWidget s
 
           genSrc nam (width, height, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -237,16 +243,16 @@ handleBoxLimit =
             return $ declareWidget nam $
                    parseType $ "VLimit (HLimit (" ++ Hs.prettyPrint chType ++ "))"
 
-handleVFixed :: WidgetSpecHandler
+handleVFixed :: WidgetElementHandler
 handleVFixed =
-    WidgetSpecHandler genSrc doValidate "vFixed"
+    WidgetElementHandler genSrc doValidate "vFixed"
         where
           doValidate s = (,)
-                         <$> requiredInt s "height"
-                         <*> firstChildWidget s
+                         <$> V.requiredInt s "height"
+                         <*> V.firstChildWidget s
 
           genSrc nam (height, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -254,16 +260,16 @@ handleVFixed =
             return $ declareWidget nam $
                    parseType $ "VFixed (" ++ Hs.prettyPrint chType ++ ")"
 
-handleHFixed :: WidgetSpecHandler
+handleHFixed :: WidgetElementHandler
 handleHFixed =
-    WidgetSpecHandler genSrc doValidate "hFixed"
+    WidgetElementHandler genSrc doValidate "hFixed"
         where
           doValidate s = (,)
-                         <$> requiredInt s "width"
-                         <*> firstChildWidget s
+                         <$> V.requiredInt s "width"
+                         <*> V.firstChildWidget s
 
           genSrc nam (width, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -271,17 +277,17 @@ handleHFixed =
             return $ declareWidget nam $
                    parseType $ "HFixed (" ++ Hs.prettyPrint chType ++ ")"
 
-handleBoxFixed :: WidgetSpecHandler
+handleBoxFixed :: WidgetElementHandler
 handleBoxFixed =
-    WidgetSpecHandler genSrc doValidate "boxFixed"
+    WidgetElementHandler genSrc doValidate "boxFixed"
         where
           doValidate s = (,,)
-                         <$> requiredInt s "width"
-                         <*> requiredInt s "height"
-                         <*> firstChildWidget s
+                         <$> V.requiredInt s "width"
+                         <*> V.requiredInt s "height"
+                         <*> V.firstChildWidget s
 
           genSrc nam (width, height, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
             chType <- getWidgetStateType chNam
 
@@ -302,26 +308,26 @@ data PadInfo = PadInfo { padTop :: Maybe Int
 noPadding :: PadInfo
 noPadding = PadInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
-handlePad :: WidgetSpecHandler
+handlePad :: WidgetElementHandler
 handlePad =
-    WidgetSpecHandler genSrc doValidate "pad"
+    WidgetElementHandler genSrc doValidate "pad"
         where
           doValidate s = do
             pInfo <- PadInfo
-                     <$> optionalInt s "top"
-                     <*> optionalInt s "bottom"
-                     <*> optionalInt s "left"
-                     <*> optionalInt s "right"
-                     <*> optionalInt s "leftRight"
-                     <*> optionalInt s "topBottom"
-                     <*> optionalInt s "all"
+                     <$> V.optionalInt s "top"
+                     <*> V.optionalInt s "bottom"
+                     <*> V.optionalInt s "left"
+                     <*> V.optionalInt s "right"
+                     <*> V.optionalInt s "leftRight"
+                     <*> V.optionalInt s "topBottom"
+                     <*> V.optionalInt s "all"
             if pInfo == noPadding then
-                failValidation $ Error (A.widgetLocation s)
+                failValidation $ Error (A.sourceLocation s)
                                    "element requires at least one padding attribute" else
-                (,) <$> pure pInfo <*> firstChildWidget s
+                (,) <$> pure pInfo <*> V.firstChildWidget s
 
           genSrc nam (padding, ch) = do
-            chNam <- newEntry (widgetLikeType ch)
+            chNam <- newEntry (widgetLikeName ch)
             gen ch chNam
 
             -- Mapping of projections and the function names we should
@@ -351,11 +357,11 @@ handlePad =
 
             return $ declareWidget nam (mkTyp "Padded" [])
 
-handleDirBrowser :: WidgetSpecHandler
+handleDirBrowser :: WidgetElementHandler
 handleDirBrowser =
-    WidgetSpecHandler genSrc doValidation "dirBrowser"
+    WidgetElementHandler genSrc doValidation "dirBrowser"
         where
-          doValidation s = optional s "skin"
+          doValidation s = V.optional s "skin"
 
           genSrc nam skin = do
             let Just skinName = skin <|> Just "defaultBrowserSkin"
@@ -375,16 +381,16 @@ handleDirBrowser =
             return $ declareWidget nam (mkTyp "DirBrowserWidgetType" [])
                        `withField` (browserName, parseType "DirBrowser")
 
-handleDialog :: WidgetSpecHandler
+handleDialog :: WidgetElementHandler
 handleDialog =
-    WidgetSpecHandler genSrc doValidation "dialog"
+    WidgetElementHandler genSrc doValidation "dialog"
         where
           doValidation s = (,)
-                           <$> required s "title"
-                           <*> firstChildWidget s
+                           <$> V.required s "title"
+                           <*> V.firstChildWidget s
 
           genSrc nam (title, ch) = do
-            chNam <- newEntry $ widgetLikeType ch
+            chNam <- newEntry $ widgetLikeName ch
             gen ch chNam
 
             dlgName <- newEntry "dialog"
@@ -404,14 +410,14 @@ handleDialog =
             return $ declareWidget nam (parseType "Bordered Padded")
                        `withField` (dlgName, parseType "Dialog")
 
-handleCentered :: WidgetSpecHandler
+handleCentered :: WidgetElementHandler
 handleCentered =
-    WidgetSpecHandler genSrc doValidation "centered"
+    WidgetElementHandler genSrc doValidation "centered"
         where
-          doValidation = firstChildWidget
+          doValidation = V.firstChildWidget
 
           genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeType ch
+            chNam <- newEntry $ widgetLikeName ch
             gen ch chNam
 
             append $ bind nam "centered" [expr chNam]
@@ -419,14 +425,14 @@ handleCentered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (parseType $ "VCentered (HCentered (" ++ Hs.prettyPrint chType ++ "))")
 
-handleHCentered :: WidgetSpecHandler
+handleHCentered :: WidgetElementHandler
 handleHCentered =
-    WidgetSpecHandler genSrc doValidation "hCentered"
+    WidgetElementHandler genSrc doValidation "hCentered"
         where
-          doValidation = firstChildWidget
+          doValidation = V.firstChildWidget
 
           genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeType ch
+            chNam <- newEntry $ widgetLikeName ch
             gen ch chNam
 
             append $ bind nam "hCentered" [expr chNam]
@@ -434,14 +440,14 @@ handleHCentered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "HCentered" [chType])
 
-handleVCentered :: WidgetSpecHandler
+handleVCentered :: WidgetElementHandler
 handleVCentered =
-    WidgetSpecHandler genSrc doValidation "vCentered"
+    WidgetElementHandler genSrc doValidation "vCentered"
         where
-          doValidation = firstChildWidget
+          doValidation = V.firstChildWidget
 
           genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeType ch
+            chNam <- newEntry $ widgetLikeName ch
             gen ch chNam
 
             append $ bind nam "vCentered" [expr chNam]
@@ -449,23 +455,23 @@ handleVCentered =
             chType <- getWidgetStateType chNam
             return $ declareWidget nam (mkTyp "VCentered" [chType])
 
-handleVFill :: WidgetSpecHandler
+handleVFill :: WidgetElementHandler
 handleVFill =
-    WidgetSpecHandler genSrc doValidation "vFill"
+    WidgetElementHandler genSrc doValidation "vFill"
         where
-          doValidation s = requiredChar s "char"
+          doValidation s = V.requiredChar s "char"
 
           genSrc nam ch = do
             append $ bind nam "vFill" [mkChar ch]
             return $ declareWidget nam (mkTyp "VFill" [])
 
-handleHFill :: WidgetSpecHandler
+handleHFill :: WidgetElementHandler
 handleHFill =
-    WidgetSpecHandler genSrc doValidation "hFill"
+    WidgetElementHandler genSrc doValidation "hFill"
         where
           doValidation s = (,)
-                           <$> requiredChar s "char"
-                           <*> requiredInt s "height"
+                           <$> V.requiredChar s "char"
+                           <*> V.requiredInt s "height"
 
           genSrc nam (ch, height) = do
             append $ bind nam "hFill" [ mkChar ch
@@ -474,14 +480,14 @@ handleHFill =
 
             return $ declareWidget nam (mkTyp "HFill" [])
 
-handleProgressBar :: WidgetSpecHandler
+handleProgressBar :: WidgetElementHandler
 handleProgressBar =
-    WidgetSpecHandler genSrc doValidation "progressBar"
+    WidgetElementHandler genSrc doValidation "progressBar"
         where
           doValidation s = (,,)
-                           <$> required s "completeColor"
-                           <*> required s "incompleteColor"
-                           <*> optionalInt s "progress"
+                           <$> V.required s "completeColor"
+                           <*> V.required s "incompleteColor"
+                           <*> V.optionalInt s "progress"
 
           genSrc nam (compColor, incompColor, prog) = do
             barName <- newEntry "progressBar"
@@ -502,11 +508,11 @@ handleProgressBar =
                                                     ])
                        `withField` (barName, parseType "ProgressBar")
 
-handleButton :: WidgetSpecHandler
+handleButton :: WidgetElementHandler
 handleButton =
-    WidgetSpecHandler genSrc doValidation "button"
+    WidgetElementHandler genSrc doValidation "button"
         where
-          doValidation s = required s "label"
+          doValidation s = V.required s "label"
 
           genSrc nam label = do
             buttonName <- newEntry "button"
@@ -520,11 +526,11 @@ handleButton =
             return $ declareWidget nam (mkTyp "Padded" [])
                        `withField` (buttonName, parseType "Button")
 
-handleEdit :: WidgetSpecHandler
+handleEdit :: WidgetElementHandler
 handleEdit =
-    WidgetSpecHandler genSrc doValidation "edit"
+    WidgetElementHandler genSrc doValidation "edit"
         where
-          doValidation e = optional e "contents"
+          doValidation e = V.optional e "contents"
 
           genSrc nam contents = do
             append $ bind nam "editWidget" []
@@ -537,30 +543,30 @@ handleEdit =
 
             return $ declareWidget nam (mkTyp "Edit" [])
 
-handleHBorder :: WidgetSpecHandler
+handleHBorder :: WidgetElementHandler
 handleHBorder =
-    WidgetSpecHandler genSrc (const $ return ()) "hBorder"
+    WidgetElementHandler genSrc (const $ return ()) "hBorder"
         where
           genSrc nam _ = do
             append $ bind nam "hBorder" []
             return $ declareWidget nam (mkTyp "HBorder" [])
 
-handleVBorder :: WidgetSpecHandler
+handleVBorder :: WidgetElementHandler
 handleVBorder =
-    WidgetSpecHandler genSrc (const $ return ()) "vBorder"
+    WidgetElementHandler genSrc (const $ return ()) "vBorder"
         where
           genSrc nam _ = do
             append $ bind nam "vBorder" []
             return $ declareWidget nam (mkTyp "VBorder" [])
 
-handleBordered :: WidgetSpecHandler
+handleBordered :: WidgetElementHandler
 handleBordered =
-    WidgetSpecHandler genSrc doValidation "bordered"
+    WidgetElementHandler genSrc doValidation "bordered"
         where
-          doValidation = firstChildWidget
+          doValidation = V.firstChildWidget
 
           genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeType ch
+            chNam <- newEntry $ widgetLikeName ch
             gen ch chNam
 
             append $ bind nam "bordered" [expr chNam]
@@ -576,7 +582,7 @@ genBox :: [A.WidgetLike]
 genBox es typ spacing rootName = do
   names <- forM es $
            \child -> do
-              chname <- newEntry $ widgetLikeType child
+              chname <- newEntry $ widgetLikeName child
               gen child chname
               return chname
 
@@ -608,24 +614,24 @@ genBox es typ spacing rootName = do
   append $ mkLet [(rootName, expr resultName)]
   return resultName
 
-boxChildWidgets :: A.WidgetSpec -> ValidateM [A.WidgetLike]
+boxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]
 boxChildWidgets s =
-    case A.getChildWidgetLikes s of
+    case getChildWidgetLikes s of
       es@(_:_:_) -> return es
-      _ -> failValidation $ Error (A.widgetLocation s) "Box must have at least two children"
+      _ -> failValidation $ Error (A.sourceLocation s) "Box must have at least two children"
 
-sizedBoxChildWidgets :: A.WidgetSpec -> ValidateM [A.WidgetLike]
+sizedBoxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]
 sizedBoxChildWidgets s =
-    case A.getChildWidgetLikes s of
+    case getChildWidgetLikes s of
       es@[_,_] -> return es
-      _ -> failValidation $ Error (A.widgetLocation s) "Sized box must have exactly two children"
+      _ -> failValidation $ Error (A.sourceLocation s) "Sized box must have exactly two children"
 
-handleVBox :: WidgetSpecHandler
+handleVBox :: WidgetElementHandler
 handleVBox =
-    WidgetSpecHandler genSrc doValidation "vBox"
+    WidgetElementHandler genSrc doValidation "vBox"
         where
           doValidation s = (,)
-                           <$> optionalInt s "spacing"
+                           <$> V.optionalInt s "spacing"
                            <*> boxChildWidgets s
 
           genSrc nam (spacing, chs) = do
@@ -633,12 +639,12 @@ handleVBox =
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleBoxSized :: String -> WidgetSpecHandler
+handleBoxSized :: String -> WidgetElementHandler
 handleBoxSized typ =
-    WidgetSpecHandler genSrc doValidation (typ ++ "-sized")
+    WidgetElementHandler genSrc doValidation (typ ++ "-sized")
         where
           doValidation s = (,,)
-                           <$> optionalInt s "spacing"
+                           <$> V.optionalInt s "spacing"
                            <*> boxSize s
                            <*> sizedBoxChildWidgets s
 
@@ -652,32 +658,32 @@ handleBoxSized typ =
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleHBoxSized :: WidgetSpecHandler
+handleHBoxSized :: WidgetElementHandler
 handleHBoxSized = handleBoxSized "hBox"
 
-handleVBoxSized :: WidgetSpecHandler
+handleVBoxSized :: WidgetElementHandler
 handleVBoxSized = handleBoxSized "vBox"
 
-boxSize :: A.WidgetSpec -> ValidateM ChildSizePolicy
+boxSize :: A.Element -> ValidateM ChildSizePolicy
 boxSize s = getPercentSize
             <|> getDualSize
-            <|> (failValidation (Error (A.widgetLocation s)
+            <|> (failValidation (Error (A.sourceLocation s)
                  "Either a percentage or first/second size policy must be specified for this box"))
     where
-      getPercentSize = Percentage <$> requiredInt s "percent"
+      getPercentSize = Percentage <$> V.requiredInt s "percent"
 
       getDualSize = PerChild
-                    <$> (BoxFixed <$> requiredInt s "first"
-                         <|> requiredEqual s "first" "auto" *> (pure BoxAuto))
-                    <*> (BoxFixed <$> requiredInt s "second"
-                         <|> requiredEqual s "second" "auto" *> (pure BoxAuto))
+                    <$> (BoxFixed <$> V.requiredInt s "first"
+                         <|> V.requiredEqual s "first" "auto" *> (pure BoxAuto))
+                    <*> (BoxFixed <$> V.requiredInt s "second"
+                         <|> V.requiredEqual s "second" "auto" *> (pure BoxAuto))
 
-handleHBox :: WidgetSpecHandler
+handleHBox :: WidgetElementHandler
 handleHBox =
-    WidgetSpecHandler genSrc doValidation "hBox"
+    WidgetElementHandler genSrc doValidation "hBox"
         where
           doValidation s = (,)
-                           <$> optionalInt s "spacing"
+                           <$> V.optionalInt s "spacing"
                            <*> boxChildWidgets s
 
           genSrc nam (spacing, chs) = do
@@ -685,11 +691,12 @@ handleHBox =
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
-handleWrap :: WidgetSpecHandler
+handleWrap :: WidgetElementHandler
 handleWrap =
-    WidgetSpecHandler genSrc doValidation "wrap"
+    WidgetElementHandler genSrc doValidation "wrap"
         where
-          doValidation s = requireWidgetType "fText" =<< firstChildWidget s
+          doValidation s = V.requireWidgetName "fText" =<<
+                           V.firstChildWidget s
 
           genSrc nam ch = do
             gen ch nam
@@ -714,9 +721,9 @@ handleWrap =
 defAttr :: Hs.Exp
 defAttr = expr $ mkName "def_attr"
 
-handleFormattedText :: WidgetSpecHandler
+handleFormattedText :: WidgetElementHandler
 handleFormattedText =
-    WidgetSpecHandler genSrc doValidation "fText"
+    WidgetElementHandler genSrc doValidation "fText"
         where
           isWhitespace = (`elem` " \t\n")
 
@@ -729,34 +736,34 @@ handleFormattedText =
 
                 -- Left: do not strip whitespace
                 -- Right: do strip whitespace
-                processSpecContent :: Hs.Exp -> A.WidgetSpecContent -> ValidateM [(Either String String, Hs.Exp)]
+                processSpecContent :: Hs.Exp -> A.ElementContent -> ValidateM [(Either String String, Hs.Exp)]
                 processSpecContent ex c =
                     case c of
                       A.Text str _ -> return [(Right $ stripWhitespace str, ex)]
                       A.ChildElement elm ->
-                          case A.elementType elm of
+                          case A.elementName elm of
                             "br" -> return [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> failValidation $ Error (A.widgetLocation s) $ "got unsupported child of fText: " ++ badName
-                      A.ChildWidgetLike _ -> failValidation $ Error (A.widgetLocation s) "got unsupported child of fText: widget-like"
+                            badName -> failValidation $ Error (A.sourceLocation s) $ "got unsupported child of fText: " ++ badName
+                      A.ChildWidgetLike _ -> failValidation $ Error (A.sourceLocation s) "got unsupported child of fText: widget-like"
 
                 processElemContent :: Hs.Exp -> A.ElementContent -> ValidateM [(Either String String, Hs.Exp)]
                 processElemContent ex c =
                     case c of
-                      A.ElemChildWidgetLike _ -> failValidation $ Error (A.widgetLocation s) "got unsupported child of attr: widget-like"
-                      A.ElemText str _ -> return [(Right $ stripWhitespace str, ex)]
-                      A.ElemChild elm ->
-                          case A.elementType elm of
+                      A.ChildWidgetLike _ -> failValidation $ Error (A.sourceLocation s) "got unsupported child of attr: widget-like"
+                      A.Text str _ -> return [(Right $ stripWhitespace str, ex)]
+                      A.ChildElement elm ->
+                          case A.elementName elm of
                             "br" -> return [(Left "\n", ex)]
                             "attr" -> processAttr elm
-                            badName -> failValidation $ Error (A.widgetLocation s) $ "got unsupported child of attr: " ++ badName
+                            badName -> failValidation $ Error (A.sourceLocation s) $ "got unsupported child of attr: " ++ badName
 
                 processAttr :: A.Element -> ValidateM [(Either String String, Hs.Exp)]
                 processAttr elm = do
                   let loc = A.elementLocation elm
                   attrResult <- (,)
-                                <$> (requireValidColor loc $ getAttribute elm "fg")
-                                <*> (requireValidColor loc $ getAttribute elm "bg")
+                                <$> (V.requireValidColor loc $ getAttribute elm "fg")
+                                <*> (V.requireValidColor loc $ getAttribute elm "bg")
 
                   let attrExpr = case attrsToExpr attrResult of
                                    Nothing -> defAttr
@@ -774,7 +781,7 @@ handleFormattedText =
 
                 pairs :: ValidateM [(Either String String, Hs.Exp)]
                 pairs = do
-                  results <- mapM (processSpecContent defAttr) $ A.widgetSpecContents s
+                  results <- mapM (processSpecContent defAttr) $ A.elementContents s
                   return $ concat $ results
 
           genSrc nam pairs = do
@@ -860,24 +867,24 @@ toAST thing = parsed
     where
       Hs.ParseOk parsed = Hs.parse $ show thing
 
-handleTable :: WidgetSpecHandler
+handleTable :: WidgetElementHandler
 handleTable =
-    WidgetSpecHandler genSrc doValidation "table"
+    WidgetElementHandler genSrc doValidation "table"
         where
           doValidation s = do
             specs <- getColumnSpecs s
             rs <- getRows s
 
             when (null specs) $
-                 failValidation $ Error (A.getSourceLocation s)
+                 failValidation $ Error (A.sourceLocation s)
                                     "table must have at least one column specification"
 
             when (null rs) $
-                 failValidation $ Error (A.getSourceLocation s)
+                 failValidation $ Error (A.sourceLocation s)
                                     "table must have at least one row"
 
             when (length specs /= (length $ cells $ head rs)) $
-                 failValidation $ Error (A.getSourceLocation s) $
+                 failValidation $ Error (A.sourceLocation s) $
                                     "number of column specifications must match the number of columns (" ++ (show $ length $ cells $ head rs) ++ ")"
 
             TableInfo <$> pure rs
@@ -885,19 +892,19 @@ handleTable =
                           <*> pure specs
 
           getColumnSpecs s =
-              concat <$> (for (elementsByName "columns" $ A.getChildElements s)
+              concat <$> (for (V.elementsByName "columns" $ getChildElements s)
                               validateColumnSpecs)
 
           validateColumnSpecs e =
-              for (elementsByName "column" $ A.getChildElements e)
+              for (V.elementsByName "column" $ getChildElements e)
                   validateColumnSpec
 
           validateColumnSpec e =
-              column <$> ((requiredEqual e "size" "auto" *> pure ColAuto)
-                          <|> (ColFixed <$> requiredInt e "size"))
+              column <$> ((V.requiredEqual e "size" "auto" *> pure ColAuto)
+                          <|> (ColFixed <$> V.requiredInt e "size"))
 
           getBorderStyle s = do
-            attr <- optional s "borderStyle"
+            attr <- V.optional s "borderStyle"
             case attr of
               Nothing -> return BorderFull
               Just val ->
@@ -910,7 +917,7 @@ handleTable =
               forM flgs $ \f ->
                   case lookup f borderFlags of
                     Just val -> return val
-                    Nothing -> failValidation $ Error (A.widgetLocation s) $
+                    Nothing -> failValidation $ Error (A.sourceLocation s) $
                                "invalid border style flag " ++ show f ++ ", valid choices are 'none', "
                               ++ "'full', or a comma-separated list of " ++ show (map fst borderFlags)
 
@@ -922,21 +929,21 @@ handleTable =
           getRows s = do
             rs <- validateRows s
             if (length $ nub (map (length . cells) rs)) /= 1 then
-                failValidation $ Error (A.widgetLocation s) $ "all rows must have the same number of cells" else
+                failValidation $ Error (A.sourceLocation s) $ "all rows must have the same number of cells" else
                 if nub (map (length . cells) rs) == [0] then
-                    failValidation $ Error (A.widgetLocation s) "all rows must contain at least one cell" else
+                    failValidation $ Error (A.sourceLocation s) "all rows must contain at least one cell" else
                     return rs
 
           validateRows s =
-              for (elementsByName "row" $ A.getChildElements s)
+              for (V.elementsByName "row" $ getChildElements s)
                   validateRow
 
           validateRow e =
               RowInfo <$> validateCells e
 
           validateCells e =
-              for (A.getChildElements e) $ \c ->
-                  elemName c "cell" *> firstChildWidget c
+              for (getChildElements e) $ \c ->
+                  V.elemName c "cell" *> V.firstChildWidget c
 
           genSrc nam table = do
             let parsedBorderStyle = toAST $ borderStyle table

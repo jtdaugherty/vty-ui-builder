@@ -42,3 +42,5 @@ Library
     Graphics.Vty.Widgets.Builder.Util
     Graphics.Vty.Widgets.Builder.AST
     Graphics.Vty.Widgets.Builder.Reader
+    Graphics.Vty.Widgets.Builder.Validation
+    Graphics.Vty.Widgets.Builder.Names
