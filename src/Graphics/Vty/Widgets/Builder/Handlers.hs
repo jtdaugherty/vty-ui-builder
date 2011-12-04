@@ -105,8 +105,13 @@ handleInterface iface doc nam = do
   registerInterface (A.interfaceName iface) vals
 
 handleParam :: A.Param -> GenM ()
-handleParam p =
-    registerParam (mkName $ A.paramName p) (parseType $ A.paramType p)
+handleParam p = do
+  let paramName = mkName $ A.paramName p
+      typ = parseType $ A.paramType p
+  registerReferenceTarget paramName paramName typ
+  setFocusValue paramName $ WidgetName { widgetName = paramName
+                                       , widgetType = typ
+                                       }
 
 handleCheckBox :: WidgetElementHandler
 handleCheckBox =

@@ -11,7 +11,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getWidgetStateType
     , registerWidgetName
     , lookupFocusValue
-    , registerParam
     , parseType
     , nameStr
     , getFieldValueName
@@ -25,6 +24,8 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getChildWidgetLikes
     , getChildElements
     , widgetElementName
+    , registerReferenceTarget
+    , setFocusValue
 
     -- Helper functions for source generation
     , call
@@ -114,6 +115,13 @@ gen (A.Widget spec) nam = do
                       -- type Widget a), or fall back to the widget
                       -- value if no custom field value was specified.
                       registerFieldValueName (mkName newName) fieldValName
+
+                      -- Register the 'id' as a valid reference target
+                      -- so that 'ref' tags can use it
+                      registerReferenceTarget (mkName newName)
+                        (widgetName $ resultWidgetName result)
+                        (widgetType $ resultWidgetName result)
+
                       -- When setting up the widget value to be added
                       -- to the focus group for this widget, always
                       -- use the resultWidgetName name since it will
@@ -128,27 +136,27 @@ gen (A.Widget spec) nam = do
 gen (A.Ref (A.Reference tgt loc)) nam = do
   let target = mkName tgt
 
-  val <- getFieldValueName target
+  val <- getReferenceTarget target
 
   result <- case val of
-              Nothing -> do
-                result <- isValidParamName target
-                case result of
-                  False -> error $ show loc ++
-                           ": ref: target '" ++ tgt ++ "' invalid"
-                  True -> do
-                           typ <- getParamType target
-                           append $ mkLet [(nam, expr target)]
-                           return $ declareWidget nam typ
-              Just (WName valName) -> do
-                append $ mkLet [(nam, expr $ widgetName valName)]
-                typ <- getWidgetStateType $ widgetName valName
+              Nothing -> error $ show loc ++
+                         ": ref: target '" ++ tgt ++ "' invalid"
+              Just (wName, typ) -> do
+                append $ mkLet [(nam, expr wName)]
                 return $ declareWidget nam typ
-              Just (VName _) -> error $ show loc ++
-                                ": ref: target '" ++ tgt
-                                ++ "' references non-widget type"
 
   registerWidgetName $ resultWidgetName result
+
+getReferenceTarget :: Hs.Name -> GenM (Maybe (Hs.Name, Hs.Type))
+getReferenceTarget target =
+    lookup target <$> gets validReferenceTargets
+
+registerReferenceTarget :: Hs.Name -> Hs.Name -> Hs.Type -> GenM ()
+registerReferenceTarget target valName typ =
+    modify $ \st ->
+        st { validReferenceTargets = validReferenceTargets st
+                                     ++ [(target, (valName, typ))]
+           }
 
 getNamedWidgetNames :: A.WidgetLike -> [A.WidgetId]
 getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
@@ -201,16 +209,6 @@ getWidgetStateType nam = do
                ++ " impossible; did the element handler forget"
                ++ " to register the type?"
     Just wName -> return $ widgetType wName
-
-isValidParamName :: Hs.Name -> GenM Bool
-isValidParamName s = (isJust . lookup s) <$> gets paramNames
-
-getParamType :: Hs.Name -> GenM Hs.Type
-getParamType s = do
-  typ <- lookup s <$> gets paramNames
-  case typ of
-    Nothing -> error $ "Invalid parameter name: " ++ show s
-    Just t -> return t
 
 getAttribute :: (A.IsElement a) => a -> String -> Maybe String
 getAttribute val attrName = lookup attrName (getAttributes val)
@@ -381,13 +379,6 @@ mkImportDecl name hidden =
                                        [] -> Nothing
                                        is -> Just (True, map (Hs.IVar . mkName) is)
                   }
-
-registerParam :: Hs.Name -> Hs.Type -> GenM ()
-registerParam nam typ = do
-  modify $ \st -> st { paramNames = paramNames st ++ [(nam, typ)] }
-  setFocusValue nam $ WidgetName { widgetName = nam
-                                 , widgetType = typ
-                                 }
 
 parseType :: String -> Hs.Type
 parseType s =

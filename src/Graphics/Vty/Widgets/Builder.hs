@@ -2,6 +2,7 @@ module Graphics.Vty.Widgets.Builder
 where
 
 import qualified Data.Map as Map
+import Control.Applicative ((<$>))
 import Control.Monad.State
 import Data.List (intercalate)
 import Data.Maybe
@@ -43,9 +44,9 @@ generateSourceForDocument config doc theHandlers = do
                                       , allWidgetNames = []
                                       , registeredFieldNames = []
                                       , focusValues = []
-                                      , paramNames = []
                                       , errorMessages = []
                                       , validationState = valState
+                                      , validReferenceTargets = []
                                       }
 
           case errorMessages finalState of
@@ -54,7 +55,7 @@ generateSourceForDocument config doc theHandlers = do
                -- can't do that if the generated collection
                -- constructor function takes parameters because we
                -- don't have values to provide for them.
-               case generateMain config && (not $ null $ paramNames finalState) of
+               case generateMain config && (not $ null $ A.documentParams doc) of
                  True -> return $ Left [
                              Error A.noLoc $ concat
                              [ "configuration indicates that a 'main' should be generated, "
@@ -63,7 +64,7 @@ generateSourceForDocument config doc theHandlers = do
                              ]
                             ]
                  False -> do
-                       let moduleBody = generateModuleBody config finalState
+                       let moduleBody = generateModuleBody config doc finalState
                            result = generateModule config doc moduleBody
                        return $ Right result
             msgs -> return $ Left msgs
@@ -95,15 +96,15 @@ generateModule config doc moduleBody =
 
     in Hs.Module noLoc (Hs.ModuleName modName) [] Nothing theExports theImports moduleBody
 
-generateModuleBody :: BuilderConfig -> GenState -> [Hs.Decl]
-generateModuleBody config st =
+generateModuleBody :: BuilderConfig -> A.Doc -> GenState -> [Hs.Decl]
+generateModuleBody config doc st =
     let main = mkMain $ concat [ [tBind [Names.collectionName, mkName "values"] "buildCollection" []]
                                , mkKeyHandlers st
                                , [act $ call "runUi" [expr Names.collectionName, expr $ mkName "defaultContext"]]
                                ]
 
         moduleBody = concat [ if generateInterfaceType config then [mkInterfaceType st] else []
-                            , if generateInterfaceBuilder config then mkBuilderFunction st else []
+                            , if generateInterfaceBuilder config then mkBuilderFunction doc st else []
                             , if generateMain config then main else []
                             ]
 
@@ -135,10 +136,10 @@ mkInterfaceType st =
 
     in Hs.DataDecl noLoc Hs.DataType [] (mkName "InterfaceElements") [] [qualConDecl] []
 
-mkBuilderFunction :: GenState -> [Hs.Decl]
-mkBuilderFunction st =
-    let theParamTypes = map (\typ -> mkTyp "Widget" [typ]) (map snd $ paramNames st)
-        theParamNames = map (Hs.PVar . fst) $ paramNames st
+mkBuilderFunction :: A.Doc -> GenState -> [Hs.Decl]
+mkBuilderFunction doc st =
+    let theParamTypes = map (mkTyp "Widget" . (:[])) $ (parseType . A.paramName) <$> A.documentParams doc
+        theParamNames = map (Hs.PVar . mkName) $ A.paramName <$> A.documentParams doc
 
         typeStr = intercalate " -> " $
                   map Hs.prettyPrint theParamTypes ++ ["IO (Collection, InterfaceElements)"]

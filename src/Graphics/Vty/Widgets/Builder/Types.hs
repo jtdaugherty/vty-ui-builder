@@ -74,9 +74,14 @@ data GenState =
              , interfaceNames :: [(String, InterfaceValues)]
              , focusMethods :: [(Hs.Name, FocusMethod)]
              , focusValues :: [(Hs.Name, WidgetName)]
-             , paramNames :: [(Hs.Name, Hs.Type)]
              , errorMessages :: [Error]
              , validationState :: ValidationState
+
+             -- Valid reference targets.  For widgets, the reference
+             -- target is its 'id', and the name in the tuple is the
+             -- name of the generated value.  For parameters, both
+             -- names are the parameter name.
+             , validReferenceTargets :: [(Hs.Name, (Hs.Name, Hs.Type))]
              }
 
 data FocusMethod = Direct WidgetName -- The name of the widget which
