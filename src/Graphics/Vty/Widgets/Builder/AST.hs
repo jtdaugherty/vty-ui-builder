@@ -11,9 +11,7 @@ module Graphics.Vty.Widgets.Builder.AST
     , Element(..)
     , ElementContent(..)
     , WidgetId
-    , HasAttributes(..)
-    , HasChildElements(..)
-    , HasChildWidgetLikes(..)
+    , ElementData(..)
     , HasSourceLocation(..)
     , noLoc
     )
@@ -103,43 +101,31 @@ data Reference = Reference WidgetId SourceLocation
 
 type WidgetId = String
 
-class HasAttributes a where
+class ElementData a where
     getAttributes :: a -> [(String, String)]
-
-class HasChildWidgetLikes a where
     getChildWidgetLikes :: a -> [WidgetLike]
-
-class HasChildElements a where
     getChildElements :: a -> [Element]
 
 class HasSourceLocation a where
     getSourceLocation :: a -> SourceLocation
 
-instance HasAttributes Element where
+instance ElementData Element where
     getAttributes = elementAttributes
-
-instance HasAttributes WidgetSpec where
-    getAttributes = widgetSpecAttributes
-
-instance HasChildWidgetLikes Element where
     getChildWidgetLikes e = catMaybes $ map getWL $ elementContents e
         where
           getWL (ElemChildWidgetLike w) = Just w
           getWL _ = Nothing
-
-instance HasChildWidgetLikes WidgetSpec where
-    getChildWidgetLikes e = catMaybes $ map getWL $ widgetSpecContents e
-        where
-          getWL (ChildWidgetLike w) = Just w
-          getWL _ = Nothing
-
-instance HasChildElements Element where
     getChildElements e = catMaybes $ map getWL $ elementContents e
         where
           getWL (ElemChild el) = Just el
           getWL _ = Nothing
 
-instance HasChildElements WidgetSpec where
+instance ElementData WidgetSpec where
+    getAttributes = widgetSpecAttributes
+    getChildWidgetLikes e = catMaybes $ map getWL $ widgetSpecContents e
+        where
+          getWL (ChildWidgetLike w) = Just w
+          getWL _ = Nothing
     getChildElements e = catMaybes $ map getWL $ widgetSpecContents e
         where
           getWL (ChildElement el) = Just el
@@ -150,3 +136,12 @@ instance HasSourceLocation Element where
 
 instance HasSourceLocation WidgetSpec where
     getSourceLocation = widgetLocation
+
+instance HasSourceLocation Param where
+    getSourceLocation = paramLocation
+
+instance HasSourceLocation Interface where
+    getSourceLocation = interfaceLocation
+
+instance HasSourceLocation Reference where
+    getSourceLocation (Reference _ loc) = loc

@@ -338,7 +338,7 @@ getParamType s = do
 elementsByName :: String -> [A.Element] -> [A.Element]
 elementsByName n es = filter ((== n) . A.elementType) es
 
-getAttribute :: (A.HasAttributes a) => a -> String -> Maybe String
+getAttribute :: (A.ElementData a) => a -> String -> Maybe String
 getAttribute val attrName = lookup attrName (A.getAttributes val)
 
 elemName :: A.Element -> String -> ValidateM A.Element
@@ -348,7 +348,7 @@ elemName e s =
     else failValidation $ Error (A.elementLocation e) $ "expected element of type "
              ++ show s ++ ", got " ++ show (A.elementType e)
 
-requiredEqual :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> String -> ValidateM String
+requiredEqual :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> String -> ValidateM String
 requiredEqual spec attrName expected = do
   v <- required spec attrName
   if v == expected then
@@ -404,20 +404,20 @@ validColors =
     , "bright_blue"
     ]
 
-firstChildWidget :: (A.HasChildWidgetLikes a, A.HasSourceLocation a) => a -> ValidateM A.WidgetLike
+firstChildWidget :: (A.ElementData a, A.HasSourceLocation a) => a -> ValidateM A.WidgetLike
 firstChildWidget val =
     case A.getChildWidgetLikes val of
       (ch:_) -> return ch
       _ -> failValidation $ Error (A.getSourceLocation val) "required first child widget is missing"
 
-required :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> ValidateM String
+required :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> ValidateM String
 required thing attrName =
     case getAttribute thing attrName of
       Nothing -> failValidation $ Error (A.getSourceLocation thing) $
                  "attribute " ++ show attrName ++ " required"
       Just val -> return val
 
-optional :: (A.HasAttributes a) => a -> String -> ValidateM (Maybe String)
+optional :: (A.ElementData a) => a -> String -> ValidateM (Maybe String)
 optional val attr = return $ getAttribute val attr
 
 getInt :: (A.HasSourceLocation a) => a -> String -> String -> ValidateM Int
@@ -428,10 +428,10 @@ getInt thing attrName val =
             " value must be an integer"
       ((v,_):_) -> return v
 
-requiredInt :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> ValidateM Int
+requiredInt :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> ValidateM Int
 requiredInt thing attrName = required thing attrName >>= getInt thing attrName
 
-requiredChar :: (A.HasSourceLocation a, A.HasAttributes a) => a -> String -> ValidateM Char
+requiredChar :: (A.HasSourceLocation a, A.ElementData a) => a -> String -> ValidateM Char
 requiredChar val attrName = do
   s <- required val attrName
   case null s of
@@ -442,7 +442,7 @@ requiredChar val attrName = do
                  failValidation $ Error (A.getSourceLocation val) $
                    "Attribute " ++ show attrName ++ " must be one character in length"
 
-optionalInt :: (A.HasAttributes a, A.HasSourceLocation a) =>
+optionalInt :: (A.ElementData a, A.HasSourceLocation a) =>
                a -> String -> ValidateM (Maybe Int)
 optionalInt spec attrName =
     case getAttribute spec attrName of
