@@ -38,7 +38,8 @@ generateSourceForDocument config doc theHandlers = do
           let (_, finalState) = runState (handleDoc doc) initialState
               initialState = GenState { nameCounters = Map.empty
                                       , hsStatements = []
-                                      , handlers = map (\h -> (specType h, h)) theHandlers
+                                      , elemHandlers =
+                                          map (\h -> (specType h, h)) theHandlers
                                       , interfaceNames = []
                                       , focusMethods = []
                                       , allWidgetNames = []

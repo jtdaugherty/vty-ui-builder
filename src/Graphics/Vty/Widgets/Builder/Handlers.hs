@@ -18,10 +18,14 @@ import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
 import qualified Graphics.Vty.Widgets.Builder.Names as Names
 
-import Graphics.Vty.Widgets.Box
-    ( ChildSizePolicy(..)
-    , IndividualPolicy(..)
-    )
+import qualified Graphics.Vty.Widgets.Builder.Handlers.Box as Box
+import qualified Graphics.Vty.Widgets.Builder.Handlers.Wrap as Wrap
+import qualified Graphics.Vty.Widgets.Builder.Handlers.Borders as Borders
+import qualified Graphics.Vty.Widgets.Builder.Handlers.Fills as Fills
+import qualified Graphics.Vty.Widgets.Builder.Handlers.Centered as Centered
+
+import qualified Language.Haskell.Exts as Hs
+
 import Graphics.Vty.Widgets.Table
     ( BorderStyle(..)
     , BorderFlag(..)
@@ -30,26 +34,11 @@ import Graphics.Vty.Widgets.Table
     , column
     )
 
-import qualified Language.Haskell.Exts as Hs
-
 coreSpecHandlers :: [WidgetElementHandler]
 coreSpecHandlers =
-    [ handleWrap
-    , handleFormattedText
-    , handleVBox
-    , handleHBox
-    , handleVBoxSized
-    , handleHBoxSized
-    , handleHBorder
-    , handleVBorder
-    , handleBordered
+    [ handleFormattedText
     , handleEdit
     , handleButton
-    , handleVFill
-    , handleHFill
-    , handleCentered
-    , handleHCentered
-    , handleVCentered
     , handleProgressBar
     , handleDialog
     , handleDirBrowser
@@ -64,7 +53,11 @@ coreSpecHandlers =
     , handleHFixed
     , handleBoxFixed
     , handleTable
-    ]
+    ] ++ Box.handlers
+    ++ Wrap.handlers
+    ++ Borders.handlers
+    ++ Fills.handlers
+    ++ Centered.handlers
 
 handleDoc :: A.Doc -> GenM ()
 handleDoc doc = do
@@ -415,76 +408,6 @@ handleDialog =
             return $ declareWidget nam (parseType "Bordered Padded")
                        `withField` (dlgName, parseType "Dialog")
 
-handleCentered :: WidgetElementHandler
-handleCentered =
-    WidgetElementHandler genSrc doValidation "centered"
-        where
-          doValidation = V.firstChildWidget
-
-          genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeName ch
-            gen ch chNam
-
-            append $ bind nam "centered" [expr chNam]
-
-            chType <- getWidgetStateType chNam
-            return $ declareWidget nam (parseType $ "VCentered (HCentered (" ++ Hs.prettyPrint chType ++ "))")
-
-handleHCentered :: WidgetElementHandler
-handleHCentered =
-    WidgetElementHandler genSrc doValidation "hCentered"
-        where
-          doValidation = V.firstChildWidget
-
-          genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeName ch
-            gen ch chNam
-
-            append $ bind nam "hCentered" [expr chNam]
-
-            chType <- getWidgetStateType chNam
-            return $ declareWidget nam (mkTyp "HCentered" [chType])
-
-handleVCentered :: WidgetElementHandler
-handleVCentered =
-    WidgetElementHandler genSrc doValidation "vCentered"
-        where
-          doValidation = V.firstChildWidget
-
-          genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeName ch
-            gen ch chNam
-
-            append $ bind nam "vCentered" [expr chNam]
-
-            chType <- getWidgetStateType chNam
-            return $ declareWidget nam (mkTyp "VCentered" [chType])
-
-handleVFill :: WidgetElementHandler
-handleVFill =
-    WidgetElementHandler genSrc doValidation "vFill"
-        where
-          doValidation s = V.requiredChar s "char"
-
-          genSrc nam ch = do
-            append $ bind nam "vFill" [mkChar ch]
-            return $ declareWidget nam (mkTyp "VFill" [])
-
-handleHFill :: WidgetElementHandler
-handleHFill =
-    WidgetElementHandler genSrc doValidation "hFill"
-        where
-          doValidation s = (,)
-                           <$> V.requiredChar s "char"
-                           <*> V.requiredInt s "height"
-
-          genSrc nam (ch, height) = do
-            append $ bind nam "hFill" [ mkChar ch
-                                      , mkInt height
-                                      ]
-
-            return $ declareWidget nam (mkTyp "HFill" [])
-
 handleProgressBar :: WidgetElementHandler
 handleProgressBar =
     WidgetElementHandler genSrc doValidation "progressBar"
@@ -547,181 +470,6 @@ handleEdit =
                                                           ]
 
             return $ declareWidget nam (mkTyp "Edit" [])
-
-handleHBorder :: WidgetElementHandler
-handleHBorder =
-    WidgetElementHandler genSrc (const $ return ()) "hBorder"
-        where
-          genSrc nam _ = do
-            append $ bind nam "hBorder" []
-            return $ declareWidget nam (mkTyp "HBorder" [])
-
-handleVBorder :: WidgetElementHandler
-handleVBorder =
-    WidgetElementHandler genSrc (const $ return ()) "vBorder"
-        where
-          genSrc nam _ = do
-            append $ bind nam "vBorder" []
-            return $ declareWidget nam (mkTyp "VBorder" [])
-
-handleBordered :: WidgetElementHandler
-handleBordered =
-    WidgetElementHandler genSrc doValidation "bordered"
-        where
-          doValidation = V.firstChildWidget
-
-          genSrc nam ch = do
-            chNam <- newEntry $ widgetLikeName ch
-            gen ch chNam
-
-            append $ bind nam "bordered" [expr chNam]
-
-            chType <- getWidgetStateType chNam
-            return $ declareWidget nam (mkTyp "Bordered" [chType])
-
-genBox :: [A.WidgetLike]
-       -> String
-       -> Maybe Int
-       -> Hs.Name
-       -> GenM Hs.Name
-genBox es typ spacing rootName = do
-  names <- forM es $
-           \child -> do
-              chname <- newEntry $ widgetLikeName child
-              gen child chname
-              return chname
-
-  let buildBox [] =
-          error "BUG: unexpected buildBox input (validation should have caught this)"
-      buildBox [c] = return c
-      buildBox (c1:c2:rest) = do
-              nextName <- newEntry typ
-              append $ bind nextName typ [ expr c1
-                                         , expr c2
-                                         ]
-
-              case spacing of
-                Nothing -> return ()
-                Just val ->
-                    append $ act $ call "setBoxSpacing" [ expr nextName
-                                                        , mkInt val
-                                                        ]
-
-              c1Type <- getWidgetStateType c1
-              c2Type <- getWidgetStateType c2
-
-              registerWidgetName $ WidgetName { widgetName = nextName
-                                              , widgetType = mkTyp "Box" [c1Type, c2Type]
-                                              }
-              buildBox (nextName:rest)
-
-  resultName <- buildBox names
-  append $ mkLet [(rootName, expr resultName)]
-  return resultName
-
-boxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]
-boxChildWidgets s =
-    case getChildWidgetLikes s of
-      es@(_:_:_) -> return es
-      _ -> failValidation $ Error (A.sourceLocation s) "Box must have at least two children"
-
-sizedBoxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]
-sizedBoxChildWidgets s =
-    case getChildWidgetLikes s of
-      es@[_,_] -> return es
-      _ -> failValidation $ Error (A.sourceLocation s) "Sized box must have exactly two children"
-
-handleVBox :: WidgetElementHandler
-handleVBox =
-    WidgetElementHandler genSrc doValidation "vBox"
-        where
-          doValidation s = (,)
-                           <$> V.optionalInt s "spacing"
-                           <*> boxChildWidgets s
-
-          genSrc nam (spacing, chs) = do
-            resultName <- genBox chs "vBox" spacing nam
-            ty <- getWidgetStateType resultName
-            return $ declareWidget nam ty
-
-handleBoxSized :: String -> WidgetElementHandler
-handleBoxSized typ =
-    WidgetElementHandler genSrc doValidation (typ ++ "-sized")
-        where
-          doValidation s = (,,)
-                           <$> V.optionalInt s "spacing"
-                           <*> boxSize s
-                           <*> sizedBoxChildWidgets s
-
-          genSrc nam (spacing, boxSz, chs) = do
-            let Hs.ParseOk parsedSizeExpr = Hs.parse $ show boxSz
-
-            resultName <- genBox chs typ spacing nam
-            append $ act $ call "setBoxChildSizePolicy" [ expr nam
-                                                        , parsedSizeExpr
-                                                        ]
-            ty <- getWidgetStateType resultName
-            return $ declareWidget nam ty
-
-handleHBoxSized :: WidgetElementHandler
-handleHBoxSized = handleBoxSized "hBox"
-
-handleVBoxSized :: WidgetElementHandler
-handleVBoxSized = handleBoxSized "vBox"
-
-boxSize :: A.Element -> ValidateM ChildSizePolicy
-boxSize s = getPercentSize
-            <|> getDualSize
-            <|> (failValidation (Error (A.sourceLocation s)
-                 "Either a percentage or first/second size policy must be specified for this box"))
-    where
-      getPercentSize = Percentage <$> V.requiredInt s "percent"
-
-      getDualSize = PerChild
-                    <$> (BoxFixed <$> V.requiredInt s "first"
-                         <|> V.requiredEqual s "first" "auto" *> (pure BoxAuto))
-                    <*> (BoxFixed <$> V.requiredInt s "second"
-                         <|> V.requiredEqual s "second" "auto" *> (pure BoxAuto))
-
-handleHBox :: WidgetElementHandler
-handleHBox =
-    WidgetElementHandler genSrc doValidation "hBox"
-        where
-          doValidation s = (,)
-                           <$> V.optionalInt s "spacing"
-                           <*> boxChildWidgets s
-
-          genSrc nam (spacing, chs) = do
-            resultName <- genBox chs "hBox" spacing nam
-            ty <- getWidgetStateType resultName
-            return $ declareWidget nam ty
-
-handleWrap :: WidgetElementHandler
-handleWrap =
-    WidgetElementHandler genSrc doValidation "wrap"
-        where
-          doValidation s = V.requireWidgetName "fText" =<<
-                           V.firstChildWidget s
-
-          genSrc nam ch = do
-            gen ch nam
-            tempNam <- newEntry "formattedText"
-            append $ bind tempNam "getTextFormatter" [expr nam]
-            append $ act $ call "setTextFormatter" [ expr nam
-                                                   , parens (opApp (expr tempNam) (mkName "mappend") (expr $ mkName "wrap"))
-                                                   ]
-
-            -- NB: this is a no-op because the child element handler
-            -- will have already registered a type for 'nam'.
-            -- However, we are required to return something from this
-            -- handler because it is a widget element handler, so we
-            -- just return the same thing the child would have
-            -- returned.  Ultimately the name and type declared here
-            -- will be ignored because they'll be appended onto the
-            -- list of registered widget names and won't be reached by
-            -- 'lookup' calls.
-            ty <- getWidgetStateType nam
-            return $ declareWidget nam ty
 
 defAttr :: Hs.Exp
 defAttr = expr $ mkName "def_attr"
@@ -866,11 +614,6 @@ data RowInfo =
     RowInfo { cells :: [A.WidgetLike]
             }
     deriving (Show)
-
-toAST :: (Show a) => a -> Hs.Exp
-toAST thing = parsed
-    where
-      Hs.ParseOk parsed = Hs.parse $ show thing
 
 handleTable :: WidgetElementHandler
 handleTable =

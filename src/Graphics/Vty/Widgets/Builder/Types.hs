@@ -68,7 +68,7 @@ data InterfaceValues =
 data GenState =
     GenState { nameCounters :: Map.Map String Int
              , hsStatements :: [Hs.Stmt]
-             , handlers :: [(String, WidgetElementHandler)]
+             , elemHandlers :: [(String, WidgetElementHandler)]
              , allWidgetNames :: [(Hs.Name, WidgetName)]
              , registeredFieldNames :: [(Hs.Name, AnyName)]
              , interfaceNames :: [(String, InterfaceValues)]

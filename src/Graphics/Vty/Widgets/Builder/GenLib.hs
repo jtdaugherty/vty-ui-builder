@@ -28,6 +28,7 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , setFocusValue
 
     -- Helper functions for source generation
+    , toAST
     , call
     , bind
     , tBind
@@ -57,6 +58,11 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Util
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Language.Haskell.Exts as Hs
+
+toAST :: (Show a) => a -> Hs.Exp
+toAST thing = parsed
+    where
+      Hs.ParseOk parsed = Hs.parse $ show thing
 
 widgetElementName :: A.WidgetElement -> String
 widgetElementName = A.elementName . A.getElement
@@ -89,7 +95,7 @@ generateWidgetSource (WidgetElementHandler genSrc validator specTyp) spec st nam
 
 gen :: A.WidgetLike -> Hs.Name -> GenM ()
 gen (A.Widget spec) nam = do
-  hs <- gets handlers
+  hs <- gets elemHandlers
   case lookup (widgetElementName spec) hs of
     Nothing -> error $ show (A.sourceLocation spec) ++
                ": no handler for widget type " ++ (show $ widgetElementName spec)
