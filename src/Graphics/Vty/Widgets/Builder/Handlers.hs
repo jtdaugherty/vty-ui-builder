@@ -55,10 +55,12 @@ coreSpecHandlers =
 handleDoc :: A.Doc -> GenM ()
 handleDoc doc = do
   mapM_ handleParam $ A.documentParams doc
-  forM_ (A.documentSharedWidgets doc) $ \(_, spec) ->
+  forM_ (A.documentSharedWidgets doc) $ \(sharedName, spec) ->
       do
         nam <- newEntry $ A.widgetElementName spec
         gen (A.Widget spec) nam
+        typ <- getWidgetStateType nam
+        registerReferenceTarget (mkName sharedName) A.SharedWidgetRef nam typ
 
   append $ bind Names.collectionName "newCollection" []
 
