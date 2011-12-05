@@ -136,8 +136,7 @@ required :: (A.HasSourceLocation a, A.IsElement a) =>
             a -> String -> ValidateM String
 required thing attrName =
     case getAttribute thing attrName of
-      Nothing -> failValidation $ Error (A.sourceLocation thing) $
-                 "attribute " ++ show attrName ++ " required"
+      Nothing -> failValidation thing $ "attribute " ++ show attrName ++ " required"
       Just val -> return val
 
 optional :: (A.IsElement a) => a -> String -> ValidateM (Maybe String)
@@ -149,9 +148,8 @@ requiredEqual spec attrName expected = do
   v <- required spec attrName
   if v == expected then
       return v else
-      failValidation $ Error (A.sourceLocation spec) $
-                         "Attribute value for attribute " ++
-                         show attrName ++ " must be " ++ show expected
+      failValidation spec $ "Attribute value for attribute " ++
+                     show attrName ++ " must be " ++ show expected
 
 requireWidgetName :: String -> A.WidgetLike -> ValidateM A.WidgetLike
 requireWidgetName typ wl@(A.WidgetRef ref) = do
@@ -159,27 +157,25 @@ requireWidgetName typ wl@(A.WidgetRef ref) = do
   iface' <- getValidatingInterface
 
   case iface' of
-    Nothing -> failValidation $ Error (A.sourceLocation ref) $
+    Nothing -> failValidation ref $
                "Widget references not permitted outside of an interface"
     Just iface -> do
       case resolveRef doc iface ref of
-        Left e -> failValidation e
+        Left e -> failValidation' e
         Right (ResolvedParameter _) ->
-            failValidation $ Error (A.sourceLocation ref) $
-                               "Expected widget or reference to widget of type " ++ (show typ)
+            failValidation ref $ "Expected widget or reference to widget of type " ++ (show typ)
                                ++ ", got parameter reference instead"
         Right (ResolvedWidget e) -> do
                     if A.widgetElementName e == typ then
                         return wl else
-                        failValidation $ Error (A.sourceLocation ref) $
-                                           "Expected a reference to a widget of type " ++
-                                           show typ ++ ", got a reference to type " ++
-                                           (show $ A.widgetElementName e) ++
-                                           " (defined at " ++ (show $ A.sourceLocation e) ++ ")"
+                        failValidation ref $ "Expected a reference to a widget of type " ++
+                                       show typ ++ ", got a reference to type " ++
+                                       (show $ A.widgetElementName e) ++
+                                       " (defined at " ++ (show $ A.sourceLocation e) ++ ")"
 requireWidgetName typ wl@(A.Widget e) =
     if A.widgetElementName e == typ then
         return wl else
-        failValidation $ Error (A.sourceLocation e) $ "Expected a widget of type " ++
+        failValidation e $ "Expected a widget of type " ++
                        show typ ++ ", got a widget of type " ++
                                 (show $ A.widgetElementName e)
 
@@ -189,7 +185,7 @@ requireValidColor loc s =
       Nothing -> return Nothing
       Just c -> if c `elem` validColors
                 then return $ Just c
-                else failValidation $ Error loc $ "Color " ++ show c ++
+                else failValidation loc $ "Color " ++ show c ++
                          " invalid, must be one of " ++ show validColors
 
 validColors :: [String]
@@ -217,7 +213,7 @@ firstChildWidget :: (A.IsElement a, A.HasSourceLocation a) =>
 firstChildWidget val =
     case A.getChildWidgetLikes val of
       (ch:_) -> return ch
-      _ -> failValidation $ Error (A.sourceLocation val) "required first child widget is missing"
+      _ -> failValidation val "required first child widget is missing"
 
 requiredInt :: (A.HasSourceLocation a, A.IsElement a) => a -> String -> ValidateM Int
 requiredInt thing attrName = required thing attrName >>= getInt thing attrName
@@ -226,11 +222,11 @@ requiredChar :: (A.HasSourceLocation a, A.IsElement a) => a -> String -> Validat
 requiredChar val attrName = do
   s <- required val attrName
   case null s of
-    True -> failValidation $ Error (A.sourceLocation val) $
+    True -> failValidation val $
             "Attribute " ++ show attrName ++ " must be non-empty"
     False -> if length s == 1 then
                  return $ head s else
-                 failValidation $ Error (A.sourceLocation val) $
+                 failValidation val $
                    "Attribute " ++ show attrName ++ " must be one character in length"
 
 optionalInt :: (A.IsElement a, A.HasSourceLocation a) =>
@@ -247,13 +243,12 @@ elemName :: A.Element -> String -> ValidateM A.Element
 elemName e s =
     if A.elementName e == s
     then return e
-    else failValidation $ Error (A.elementLocation e) $ "expected element of type "
+    else failValidation e $ "expected element of type "
              ++ show s ++ ", got " ++ show (A.elementName e)
 
 getInt :: (A.HasSourceLocation a) => a -> String -> String -> ValidateM Int
 getInt thing attrName val =
     case reads val of
-      [] -> failValidation $ Error (A.sourceLocation thing) $
-            "Attribute " ++ show attrName ++
+      [] -> failValidation thing $ "Attribute " ++ show attrName ++
             " value must be an integer"
       ((v,_):_) -> return v

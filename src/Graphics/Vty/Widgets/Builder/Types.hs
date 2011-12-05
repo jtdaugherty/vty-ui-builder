@@ -19,6 +19,7 @@ module Graphics.Vty.Widgets.Builder.Types
     , Validated(..)
     , ValidationState(..)
     , failValidation
+    , failValidation'
     , getValidatingDocument
     , getValidatingInterface
 
@@ -158,8 +159,11 @@ instance Alternative ValidateM where
               Valid val -> Valid val
               ValidationError _ -> runValidation b st
 
-failValidation :: Error -> ValidateM a
-failValidation = ValidateM . const . ValidationError
+failValidation :: (HasSourceLocation a) => a -> String -> ValidateM b
+failValidation a msg = failValidation' $ Error (sourceLocation a) msg
+
+failValidation' :: Error -> ValidateM a
+failValidation' = ValidateM . const . ValidationError
 
 getValidatingInterface :: ValidateM (Maybe Interface)
 getValidatingInterface = ValidateM (Valid . validatingInterface)

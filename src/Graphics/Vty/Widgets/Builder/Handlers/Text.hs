@@ -39,19 +39,19 @@ doValidation s = pairs
                 case A.elementName elm of
                   "br" -> return [(Left "\n", ex)]
                   "attr" -> processAttr elm
-                  badName -> failValidation $ Error (A.sourceLocation s) $ "got unsupported child of fText: " ++ badName
-            A.ChildWidgetLike _ -> failValidation $ Error (A.sourceLocation s) "got unsupported child of fText: widget-like"
+                  badName -> failValidation s $ "got unsupported child of fText: " ++ badName
+            A.ChildWidgetLike _ -> failValidation s "got unsupported child of fText: widget-like"
 
       processElemContent :: Hs.Exp -> A.ElementContent -> ValidateM [(Either String String, Hs.Exp)]
       processElemContent ex c =
           case c of
-            A.ChildWidgetLike _ -> failValidation $ Error (A.sourceLocation s) "got unsupported child of attr: widget-like"
+            A.ChildWidgetLike _ -> failValidation s "got unsupported child of attr: widget-like"
             A.Text str _ -> return [(Right $ stripWhitespace str, ex)]
             A.ChildElement elm ->
                 case A.elementName elm of
                   "br" -> return [(Left "\n", ex)]
                   "attr" -> processAttr elm
-                  badName -> failValidation $ Error (A.sourceLocation s) $ "got unsupported child of attr: " ++ badName
+                  badName -> failValidation s $ "got unsupported child of attr: " ++ badName
 
       processAttr :: A.Element -> ValidateM [(Either String String, Hs.Exp)]
       processAttr elm = do

@@ -134,6 +134,9 @@ instance IsElement WidgetElement where
 class HasSourceLocation a where
     sourceLocation :: a -> SourceLocation
 
+instance HasSourceLocation SourceLocation where
+    sourceLocation = id
+
 instance HasSourceLocation Element where
     sourceLocation = elementLocation
 

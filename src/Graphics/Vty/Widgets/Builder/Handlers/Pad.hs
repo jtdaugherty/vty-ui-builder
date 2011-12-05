@@ -8,7 +8,6 @@ import Control.Applicative ((<$>), (<*>), pure)
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util (foreach)
-import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
 import qualified Language.Haskell.Exts as Hs
 
@@ -42,8 +41,7 @@ handlePad =
                      <*> V.optionalInt s "topBottom"
                      <*> V.optionalInt s "all"
             if pInfo == noPadding then
-                failValidation $ Error (A.sourceLocation s)
-                                   "element requires at least one padding attribute" else
+                failValidation s "element requires at least one padding attribute" else
                 (,) <$> pure pInfo <*> V.firstChildWidget s
 
           genSrc nam (padding, ch) = do

@@ -46,16 +46,14 @@ handleTable =
             rs <- getRows s
 
             when (null specs) $
-                 failValidation $ Error (A.sourceLocation s)
-                                    "table must have at least one column specification"
+                 failValidation s "table must have at least one column specification"
 
             when (null rs) $
-                 failValidation $ Error (A.sourceLocation s)
-                                    "table must have at least one row"
+                 failValidation s "table must have at least one row"
 
             when (length specs /= (length $ cells $ head rs)) $
-                 failValidation $ Error (A.sourceLocation s) $
-                                    "number of column specifications must match the number of columns (" ++ (show $ length $ cells $ head rs) ++ ")"
+                 failValidation s $ "number of column specifications must match the number of columns ("
+                                    ++ (show $ length $ cells $ head rs) ++ ")"
 
             TableInfo <$> pure rs
                           <*> getBorderStyle s
@@ -87,7 +85,7 @@ handleTable =
               forM flgs $ \f ->
                   case lookup f borderFlags of
                     Just val -> return val
-                    Nothing -> failValidation $ Error (A.sourceLocation s) $
+                    Nothing -> failValidation s $
                                "invalid border style flag " ++ show f ++ ", valid choices are 'none', "
                               ++ "'full', or a comma-separated list of " ++ show (map fst borderFlags)
 
@@ -99,9 +97,9 @@ handleTable =
           getRows s = do
             rs <- validateRows s
             if (length $ nub (map (length . cells) rs)) /= 1 then
-                failValidation $ Error (A.sourceLocation s) $ "all rows must have the same number of cells" else
+                failValidation s $ "all rows must have the same number of cells" else
                 if nub (map (length . cells) rs) == [0] then
-                    failValidation $ Error (A.sourceLocation s) "all rows must contain at least one cell" else
+                    failValidation s "all rows must contain at least one cell" else
                     return rs
 
           validateRows s =
