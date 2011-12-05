@@ -1,4 +1,10 @@
 module Graphics.Vty.Widgets.Builder
+    ( validateDocument
+    , prettyPrintSource
+    , generateSourceForDocument
+    , style
+    , mode
+    )
 where
 
 import qualified Data.Map as Map
