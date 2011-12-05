@@ -11,13 +11,16 @@ module Graphics.Vty.Widgets.Builder.Types
     , WidgetHandlerResult(..)
     , Error(..)
 
+    , getCurrentInterface
+    , setCurrentInterface
+
     -- Validation
     , ValidateM(..)
     , Validated(..)
     , ValidationState(..)
     , failValidation
-    , getResolvedRefs
-    , getValidParams
+    , getValidatingDocument
+    , getValidatingInterface
 
     -- Misc
     , specType
@@ -66,7 +69,8 @@ data InterfaceValues =
                     }
 
 data GenState =
-    GenState { nameCounters :: Map.Map String Int
+    GenState { document :: Doc
+             , nameCounters :: Map.Map String Int
              , hsStatements :: [Hs.Stmt]
              , elemHandlers :: [(String, WidgetElementHandler)]
              , allWidgetNames :: [(Hs.Name, WidgetName)]
@@ -75,13 +79,15 @@ data GenState =
              , focusMethods :: [(Hs.Name, FocusMethod)]
              , focusValues :: [(Hs.Name, WidgetName)]
              , errorMessages :: [Error]
-             , validationState :: ValidationState
+             , currentInterface :: Maybe Interface
 
              -- Valid reference targets.  For widgets, the reference
              -- target is its 'id', and the name in the tuple is the
              -- name of the generated value.  For parameters, both
-             -- names are the parameter name.
-             , validReferenceTargets :: [(Hs.Name, (Hs.Name, Hs.Type))]
+             -- names are the parameter name.  This maps the name and
+             -- type of the reference to the widget and widget type
+             -- which is referenced.
+             , referenceTargets :: [((Hs.Name, ReferenceType), (Hs.Name, Hs.Type))]
              }
 
 data FocusMethod = Direct WidgetName -- The name of the widget which
@@ -113,8 +119,8 @@ data WidgetHandlerResult =
                         }
 
 data ValidationState =
-    ValidationState { validParams :: [String]
-                    , resolvedRefs :: [(Hs.Name, WidgetElement)]
+    ValidationState { validatingInterface :: Maybe Interface
+                    , validatingDocument :: Doc
                     }
 
 data ValidateM a =
@@ -155,11 +161,17 @@ instance Alternative ValidateM where
 failValidation :: Error -> ValidateM a
 failValidation = ValidateM . const . ValidationError
 
-getValidParams :: ValidateM [String]
-getValidParams = ValidateM (Valid . validParams)
+getValidatingInterface :: ValidateM (Maybe Interface)
+getValidatingInterface = ValidateM (Valid . validatingInterface)
 
-getResolvedRefs :: ValidateM [(Hs.Name, WidgetElement)]
-getResolvedRefs = ValidateM (Valid . resolvedRefs)
+getValidatingDocument :: ValidateM Doc
+getValidatingDocument = ValidateM (Valid . validatingDocument)
+
+getCurrentInterface :: GenM (Maybe Interface)
+getCurrentInterface = gets currentInterface
+
+setCurrentInterface :: Maybe Interface -> GenM ()
+setCurrentInterface i = modify $ \st -> st { currentInterface = i }
 
 specType :: WidgetElementHandler
          -> String

@@ -80,7 +80,9 @@ gen (A.Widget spec) nam = do
     Nothing -> error $ show (A.sourceLocation spec) ++
                ": no handler for widget type " ++ (show $ A.widgetElementName spec)
     Just handler -> do
-      st <- gets validationState
+      doc <- gets document
+      iface <- gets currentInterface
+      let st = ValidationState iface doc
       result <- generateWidgetSource handler spec st nam
 
       -- Register the widget value name.
@@ -104,7 +106,7 @@ gen (A.Widget spec) nam = do
 
                       -- Register the 'id' as a valid reference target
                       -- so that 'ref' tags can use it
-                      registerReferenceTarget (mkName newName)
+                      registerReferenceTarget (mkName newName) A.InterfaceWidgetRef
                         (widgetName $ resultWidgetName result)
                         (widgetType $ resultWidgetName result)
 
@@ -119,10 +121,10 @@ gen (A.Widget spec) nam = do
       -- widget-agnostic properties.
       annotateWidget spec nam
 
-gen (A.Ref (A.Reference tgt loc)) nam = do
+gen (A.WidgetRef (A.WidgetReference tgt loc refType)) nam = do
   let target = mkName tgt
 
-  val <- getReferenceTarget target
+  val <- getReferenceTarget target refType
 
   result <- case val of
               Nothing -> error $ show loc ++
@@ -133,15 +135,15 @@ gen (A.Ref (A.Reference tgt loc)) nam = do
 
   registerWidgetName $ resultWidgetName result
 
-getReferenceTarget :: Hs.Name -> GenM (Maybe (Hs.Name, Hs.Type))
-getReferenceTarget target =
-    lookup target <$> gets validReferenceTargets
+getReferenceTarget :: Hs.Name -> A.ReferenceType -> GenM (Maybe (Hs.Name, Hs.Type))
+getReferenceTarget nam typ =
+    lookup (nam, typ) <$> gets referenceTargets
 
-registerReferenceTarget :: Hs.Name -> Hs.Name -> Hs.Type -> GenM ()
-registerReferenceTarget target valName typ =
+registerReferenceTarget :: Hs.Name -> A.ReferenceType -> Hs.Name -> Hs.Type -> GenM ()
+registerReferenceTarget target refType valName typ =
     modify $ \st ->
-        st { validReferenceTargets = validReferenceTargets st
-                                     ++ [(target, (valName, typ))]
+        st { referenceTargets = referenceTargets st
+                                ++ [((target, refType), (valName, typ))]
            }
 
 putError :: A.SourceLocation -> String -> GenM ()
@@ -304,7 +306,7 @@ mkName :: String -> Hs.Name
 mkName = Hs.Ident
 
 widgetLikeName :: A.WidgetLike -> String
-widgetLikeName (A.Ref _) = "ref"
+widgetLikeName (A.WidgetRef _) = "ref"
 widgetLikeName (A.Widget w) = A.widgetElementName w
 
 getElementStringContent :: A.Element -> String

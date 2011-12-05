@@ -26,49 +26,56 @@ mode = Hs.defaultMode { Hs.doIndent = 2, Hs.spacing = True }
 prettyPrintSource :: Hs.Module -> String
 prettyPrintSource = Hs.prettyPrintStyleMode style mode
 
+validateDocument :: A.Doc
+                 -> [WidgetElementHandler]
+                 -> [Error]
+validateDocument doc hs =
+    either id (const []) $ doFullValidation doc hs
+
 generateSourceForDocument :: BuilderConfig
                           -> A.Doc
                           -> [WidgetElementHandler]
                           -> IO (Either [Error] Hs.Module)
 generateSourceForDocument config doc theHandlers = do
-  case doFullValidation doc theHandlers of
-    Left es -> return $ Left es
-    Right valState ->
-        do
-          let (_, finalState) = runState (handleDoc doc) initialState
-              initialState = GenState { nameCounters = Map.empty
-                                      , hsStatements = []
-                                      , elemHandlers =
-                                          map (\h -> (specType h, h)) theHandlers
-                                      , interfaceNames = []
-                                      , focusMethods = []
-                                      , allWidgetNames = []
-                                      , registeredFieldNames = []
-                                      , focusValues = []
-                                      , errorMessages = []
-                                      , validationState = valState
-                                      , validReferenceTargets = []
-                                      }
+  let validationErrors = validateDocument doc theHandlers
+  if not $ null validationErrors then
+      return $ Left validationErrors else
+      do
+        let (_, finalState) = runState (handleDoc doc) initialState
+            initialState = GenState { nameCounters = Map.empty
+                                    , hsStatements = []
+                                    , elemHandlers =
+                                        map (\h -> (specType h, h)) theHandlers
+                                    , interfaceNames = []
+                                    , focusMethods = []
+                                    , allWidgetNames = []
+                                    , registeredFieldNames = []
+                                    , focusValues = []
+                                    , errorMessages = []
+                                    , referenceTargets = []
+                                    , document = doc
+                                    , currentInterface = Nothing
+                                    }
 
-          case errorMessages finalState of
-            [] -> do
-               -- If the user wants to generate a main function, we
-               -- can't do that if the generated collection
-               -- constructor function takes parameters because we
-               -- don't have values to provide for them.
-               case generateMain config && (not $ null $ A.documentParams doc) of
-                 True -> return $ Left [
-                             Error A.noLoc $ concat
-                             [ "configuration indicates that a 'main' should be generated, "
-                             , "but parameters are required to construct the interface. "
-                             , "Turn off 'main' generation to generate the interface source."
-                             ]
-                            ]
-                 False -> do
-                       let moduleBody = generateModuleBody config doc finalState
-                           result = generateModule config doc moduleBody
-                       return $ Right result
-            msgs -> return $ Left msgs
+        case errorMessages finalState of
+          [] -> do
+             -- If the user wants to generate a main function, we
+             -- can't do that if the generated collection constructor
+             -- function takes parameters because we don't have values
+             -- to provide for them.
+             case generateMain config && (not $ null $ A.documentParams doc) of
+               True -> return $ Left [
+                           Error A.noLoc $ concat
+                           [ "configuration indicates that a 'main' should be generated, "
+                           , "but parameters are required to construct the interface. "
+                           , "Turn off 'main' generation to generate the interface source."
+                           ]
+                          ]
+               False -> do
+                     let moduleBody = generateModuleBody config doc finalState
+                         result = generateModule config doc moduleBody
+                     return $ Right result
+          msgs -> return $ Left msgs
 
 generateModule :: BuilderConfig -> A.Doc -> [Hs.Decl] -> Hs.Module
 generateModule config doc moduleBody =

@@ -64,6 +64,7 @@ handleDoc doc = do
 
   forM_ (A.documentInterfaces doc) $ \iface ->
       do
+        setCurrentInterface $ Just iface
         nam <- newEntry "interface"
         handleInterface iface nam
 
@@ -94,33 +95,38 @@ handleParam :: A.Param -> GenM ()
 handleParam p = do
   let paramName = mkName $ A.paramName p
       typ = parseType $ A.paramType p
-  registerReferenceTarget paramName paramName typ
+      refType = A.ParameterRef
+  registerReferenceTarget paramName refType paramName typ
   setFocusValue paramName $ WidgetName { widgetName = paramName
                                        , widgetType = typ
                                        }
 
-handleFocusEntry :: A.Interface -> (A.WidgetId, A.SourceLocation)
+handleFocusEntry :: A.Interface -> A.FocusReference
                  -> Hs.Name -> GenM ()
-handleFocusEntry iface (entryName, loc) fgName =
-    case entryName `elem` A.validFocusEntries iface of
-        False -> putError loc $ "Focus group error: widget name "
+handleFocusEntry iface (A.FocusReference entryName loc) fgName =
+    case entryName `elem` A.validFocusNames iface of
+        False -> error $ "BUG: " ++ show loc ++ ": Validation did not prevent widget name "
                  ++ show entryName
-                 ++ " not found in interface " ++ show (A.interfaceName iface)
+                 ++ " from being used in focus group entry in interface "
+                 ++ (show $ A.interfaceName iface)
         True -> do
           -- Since we know the name is valid for this interface, this
           -- lookup should always succeed.
-          Just wName <- lookupFocusValue (mkName entryName)
-          -- Get the focus method for this value.
-          m <- lookupFocusMethod $ widgetName wName
-          case m of
-            Just (Merge fgName') ->
-                 append $ act $ call "appendFocusGroup" [ expr fgName
-                                                        , expr fgName'
-                                                        ]
-            -- Covers the Just Direct and Nothing cases (default is
-            -- Direct so handlers don't have to register focus method
-            -- unless it's Merge)
-            _ -> append $ act $ call "addToFocusGroup" [ expr fgName
-                                                       , expr $ widgetName wName
-                                                       ]
+          result <- lookupFocusValue (mkName entryName)
+          case result of
+            Nothing -> error $ "BUG: no focus value found for widget ID " ++ (show entryName)
+                       ++ "; did we fail to register one?"
+            Just wName -> do
+              m <- lookupFocusMethod $ widgetName wName
+              case m of
+                Just (Merge fgName') ->
+                    append $ act $ call "appendFocusGroup" [ expr fgName
+                                                           , expr fgName'
+                                                           ]
+                -- Covers the Just Direct and Nothing cases (default
+                -- is Direct so handlers don't have to register focus
+                -- method unless it's Merge)
+                _ -> append $ act $ call "addToFocusGroup" [ expr fgName
+                                                           , expr $ widgetName wName
+                                                           ]
 
