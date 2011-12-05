@@ -62,11 +62,11 @@ handleTable =
                           <*> pure specs
 
           getColumnSpecs s =
-              concat <$> (for (V.elementsByName "columns" $ getChildElements s)
+              concat <$> (for (V.elementsByName "columns" $ A.getChildElements s)
                               validateColumnSpecs)
 
           validateColumnSpecs e =
-              for (V.elementsByName "column" $ getChildElements e)
+              for (V.elementsByName "column" $ A.getChildElements e)
                   validateColumnSpec
 
           validateColumnSpec e =
@@ -105,14 +105,14 @@ handleTable =
                     return rs
 
           validateRows s =
-              for (V.elementsByName "row" $ getChildElements s)
+              for (V.elementsByName "row" $ A.getChildElements s)
                   validateRow
 
           validateRow e =
               RowInfo <$> validateCells e
 
           validateCells e =
-              for (getChildElements e) $ \c ->
+              for (A.getChildElements e) $ \c ->
                   V.elemName c "cell" *> V.firstChildWidget c
 
           genSrc nam table = do

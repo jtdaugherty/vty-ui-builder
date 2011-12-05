@@ -131,12 +131,12 @@ genBox es typ spacing rootName = do
 
 boxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]
 boxChildWidgets s =
-    case getChildWidgetLikes s of
+    case A.getChildWidgetLikes s of
       es@(_:_:_) -> return es
       _ -> failValidation $ Error (A.sourceLocation s) "Box must have at least two children"
 
 sizedBoxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]
 sizedBoxChildWidgets s =
-    case getChildWidgetLikes s of
+    case A.getChildWidgetLikes s of
       es@[_,_] -> return es
       _ -> failValidation $ Error (A.sourceLocation s) "Sized box must have exactly two children"

@@ -16,14 +16,9 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getFieldValueName
     , getElementStringContent
     , registerFieldValueName
-    , getNamedWidgetNames
     , widgetLikeName
     , putError
     , getAttribute
-    , getAttributes
-    , getChildWidgetLikes
-    , getChildElements
-    , widgetElementName
     , registerReferenceTarget
     , setFocusValue
 
@@ -52,7 +47,6 @@ where
 
 import Control.Applicative hiding (optional)
 import Control.Monad.State
-import Data.Maybe
 import qualified Data.Map as Map
 
 import Graphics.Vty.Widgets.Builder.Types
@@ -68,24 +62,6 @@ toAST thing = parsed
     where
       Hs.ParseOk parsed = Hs.parse $ show thing
 
-widgetElementName :: A.WidgetElement -> String
-widgetElementName = A.elementName . A.getElement
-
-getAttributes :: (A.IsElement e) => e -> [(String, String)]
-getAttributes = A.elementAttributes . A.getElement
-
-getChildWidgetLikes :: (A.IsElement e) => e -> [A.WidgetLike]
-getChildWidgetLikes = catMaybes . map getWL . A.elementContents . A.getElement
-    where
-      getWL (A.ChildWidgetLike w) = Just w
-      getWL _ = Nothing
-
-getChildElements :: (A.IsElement e) => e -> [A.Element]
-getChildElements = catMaybes . map getEls . A.elementContents . A.getElement
-    where
-      getEls (A.ChildElement el) = Just el
-      getEls _ = Nothing
-
 generateWidgetSource :: WidgetElementHandler
                      -> A.WidgetElement
                      -> ValidationState
@@ -100,9 +76,9 @@ generateWidgetSource (WidgetElementHandler genSrc validator specTyp) spec st nam
 gen :: A.WidgetLike -> Hs.Name -> GenM ()
 gen (A.Widget spec) nam = do
   hs <- gets elemHandlers
-  case lookup (widgetElementName spec) hs of
+  case lookup (A.widgetElementName spec) hs of
     Nothing -> error $ show (A.sourceLocation spec) ++
-               ": no handler for widget type " ++ (show $ widgetElementName spec)
+               ": no handler for widget type " ++ (show $ A.widgetElementName spec)
     Just handler -> do
       st <- gets validationState
       result <- generateWidgetSource handler spec st nam
@@ -168,13 +144,6 @@ registerReferenceTarget target valName typ =
                                      ++ [(target, (valName, typ))]
            }
 
-getNamedWidgetNames :: A.WidgetLike -> [A.WidgetId]
-getNamedWidgetNames wlike = catMaybes $ getNamedWidgetNames' wlike
-    where
-      getNamedWidgetNames' (A.Ref _) = []
-      getNamedWidgetNames' (A.Widget spec) =
-          A.widgetId spec : (concat $ map getNamedWidgetNames' $ getChildWidgetLikes spec)
-
 putError :: A.SourceLocation -> String -> GenM ()
 putError loc s =
     modify $ \st -> st { errorMessages = errorMessages st ++ [Error loc s] }
@@ -221,7 +190,7 @@ getWidgetStateType nam = do
     Just wName -> return $ widgetType wName
 
 getAttribute :: (A.IsElement a) => a -> String -> Maybe String
-getAttribute val attrName = lookup attrName (getAttributes val)
+getAttribute val attrName = lookup attrName (A.getAttributes val)
 
 attrsToExpr :: (Maybe String, Maybe String) -> Maybe Hs.Exp
 attrsToExpr (Nothing, Nothing) = Nothing
@@ -336,7 +305,7 @@ mkName = Hs.Ident
 
 widgetLikeName :: A.WidgetLike -> String
 widgetLikeName (A.Ref _) = "ref"
-widgetLikeName (A.Widget w) = widgetElementName w
+widgetLikeName (A.Widget w) = A.widgetElementName w
 
 getElementStringContent :: A.Element -> String
 getElementStringContent =

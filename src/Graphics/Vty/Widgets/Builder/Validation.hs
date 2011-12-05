@@ -30,8 +30,6 @@ import qualified Graphics.Vty.Widgets.Builder.AST as A
 import Graphics.Vty.Widgets.Builder.GenLib
     ( getAttribute
     , mkName
-    , widgetElementName
-    , getChildWidgetLikes
     )
 
 doFullValidation :: A.Doc
@@ -46,9 +44,10 @@ doFullValidation doc theHandlers =
           where
             -- Match up widget specs in the document with handlers
             handlersBySpecType = map (\s -> (specType s, s)) theHandlers
-            mapping = map (\s -> (s, lookup (widgetElementName s) handlersBySpecType)) $ allSpecs doc
+            mapping = map (\s -> (s, lookup (A.widgetElementName s) handlersBySpecType)) $
+                      A.allWidgetElements doc
 
-            mkMsg s = "unknown widget type " ++ show (widgetElementName s)
+            mkMsg s = "unknown widget type " ++ show (A.widgetElementName s)
 
             process (s, Nothing) = Just $ Error (A.sourceLocation s) $ mkMsg s
             process (s, Just h) = doSpecValidation h s st
@@ -57,14 +56,14 @@ doFullValidation doc theHandlers =
 
 mkValidationState :: A.Doc -> Either [Error] ValidationState
 mkValidationState doc =
-    checkValidRefTargets *> (ValidationState params <$> (resolveRefs $ allRefs doc))
+    checkValidRefTargets *> (ValidationState params <$> (resolveRefs $ A.allRefs doc))
         where
           params = map A.paramName $ A.documentParams doc
 
           -- Find all the widget specs that have IDs, i.e., those
           -- which may be referenced.
           validRefTargets = [ (fromJust $ A.widgetId s, s)
-                              | s <- allSpecs doc, isJust $ A.widgetId s
+                              | s <- A.allWidgetElements doc, isJust $ A.widgetId s
                             ]
 
           -- Group each valid reference target (widget ID) with the
@@ -112,35 +111,6 @@ mkValidationState doc =
                                           (show $ A.interfaceName iface)
                                ]
 
-allRefs :: A.Doc -> [(A.Interface, [A.Reference])]
-allRefs doc = [ (iface, catMaybes $ map getRef $ allWidgetLikes iface)
-                    | iface <- A.documentInterfaces doc ]
-    where
-      getRef (A.Ref r) = Just r
-      getRef (A.Widget _) = Nothing
-
-allWidgetLikes :: A.Interface -> [A.WidgetLike]
-allWidgetLikes iface = A.interfaceContent iface :
-                       (wLikes $ A.interfaceContent iface)
-    where
-      wLikes (A.Ref _) = []
-      wLikes (A.Widget w) = elementWLs $ A.getElement w
-
-      elementWLs = concat . map elemWLs . A.elementContents
-
-      elemWLs (A.Text _ _) = []
-      elemWLs (A.ChildElement e) = elementWLs e
-      elemWLs (A.ChildWidgetLike w) = w : wLikes w
-
-allSpecs :: A.Doc -> [A.WidgetElement]
-allSpecs doc =
-    concat [ map snd $ A.documentSharedWidgets doc
-           , catMaybes $ map getSpec $ concat $ map allWidgetLikes $ A.documentInterfaces doc
-           ]
-        where
-          getSpec (A.Ref _) = Nothing
-          getSpec (A.Widget w) = Just w
-
 doSpecValidation :: WidgetElementHandler
                  -> A.WidgetElement
                  -> ValidationState
@@ -177,17 +147,17 @@ requireWidgetName typ wl@(A.Ref (A.Reference nam loc)) = do
   -- Assume the lookup will succeed, since all references are valid in
   -- this monad.
   let Just targetSpec = lookup (mkName nam) refs
-  if widgetElementName targetSpec == typ then
+  if A.widgetElementName targetSpec == typ then
       return wl else
       failValidation $ Error loc $ "Expected a reference to a widget of type " ++
                      show typ ++ ", got a reference to type " ++
-                              (show $ widgetElementName targetSpec)
+                              (show $ A.widgetElementName targetSpec)
 requireWidgetName typ wl@(A.Widget spec) =
-    if widgetElementName spec == typ then
+    if A.widgetElementName spec == typ then
         return wl else
         failValidation $ Error (A.sourceLocation spec) $ "Expected a widget of type " ++
                        show typ ++ ", got a widget of type " ++
-                                (show $ widgetElementName spec)
+                                (show $ A.widgetElementName spec)
 
 requireValidColor :: A.SourceLocation -> Maybe String -> ValidateM (Maybe String)
 requireValidColor loc s =
@@ -221,7 +191,7 @@ validColors =
 firstChildWidget :: (A.IsElement a, A.HasSourceLocation a) =>
                     a -> ValidateM A.WidgetLike
 firstChildWidget val =
-    case getChildWidgetLikes val of
+    case A.getChildWidgetLikes val of
       (ch:_) -> return ch
       _ -> failValidation $ Error (A.sourceLocation val) "required first child widget is missing"
 

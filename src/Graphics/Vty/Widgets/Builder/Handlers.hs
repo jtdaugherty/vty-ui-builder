@@ -57,7 +57,7 @@ handleDoc doc = do
   mapM_ handleParam $ A.documentParams doc
   forM_ (A.documentSharedWidgets doc) $ \(_, spec) ->
       do
-        nam <- newEntry $ widgetElementName spec
+        nam <- newEntry $ A.widgetElementName spec
         gen (A.Widget spec) nam
 
   append $ bind Names.collectionName "newCollection" []
@@ -65,10 +65,10 @@ handleDoc doc = do
   forM_ (A.documentInterfaces doc) $ \iface ->
       do
         nam <- newEntry "interface"
-        handleInterface iface doc nam
+        handleInterface iface nam
 
-handleInterface :: A.Interface -> A.Doc -> Hs.Name -> GenM ()
-handleInterface iface doc nam = do
+handleInterface :: A.Interface -> Hs.Name -> GenM ()
+handleInterface iface nam = do
   gen (A.interfaceContent iface) nam
 
   actName <- newEntry "act"
@@ -77,7 +77,7 @@ handleInterface iface doc nam = do
   append $ bind fgName "newFocusGroup" []
 
   forM_ (A.interfaceFocusEntries iface) $ \info ->
-      handleFocusEntry iface doc info fgName
+      handleFocusEntry iface info fgName
 
   append $ bind actName "addToCollection" [ expr Names.collectionName
                                           , expr nam
@@ -99,35 +99,28 @@ handleParam p = do
                                        , widgetType = typ
                                        }
 
-handleFocusEntry :: A.Interface -> A.Doc -> (A.WidgetId, A.SourceLocation)
-                 -> Hs.Name
-                 -> GenM ()
-handleFocusEntry iface doc (entryName, loc) fgName = do
-  let ws = concat [ getNamedWidgetNames (A.interfaceContent iface)
-                  , sharedNames
-                  , map A.paramName $ A.documentParams doc
-                  ]
-      sharedNames = concat $ map (getNamedWidgetNames . A.Widget) shared
-      shared = map snd $ A.documentSharedWidgets doc
-  case entryName `elem` ws of
-      False -> putError loc $ "Focus group error: widget name "
-               ++ show entryName
-               ++ " not found in interface " ++ show (A.interfaceName iface)
-      True -> do
-        -- Since we know the name is valid for this interface, this
-        -- lookup should always succeed.
-        Just wName <- lookupFocusValue (mkName entryName)
-        -- Get the focus method for this value.
-        m <- lookupFocusMethod $ widgetName wName
-        case m of
-          Just (Merge fgName') ->
-               append $ act $ call "appendFocusGroup" [ expr fgName
-                                                      , expr fgName'
-                                                      ]
-          -- Covers the Just Direct and Nothing cases (default is
-          -- Direct so handlers don't have to register focus method
-          -- unless it's Merge)
-          _ -> append $ act $ call "addToFocusGroup" [ expr fgName
-                                                     , expr $ widgetName wName
-                                                     ]
+handleFocusEntry :: A.Interface -> (A.WidgetId, A.SourceLocation)
+                 -> Hs.Name -> GenM ()
+handleFocusEntry iface (entryName, loc) fgName =
+    case entryName `elem` A.validFocusEntries iface of
+        False -> putError loc $ "Focus group error: widget name "
+                 ++ show entryName
+                 ++ " not found in interface " ++ show (A.interfaceName iface)
+        True -> do
+          -- Since we know the name is valid for this interface, this
+          -- lookup should always succeed.
+          Just wName <- lookupFocusValue (mkName entryName)
+          -- Get the focus method for this value.
+          m <- lookupFocusMethod $ widgetName wName
+          case m of
+            Just (Merge fgName') ->
+                 append $ act $ call "appendFocusGroup" [ expr fgName
+                                                        , expr fgName'
+                                                        ]
+            -- Covers the Just Direct and Nothing cases (default is
+            -- Direct so handlers don't have to register focus method
+            -- unless it's Merge)
+            _ -> append $ act $ call "addToFocusGroup" [ expr fgName
+                                                       , expr $ widgetName wName
+                                                       ]
 
