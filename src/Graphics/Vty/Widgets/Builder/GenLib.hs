@@ -24,6 +24,7 @@ where
 import Control.Applicative hiding (optional)
 import Control.Monad.State
 import qualified Data.Map as Map
+import Data.Foldable (for_)
 
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.Util
@@ -45,50 +46,49 @@ generateWidgetSource (WidgetElementHandler genSrc validator specTyp) spec st nam
 gen :: A.WidgetLike -> Hs.Name -> GenM ()
 gen (A.Widget spec) nam = do
   hs <- gets elemHandlers
-  case lookup (A.widgetElementName spec) hs of
-    Nothing -> error $ show (A.sourceLocation spec) ++
-               ": no handler for widget type " ++ (show $ A.widgetElementName spec)
-    Just handler -> do
-      doc <- gets document
-      iface <- gets currentInterface
-      let st = ValidationState iface doc
-      result <- generateWidgetSource handler spec st nam
 
-      -- Register the widget value name.
-      registerWidgetName $ resultWidgetName result
+  handler <- case lookup (A.widgetElementName spec) hs of
+               Nothing -> error $ show (A.sourceLocation spec) ++
+                 ": no handler for widget type " ++ (show $ A.widgetElementName spec)
+               Just h -> return h
 
-      -- If the element has an ID, use that to set up field
-      -- information so we know how to assign the widget to the field.
-      case getAttribute spec "id" of
-        Nothing -> return ()
-        Just newName -> do
-                      let fieldValName = case fieldValueName result of
-                                           Just fValName -> VName fValName
-                                           Nothing -> WName $ resultWidgetName result
-                      -- When determining which value constitutes the
-                      -- type of the interface elements field for this
-                      -- widget, use the custom field value if
-                      -- specified by the handler (which may not have
-                      -- type Widget a), or fall back to the widget
-                      -- value if no custom field value was specified.
-                      registerFieldValueName (S.mkName newName) fieldValName
+  doc <- gets document
+  iface <- gets currentInterface
+  genResult <- generateWidgetSource handler spec (ValidationState iface doc) nam
 
-                      -- Register the 'id' as a valid reference target
-                      -- so that 'ref' tags can use it
-                      registerReferenceTarget (S.mkName newName) A.InterfaceWidgetRef
-                        (widgetName $ resultWidgetName result)
-                        (widgetType $ resultWidgetName result)
+  -- Register the widget value name.
+  registerWidgetName $ resultWidgetName genResult
 
-                      -- When setting up the widget value to be added
-                      -- to the focus group for this widget, always
-                      -- use the resultWidgetName name since it will
-                      -- have the right type (Widget a) in the
-                      -- generated source.
-                      setFocusValue (S.mkName newName) $ resultWidgetName result
+  -- If the element has an ID, use that to set up field information so
+  -- we know how to assign the widget to the field.
+  for_ (getAttribute spec "id") $ \newName ->
+      do
+        let fieldValName = case fieldValueName genResult of
+                             Just fValName -> VName fValName
+                             Nothing -> WName $ resultWidgetName genResult
 
-      -- Use common attributes on the element to annotate it with
-      -- widget-agnostic properties.
-      annotateWidget spec nam
+        -- When determining which value constitutes the type of the
+        -- interface elements field for this widget, use the custom
+        -- field value if specified by the handler (which may not have
+        -- type Widget a), or fall back to the widget value if no
+        -- custom field value was specified.
+        registerFieldValueName (S.mkName newName) fieldValName
+
+        -- Register the 'id' as a valid reference target so that 'ref'
+        -- tags can use it
+        registerReferenceTarget (S.mkName newName) A.InterfaceWidgetRef
+          (widgetName $ resultWidgetName genResult)
+          (widgetType $ resultWidgetName genResult)
+
+        -- When setting up the widget value to be added to the focus
+        -- group for this widget, always use the resultWidgetName name
+        -- since it will have the right type (Widget a) in the
+        -- generated source.
+        setFocusValue (S.mkName newName) $ resultWidgetName genResult
+
+  -- Use common attributes on the element to annotate it with
+  -- widget-agnostic properties.
+  annotateWidget spec nam
 
 gen (A.WidgetRef (A.WidgetReference tgt loc refType)) nam = do
   let target = S.mkName tgt
