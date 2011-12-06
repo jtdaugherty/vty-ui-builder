@@ -19,6 +19,7 @@ import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Graphics.Vty.Widgets.Builder.Names as Names
 import Graphics.Vty.Widgets.Builder.Types
+import Graphics.Vty.Widgets.Builder.Util
 import Graphics.Vty.Widgets.Builder.Config
 import Graphics.Vty.Widgets.Builder.Validation (doFullValidation)
 import Graphics.Vty.Widgets.Builder.Handlers (handleDoc)
@@ -170,41 +171,43 @@ mkBuilderFunction doc st =
 
 mkKeyHandlers :: GenState -> [Hs.Stmt]
 mkKeyHandlers st =
-    (flip map) (zip [0..] $ interfaceNames st) $
-                   \(i, (nam, _)) ->
-                       let nextIfName = fst $ interfaceNames st !! if i == lastIf
-                                                                   then 0
-                                                                   else i + 1
-                           lastIf = (length $ interfaceNames st) - 1
+    let nextIfName i = fst $ interfaceNames st !! if i == lastIf
+                                                  then 0
+                                                  else i + 1
+        lastIf = (length $ interfaceNames st) - 1
+        prevIfName i = fst $ interfaceNames st !! if i == firstIf
+                                                  then lastIf
+                                                  else i - 1
+        firstIf = 0
+    in foreach (zip [0..] $ interfaceNames st) $
+           \(i, (nam, _)) ->
+               mkKeyHandlerStmt nam (nextIfName i) (prevIfName i)
 
-                           prevIfName = fst $ interfaceNames st !! if i == firstIf
-                                                                   then lastIf
-                                                                   else i - 1
-                           firstIf = 0
-
-                       in S.act $ S.opApp (Hs.Var $ Hs.UnQual $ S.mkName $ "(fg_" ++ nam ++ " values)")
-                              (S.mkName "onKeyPressed")
-                              $ Hs.Lambda S.noLoc [Hs.PWildCard, Hs.PVar $ S.mkName "k", Hs.PWildCard] $
-                                Hs.Case (Hs.Var $ Hs.UnQual $ S.mkName "k")
-                                      [ Hs.Alt S.noLoc (Hs.PApp (Hs.UnQual $ S.mkName "KEsc") [])
-                                                   (Hs.UnGuardedAlt $ Hs.Do [ S.act $ S.call "shutdownUi" []
-                                                                            , S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "True"]
-                                                                            ])
-                                                   (Hs.BDecls [])
-                                      , Hs.Alt S.noLoc (Hs.PApp (Hs.UnQual $ S.mkName "KASCII") [Hs.PLit $ Hs.Char 'n'])
-                                                   (Hs.UnGuardedAlt $ Hs.Do [ S.act $ S.call ("switchTo_" ++ nextIfName) [S.expr $ S.mkName "values"]
-                                                                            , S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "True"]
-                                                                            ])
-                                                   (Hs.BDecls [])
-                                      , Hs.Alt S.noLoc (Hs.PApp (Hs.UnQual $ S.mkName "KASCII") [Hs.PLit $ Hs.Char 'p'])
-                                                   (Hs.UnGuardedAlt $ Hs.Do [ S.act $ S.call ("switchTo_" ++ prevIfName) [S.expr $ S.mkName "values"]
-                                                                            , S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "True"]
-                                                                            ])
-                                                   (Hs.BDecls [])
-                                      , Hs.Alt S.noLoc Hs.PWildCard
-                                                   (Hs.UnGuardedAlt $ Hs.Do [S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "False"]])
-                                                   (Hs.BDecls [])
-                                      ]
+mkKeyHandlerStmt :: String -> String -> String -> Hs.Stmt
+mkKeyHandlerStmt ifName nextIfName prevIfName = do
+  S.act $ S.opApp (Hs.Var $ Hs.UnQual $ S.mkName $ "(fg_" ++ ifName ++ " values)")
+       (S.mkName "onKeyPressed")
+       $ Hs.Lambda S.noLoc [Hs.PWildCard, Hs.PVar $ S.mkName "k", Hs.PWildCard] $
+         Hs.Case (Hs.Var $ Hs.UnQual $ S.mkName "k")
+               [ Hs.Alt S.noLoc (Hs.PApp (Hs.UnQual $ S.mkName "KEsc") [])
+                            (Hs.UnGuardedAlt $ Hs.Do [ S.act $ S.call "shutdownUi" []
+                                                     , S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "True"]
+                                                     ])
+                            (Hs.BDecls [])
+               , Hs.Alt S.noLoc (Hs.PApp (Hs.UnQual $ S.mkName "KASCII") [Hs.PLit $ Hs.Char 'n'])
+                            (Hs.UnGuardedAlt $ Hs.Do [ S.act $ S.call ("switchTo_" ++ nextIfName) [S.expr $ S.mkName "values"]
+                                                     , S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "True"]
+                                                     ])
+                            (Hs.BDecls [])
+               , Hs.Alt S.noLoc (Hs.PApp (Hs.UnQual $ S.mkName "KASCII") [Hs.PLit $ Hs.Char 'p'])
+                            (Hs.UnGuardedAlt $ Hs.Do [ S.act $ S.call ("switchTo_" ++ prevIfName) [S.expr $ S.mkName "values"]
+                                                     , S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "True"]
+                                                     ])
+                            (Hs.BDecls [])
+               , Hs.Alt S.noLoc Hs.PWildCard
+                            (Hs.UnGuardedAlt $ Hs.Do [S.act $ S.call "return" [Hs.Con $ Hs.UnQual $ S.mkName "False"]])
+                            (Hs.BDecls [])
+               ]
 
 mkMain :: [Hs.Stmt] -> [Hs.Decl]
 mkMain body =
