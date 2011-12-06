@@ -79,7 +79,6 @@ data GenState =
              , interfaceNames :: [(String, InterfaceValues)]
              , focusMethods :: [(Hs.Name, FocusMethod)]
              , focusValues :: [(Hs.Name, WidgetName)]
-             , errorMessages :: [Error]
              , currentInterface :: Maybe Interface
 
              -- Valid reference targets.  For widgets, the reference

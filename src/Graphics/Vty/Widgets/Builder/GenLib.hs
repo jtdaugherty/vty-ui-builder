@@ -14,7 +14,6 @@ module Graphics.Vty.Widgets.Builder.GenLib
     , getElementStringContent
     , registerFieldValueName
     , widgetLikeName
-    , putError
     , getAttribute
     , registerReferenceTarget
     , setFocusValue
@@ -114,10 +113,6 @@ registerReferenceTarget target refType valName typ =
         st { referenceTargets = referenceTargets st
                                 ++ [((target, refType), (valName, typ))]
            }
-
-putError :: A.SourceLocation -> String -> GenM ()
-putError loc s =
-    modify $ \st -> st { errorMessages = errorMessages st ++ [Error loc s] }
 
 registerWidgetName :: WidgetName -> GenM ()
 registerWidgetName wn =

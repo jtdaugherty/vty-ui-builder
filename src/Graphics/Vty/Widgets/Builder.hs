@@ -57,31 +57,27 @@ generateSourceForDocument config doc theHandlers = do
                                     , allWidgetNames = []
                                     , registeredFieldNames = []
                                     , focusValues = []
-                                    , errorMessages = []
                                     , referenceTargets = []
                                     , document = doc
                                     , currentInterface = Nothing
                                     }
 
-        case errorMessages finalState of
-          [] -> do
-             -- If the user wants to generate a main function, we
-             -- can't do that if the generated collection constructor
-             -- function takes parameters because we don't have values
-             -- to provide for them.
-             case generateMain config && (not $ null $ A.documentParams doc) of
-               True -> return $ Left [
-                           Error A.noLoc $ concat
-                           [ "configuration indicates that a 'main' should be generated, "
-                           , "but parameters are required to construct the interface. "
-                           , "Turn off 'main' generation to generate the interface source."
-                           ]
-                          ]
-               False -> do
-                     let moduleBody = generateModuleBody config doc finalState
-                         result = generateModule config doc moduleBody
-                     return $ Right result
-          msgs -> return $ Left msgs
+        -- If the user wants to generate a main function, we can't do
+        -- that if the generated collection constructor function takes
+        -- parameters because we don't have values to provide for
+        -- them.
+        case generateMain config && (not $ null $ A.documentParams doc) of
+          True -> return $ Left [
+                   Error A.noLoc $ concat
+                             [ "configuration indicates that a 'main' should be generated, "
+                             , "but parameters are required to construct the interface. "
+                             , "Turn off 'main' generation to generate the interface source."
+                             ]
+                  ]
+          False -> do
+            let moduleBody = generateModuleBody config doc finalState
+                result = generateModule config doc moduleBody
+            return $ Right result
 
 generateModule :: BuilderConfig -> A.Doc -> [Hs.Decl] -> Hs.Module
 generateModule config doc moduleBody =
