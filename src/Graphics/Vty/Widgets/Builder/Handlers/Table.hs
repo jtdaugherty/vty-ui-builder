@@ -12,6 +12,7 @@ import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util (foreach, splitOn)
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Language.Haskell.Exts as Hs
 
 import Graphics.Vty.Widgets.Table
@@ -114,19 +115,19 @@ handleTable =
                   V.elemName c "cell" *> V.firstChildWidget c
 
           genSrc nam table = do
-            let parsedBorderStyle = toAST $ borderStyle table
+            let parsedBorderStyle = S.toAST $ borderStyle table
 
                 colSpecExprs :: [Hs.Exp]
                 colSpecExprs = foreach (columnSpecs table) $ \spec ->
-                               call "column" [toAST $ columnSize spec]
+                               S.call "column" [S.toAST $ columnSize spec]
 
-            append $ bind nam "newTable" [mkList colSpecExprs, parsedBorderStyle]
+            append $ S.bind nam "newTable" [S.mkList colSpecExprs, parsedBorderStyle]
 
             let buildRow [] = error "BUG: validation should prevent empty table rows"
                 buildRow [w] = mkCell w
-                buildRow (w:ws) = opApp (mkCell w) (mkName "mappend") $ buildRow ws
+                buildRow (w:ws) = S.opApp (mkCell w) (S.mkName "mappend") $ buildRow ws
 
-                mkCell w = parens $ call "mkRow" [call "customCell" [expr w]]
+                mkCell w = S.parens $ S.call "mkRow" [S.call "customCell" [S.expr w]]
 
             -- Since the types of the cells can vary, we have to use .|.
             forM_ (rows table) $ \row ->
@@ -135,6 +136,6 @@ handleTable =
                                        cellName <- newEntry "cell"
                                        gen cell cellName
                                        return cellName
-                  append $ act $ call "addRow" [expr nam, buildRow cellWidgetNames]
+                  append $ S.act $ S.call "addRow" [S.expr nam, buildRow cellWidgetNames]
 
-            return $ declareWidget nam (mkTyp "Table" [])
+            return $ declareWidget nam (S.mkTyp "Table" [])

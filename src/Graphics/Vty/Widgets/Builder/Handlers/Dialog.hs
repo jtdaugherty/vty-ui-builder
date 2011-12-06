@@ -7,6 +7,7 @@ import Control.Applicative
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 
 handlers :: [WidgetElementHandler]
 handlers = [handleDialog]
@@ -27,15 +28,15 @@ handleDialog =
             fgName <- newEntry "focusGroup"
 
             dlgData <- newEntry "dialogData"
-            append $ bind dlgData "newDialog" [ expr chNam
-                                              , mkString title
-                                              ]
-            append $ mkLet [ (nam, call "dialogWidget" [expr dlgName])
-                           , (dlgName, call "fst" [expr dlgData])
-                           , (fgName, call "snd" [expr dlgData])
-                           ]
+            append $ S.bind dlgData "newDialog" [ S.expr chNam
+                                                , S.mkString title
+                                                ]
+            append $ S.mkLet [ (nam, S.call "dialogWidget" [S.expr dlgName])
+                             , (dlgName, S.call "fst" [S.expr dlgData])
+                             , (fgName, S.call "snd" [S.expr dlgData])
+                             ]
 
             mergeFocus nam fgName
 
-            return $ declareWidget nam (parseType "Bordered Padded")
-                       `withField` (dlgName, parseType "Dialog")
+            return $ declareWidget nam (S.parseType "Bordered Padded")
+                       `withField` (dlgName, S.parseType "Dialog")

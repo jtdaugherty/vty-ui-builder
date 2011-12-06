@@ -7,6 +7,7 @@ import Control.Applicative ((<$>), (<*>))
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 
 handlers :: [WidgetElementHandler]
 handlers = [ handleVFill
@@ -20,8 +21,8 @@ handleVFill =
           doValidation s = V.requiredChar s "char"
 
           genSrc nam ch = do
-            append $ bind nam "vFill" [mkChar ch]
-            return $ declareWidget nam (mkTyp "VFill" [])
+            append $ S.bind nam "vFill" [S.mkChar ch]
+            return $ declareWidget nam (S.mkTyp "VFill" [])
 
 handleHFill :: WidgetElementHandler
 handleHFill =
@@ -32,8 +33,8 @@ handleHFill =
                            <*> V.requiredInt s "height"
 
           genSrc nam (ch, height) = do
-            append $ bind nam "hFill" [ mkChar ch
-                                      , mkInt height
-                                      ]
+            append $ S.bind nam "hFill" [ S.mkChar ch
+                                        , S.mkInt height
+                                        ]
 
-            return $ declareWidget nam (mkTyp "HFill" [])
+            return $ declareWidget nam (S.mkTyp "HFill" [])

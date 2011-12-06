@@ -6,6 +6,7 @@ where
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 
 handlers :: [WidgetElementHandler]
 handlers = [handleWrap]
@@ -20,10 +21,11 @@ handleWrap =
           genSrc nam ch = do
             gen ch nam
             tempNam <- newEntry "formattedText"
-            append $ bind tempNam "getTextFormatter" [expr nam]
-            append $ act $ call "setTextFormatter" [ expr nam
-                                                   , parens (opApp (expr tempNam) (mkName "mappend") (expr $ mkName "wrap"))
-                                                   ]
+            append $ S.bind tempNam "getTextFormatter" [S.expr nam]
+            append $ S.act $ S.call "setTextFormatter"
+                       [ S.expr nam
+                       , S.parens (S.opApp (S.expr tempNam) (S.mkName "mappend") (S.expr $ S.mkName "wrap"))
+                       ]
 
             -- NB: this is a no-op because the child element handler
             -- will have already registered a type for 'nam'.

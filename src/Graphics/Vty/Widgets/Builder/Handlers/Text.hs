@@ -8,6 +8,7 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Language.Haskell.Exts as Hs
 
 handlers :: [WidgetElementHandler]
@@ -60,8 +61,8 @@ doValidation s = pairs
                       <$> (V.requireValidColor loc $ getAttribute elm "fg")
                       <*> (V.requireValidColor loc $ getAttribute elm "bg")
 
-        let attrExpr = case attrsToExpr attrResult of
-                         Nothing -> defAttr
+        let attrExpr = case S.attrsToExpr attrResult of
+                         Nothing -> S.defAttr
                          Just ex -> ex
 
         results <- mapM (processElemContent attrExpr) $ A.elementContents elm
@@ -75,7 +76,7 @@ doValidation s = pairs
 
       pairs :: ValidateM [(Either String String, Hs.Exp)]
       pairs = do
-        results <- mapM (processSpecContent defAttr) $ A.elementContents s
+        results <- mapM (processSpecContent S.defAttr) $ A.elementContents s
         return $ concat $ results
 
 genSrc :: Hs.Name -> [(Either String String, Hs.Exp)] -> GenM WidgetHandlerResult
@@ -93,7 +94,7 @@ genSrc nam pairs = do
       collapsed = collapse pairs
 
       pairExpr :: (String, Hs.Exp) -> Hs.Exp
-      pairExpr (s, ex) = mkTup [ mkString s
+      pairExpr (s, ex) = S.mkTup [ S.mkString s
                                , ex
                                ]
 
@@ -110,5 +111,5 @@ genSrc nam pairs = do
 
       pairExprList = map pairExpr $ normStrings $ tailTrimmed $ headTrimmed collapsed
 
-  append $ bind nam "plainTextWithAttrs" [mkList pairExprList]
-  return $ declareWidget nam (mkTyp "FormattedText" [])
+  append $ S.bind nam "plainTextWithAttrs" [S.mkList pairExprList]
+  return $ declareWidget nam (S.mkTyp "FormattedText" [])

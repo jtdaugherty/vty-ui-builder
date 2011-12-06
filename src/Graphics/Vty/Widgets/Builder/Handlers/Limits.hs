@@ -7,6 +7,7 @@ import Control.Applicative ((<$>), (<*>))
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Language.Haskell.Exts as Hs
 
 handlers :: [WidgetElementHandler]
@@ -29,9 +30,9 @@ handleVLimit =
             gen ch chNam
             chType <- getWidgetStateType chNam
 
-            append $ bind nam "vLimit" [mkInt height, expr chNam]
+            append $ S.bind nam "vLimit" [S.mkInt height, S.expr chNam]
             return $ declareWidget nam $
-                   parseType $ "VLimit (" ++ Hs.prettyPrint chType ++ ")"
+                   S.parseType $ "VLimit (" ++ Hs.prettyPrint chType ++ ")"
 
 handleHLimit :: WidgetElementHandler
 handleHLimit =
@@ -46,9 +47,9 @@ handleHLimit =
             gen ch chNam
             chType <- getWidgetStateType chNam
 
-            append $ bind nam "hLimit" [mkInt width, expr chNam]
+            append $ S.bind nam "hLimit" [S.mkInt width, S.expr chNam]
             return $ declareWidget nam $
-                   parseType $ "HLimit (" ++ Hs.prettyPrint chType ++ ")"
+                   S.parseType $ "HLimit (" ++ Hs.prettyPrint chType ++ ")"
 
 handleBoxLimit :: WidgetElementHandler
 handleBoxLimit =
@@ -64,9 +65,9 @@ handleBoxLimit =
             gen ch chNam
             chType <- getWidgetStateType chNam
 
-            append $ bind nam "boxLimit" [ mkInt width
-                                         , mkInt height
-                                         , expr chNam
+            append $ S.bind nam "boxLimit" [ S.mkInt width
+                                         , S.mkInt height
+                                         , S.expr chNam
                                          ]
             return $ declareWidget nam $
-                   parseType $ "VLimit (HLimit (" ++ Hs.prettyPrint chType ++ "))"
+                   S.parseType $ "VLimit (HLimit (" ++ Hs.prettyPrint chType ++ "))"

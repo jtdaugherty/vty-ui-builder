@@ -11,6 +11,7 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Language.Haskell.Exts as Hs
 import qualified Graphics.Vty.Widgets.Builder.AST as A
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Graphics.Vty.Widgets.Builder.Names as Names
 
 import qualified Graphics.Vty.Widgets.Builder.Handlers.Box as Box
@@ -60,9 +61,9 @@ handleDoc doc = do
         nam <- newEntry $ A.widgetElementName spec
         gen (A.Widget spec) nam
         typ <- getWidgetStateType nam
-        registerReferenceTarget (mkName sharedName) A.SharedWidgetRef nam typ
+        registerReferenceTarget (S.mkName sharedName) A.SharedWidgetRef nam typ
 
-  append $ bind Names.collectionName "newCollection" []
+  append $ S.bind Names.collectionName "newCollection" []
 
   forM_ (A.documentInterfaces doc) $ \iface ->
       do
@@ -77,15 +78,15 @@ handleInterface iface nam = do
   actName <- newEntry "act"
   fgName <- newEntry "focusGroup"
 
-  append $ bind fgName "newFocusGroup" []
+  append $ S.bind fgName "newFocusGroup" []
 
   forM_ (A.interfaceFocusEntries iface) $ \info ->
       handleFocusEntry iface info fgName
 
-  append $ bind actName "addToCollection" [ expr Names.collectionName
-                                          , expr nam
-                                          , expr fgName
-                                          ]
+  append $ S.bind actName "addToCollection" [ S.expr Names.collectionName
+                                            , S.expr nam
+                                            , S.expr fgName
+                                            ]
 
   let vals = InterfaceValues { topLevelWidgetName = nam
                              , switchActionName = actName
@@ -95,8 +96,8 @@ handleInterface iface nam = do
 
 handleParam :: A.Param -> GenM ()
 handleParam p = do
-  let paramName = mkName $ A.paramName p
-      typ = parseType $ A.paramType p
+  let paramName = S.mkName $ A.paramName p
+      typ = S.parseType $ A.paramType p
       refType = A.ParameterRef
   registerReferenceTarget paramName refType paramName typ
   setFocusValue paramName $ WidgetName { widgetName = paramName
@@ -114,7 +115,7 @@ handleFocusEntry iface (A.FocusReference entryName loc) fgName =
         True -> do
           -- Since we know the name is valid for this interface, this
           -- lookup should always succeed.
-          result <- lookupFocusValue (mkName entryName)
+          result <- lookupFocusValue (S.mkName entryName)
           case result of
             Nothing -> error $ "BUG: no focus value found for widget ID " ++ (show entryName)
                        ++ "; did we fail to register one?"
@@ -122,13 +123,13 @@ handleFocusEntry iface (A.FocusReference entryName loc) fgName =
               m <- lookupFocusMethod $ widgetName wName
               case m of
                 Just (Merge fgName') ->
-                    append $ act $ call "appendFocusGroup" [ expr fgName
-                                                           , expr fgName'
-                                                           ]
+                    append $ S.act $ S.call "appendFocusGroup" [ S.expr fgName
+                                                               , S.expr fgName'
+                                                               ]
                 -- Covers the Just Direct and Nothing cases (default
                 -- is Direct so handlers don't have to register focus
                 -- method unless it's Merge)
-                _ -> append $ act $ call "addToFocusGroup" [ expr fgName
-                                                           , expr $ widgetName wName
-                                                           ]
+                _ -> append $ S.act $ S.call "addToFocusGroup" [ S.expr fgName
+                                                               , S.expr $ widgetName wName
+                                                               ]
 

@@ -7,6 +7,7 @@ import Control.Applicative ((<$>), (<*>))
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Language.Haskell.Exts as Hs
 
 handlers :: [WidgetElementHandler]
@@ -28,9 +29,9 @@ handleVFixed =
             gen ch chNam
             chType <- getWidgetStateType chNam
 
-            append $ bind nam "vFixed" [mkInt height, expr chNam]
+            append $ S.bind nam "vFixed" [S.mkInt height, S.expr chNam]
             return $ declareWidget nam $
-                   parseType $ "VFixed (" ++ Hs.prettyPrint chType ++ ")"
+                   S.parseType $ "VFixed (" ++ Hs.prettyPrint chType ++ ")"
 
 handleHFixed :: WidgetElementHandler
 handleHFixed =
@@ -45,9 +46,9 @@ handleHFixed =
             gen ch chNam
             chType <- getWidgetStateType chNam
 
-            append $ bind nam "hFixed" [mkInt width, expr chNam]
+            append $ S.bind nam "hFixed" [S.mkInt width, S.expr chNam]
             return $ declareWidget nam $
-                   parseType $ "HFixed (" ++ Hs.prettyPrint chType ++ ")"
+                   S.parseType $ "HFixed (" ++ Hs.prettyPrint chType ++ ")"
 
 handleBoxFixed :: WidgetElementHandler
 handleBoxFixed =
@@ -63,6 +64,6 @@ handleBoxFixed =
             gen ch chNam
             chType <- getWidgetStateType chNam
 
-            append $ bind nam "boxFixed" [mkInt width, mkInt height, expr chNam]
+            append $ S.bind nam "boxFixed" [S.mkInt width, S.mkInt height, S.expr chNam]
             return $ declareWidget nam $
-                   parseType $ "VFixed (HFixed (" ++ Hs.prettyPrint chType ++ "))"
+                   S.parseType $ "VFixed (HFixed (" ++ Hs.prettyPrint chType ++ "))"

@@ -10,6 +10,7 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Language.Haskell.Exts as Hs
 
 import Graphics.Vty.Widgets.Box
@@ -47,12 +48,12 @@ handleBoxSized typ =
                            <*> sizedBoxChildWidgets s
 
           genSrc nam (spacing, boxSz, chs) = do
-            let parsedSizeExpr = toAST boxSz
+            let parsedSizeExpr = S.toAST boxSz
 
             resultName <- genBox chs typ spacing nam
-            append $ act $ call "setBoxChildSizePolicy" [ expr nam
-                                                        , parsedSizeExpr
-                                                        ]
+            append $ S.act $ S.call "setBoxChildSizePolicy" [ S.expr nam
+                                                            , parsedSizeExpr
+                                                            ]
             ty <- getWidgetStateType resultName
             return $ declareWidget nam ty
 
@@ -106,27 +107,27 @@ genBox es typ spacing rootName = do
       buildBox [c] = return c
       buildBox (c1:c2:rest) = do
               nextName <- newEntry typ
-              append $ bind nextName typ [ expr c1
-                                         , expr c2
-                                         ]
+              append $ S.bind nextName typ [ S.expr c1
+                                           , S.expr c2
+                                           ]
 
               case spacing of
                 Nothing -> return ()
                 Just val ->
-                    append $ act $ call "setBoxSpacing" [ expr nextName
-                                                        , mkInt val
-                                                        ]
+                    append $ S.act $ S.call "setBoxSpacing" [ S.expr nextName
+                                                            , S.mkInt val
+                                                            ]
 
               c1Type <- getWidgetStateType c1
               c2Type <- getWidgetStateType c2
 
               registerWidgetName $ WidgetName { widgetName = nextName
-                                              , widgetType = mkTyp "Box" [c1Type, c2Type]
+                                              , widgetType = S.mkTyp "Box" [c1Type, c2Type]
                                               }
               buildBox (nextName:rest)
 
   resultName <- buildBox names
-  append $ mkLet [(rootName, expr resultName)]
+  append $ S.mkLet [(rootName, S.expr resultName)]
   return resultName
 
 boxChildWidgets :: A.Element -> ValidateM [A.WidgetLike]

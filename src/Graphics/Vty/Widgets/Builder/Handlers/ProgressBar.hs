@@ -7,6 +7,7 @@ import Control.Applicative
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 
 handlers :: [WidgetElementHandler]
 handlers = [handleProgressBar]
@@ -22,19 +23,19 @@ handleProgressBar =
 
           genSrc nam (compColor, incompColor, prog) = do
             barName <- newEntry "progressBar"
-            append $ bind barName "newProgressBar" [ expr $ mkName compColor
-                                                   , expr $ mkName incompColor
-                                                   ]
-            append $ mkLet [(nam, call "progressBarWidget" [expr barName])]
+            append $ S.bind barName "newProgressBar" [ S.expr $ S.mkName compColor
+                                                     , S.expr $ S.mkName incompColor
+                                                     ]
+            append $ S.mkLet [(nam, S.call "progressBarWidget" [S.expr barName])]
 
             case prog of
               Nothing -> return ()
-              Just p -> append $ act $ call "setProgress" [expr barName, mkInt p]
+              Just p -> append $ S.act $ S.call "setProgress" [S.expr barName, S.mkInt p]
 
             -- The state type is 'Padded' because buttons are
             -- implemented as composite widgets; see the 'Button' type
             -- in Graphics.Vty.Widgets.Button.
-            return $ declareWidget nam (mkTyp "Box" [ mkTyp "HFill" []
-                                                    , mkTyp "HFill" []
-                                                    ])
-                       `withField` (barName, parseType "ProgressBar")
+            return $ declareWidget nam (S.mkTyp "Box" [ S.mkTyp "HFill" []
+                                                      , S.mkTyp "HFill" []
+                                                      ])
+                       `withField` (barName, S.parseType "ProgressBar")

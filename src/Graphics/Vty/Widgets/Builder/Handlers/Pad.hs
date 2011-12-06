@@ -9,6 +9,7 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import Graphics.Vty.Widgets.Builder.Util (foreach)
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 import qualified Language.Haskell.Exts as Hs
 
 handlers :: [WidgetElementHandler]
@@ -63,14 +64,14 @@ handlePad =
             let paddingExprs :: [Hs.Exp]
                 paddingExprs = catMaybes $ foreach padFunctions $ \(field, funcName) -> do
                                  realVal <- field padding
-                                 return $ call funcName [mkInt realVal]
+                                 return $ S.call funcName [S.mkInt realVal]
 
             -- Construct padding expression from values
-            let ex = foldl (\e1 e2 -> opApp e1 (mkName "pad") e2)
+            let ex = foldl (\e1 e2 -> S.opApp e1 (S.mkName "pad") e2)
                      (head paddingExprs) (tail paddingExprs)
 
-            append $ bind nam "padded" [ expr chNam
-                                       , parens ex
-                                       ]
+            append $ S.bind nam "padded" [ S.expr chNam
+                                         , S.parens ex
+                                         ]
 
-            return $ declareWidget nam (mkTyp "Padded" [])
+            return $ declareWidget nam (S.mkTyp "Padded" [])

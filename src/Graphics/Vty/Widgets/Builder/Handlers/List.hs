@@ -8,6 +8,7 @@ import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
 import qualified Graphics.Vty.Widgets.Builder.AST as A
 import qualified Graphics.Vty.Widgets.Builder.Validation as V
+import qualified Graphics.Vty.Widgets.Builder.SrcHelpers as S
 
 handlers :: [WidgetElementHandler]
 handlers = [ handleStringList
@@ -28,12 +29,12 @@ handleStringList =
                               V.optional s "cursorBg")
 
           genSrc nam (cursorFg, cursorBg) = do
-            let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
-                             Nothing -> defAttr
+            let attrExpr = case S.attrsToExpr (cursorFg, cursorBg) of
+                             Nothing -> S.defAttr
                              Just ex -> ex
 
-            append $ bind nam "newStringList" [attrExpr, mkList []]
-            return $ declareWidget nam $ parseType "List String FormattedText"
+            append $ S.bind nam "newStringList" [attrExpr, S.mkList []]
+            return $ declareWidget nam $ S.parseType "List String FormattedText"
 
 handleList :: WidgetElementHandler
 handleList =
@@ -51,10 +52,10 @@ handleList =
                          <*> V.required s "elemType"
 
           genSrc nam (cursorFg, cursorBg, keyType, elemType) = do
-            let attrExpr = case attrsToExpr (cursorFg, cursorBg) of
-                             Nothing -> defAttr
+            let attrExpr = case S.attrsToExpr (cursorFg, cursorBg) of
+                             Nothing -> S.defAttr
                              Just ex -> ex
 
-            append $ bind nam "newList" [attrExpr]
-            return $ declareWidget nam $ parseType $ "List (" ++ keyType ++
+            append $ S.bind nam "newList" [attrExpr]
+            return $ declareWidget nam $ S.parseType $ "List (" ++ keyType ++
                        ") (" ++ elemType ++ ")"
