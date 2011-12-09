@@ -129,7 +129,7 @@ handleFocusEntry iface (A.FocusReference entryName loc) fgName =
                 -- Covers the Just Direct and Nothing cases (default
                 -- is Direct so handlers don't have to register focus
                 -- method unless it's Merge)
-                _ -> append $ S.act $ S.call "addToFocusGroup" [ S.expr fgName
-                                                               , S.expr $ widgetName wName
-                                                               ]
+                _ -> append $ S.bind (S.mkName "_") "addToFocusGroup" [ S.expr fgName
+                                                                      , S.expr $ widgetName wName
+                                                                      ]
 
