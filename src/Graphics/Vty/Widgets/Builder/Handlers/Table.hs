@@ -5,7 +5,7 @@ where
 
 import Control.Monad (when, forM_, forM)
 import Data.Traversable (for)
-import Data.List (nub)
+import Data.List (nub, intercalate)
 import Control.Applicative ((<$>), (<*>), pure, (<|>), (*>))
 import Graphics.Vty.Widgets.Builder.Types
 import Graphics.Vty.Widgets.Builder.GenLib
@@ -20,7 +20,14 @@ import Graphics.Vty.Widgets.Table
     , BorderFlag(..)
     , ColumnSpec(..)
     , ColumnSize(..)
+    , Alignment(..)
     , column
+    , align
+    )
+import Graphics.Vty.Widgets.Builder.Handlers.Pad
+    ( PadInfo
+    , paddingFromAttributes
+    , paddingExprFromPadInfo
     )
 
 handlers :: [WidgetElementHandler]
@@ -34,8 +41,15 @@ data TableInfo =
     deriving (Show)
 
 data RowInfo =
-    RowInfo { cells :: [A.WidgetLike]
+    RowInfo { cells :: [Cell]
             }
+    deriving (Show)
+
+data Cell =
+    Cell { content :: A.WidgetLike
+         , padding :: PadInfo
+         , alignment :: Maybe Alignment
+         }
     deriving (Show)
 
 handleTable :: WidgetElementHandler
@@ -68,9 +82,13 @@ handleTable =
               for (V.elementsByName "column" $ A.getChildElements e)
                   validateColumnSpec
 
-          validateColumnSpec e =
-              column <$> ((V.requiredEqual e "size" "auto" *> pure ColAuto)
-                          <|> (ColFixed <$> V.requiredInt e "size"))
+          validateColumnSpec e = do
+            let col = column <$> ((V.requiredEqual e "size" "auto" *> pure ColAuto)
+                                  <|> (ColFixed <$> V.requiredInt e "size"))
+            val <- V.optional e "align"
+            case val of
+              Nothing -> col
+              Just a -> align <$> col <*> parseAlignment e a
 
           getBorderStyle s = do
             attr <- V.optional s "borderStyle"
@@ -112,30 +130,68 @@ handleTable =
 
           validateCells e =
               for (A.getChildElements e) $ \c ->
-                  V.elemName c "cell" *> V.firstChildWidget c
+                  V.elemName c "cell" *>
+                       (Cell
+                        <$> V.firstChildWidget c
+                        <*> paddingFromAttributes c
+                        <*> getAlignment c)
+
+          getAlignment e =
+              do
+                val <- V.optional e "align"
+                case val of
+                  Nothing -> return Nothing
+                  Just a -> Just <$> parseAlignment e a
+
+          validAlignments = [ ("left", AlignLeft)
+                            , ("center", AlignCenter)
+                            , ("right", AlignRight)
+                            ]
+
+          parseAlignment :: A.Element -> String -> ValidateM Alignment
+          parseAlignment e alignStr = do
+            case lookup alignStr validAlignments of
+              Nothing -> failValidation e $ "'align' attribute must be one of " ++
+                         (intercalate ", " $ map (show . fst) validAlignments)
+              Just a -> return a
 
           genSrc nam table = do
             let parsedBorderStyle = S.toAST $ borderStyle table
 
                 colSpecExprs :: [Hs.Exp]
                 colSpecExprs = foreach (columnSpecs table) $ \spec ->
-                               S.call "column" [S.toAST $ columnSize spec]
+                               let ex = S.call "column" [S.toAST $ columnSize spec]
+                               in case columnAlignment spec of
+                                    Nothing -> ex
+                                    Just a -> S.call "align" [ S.parens ex
+                                                             , S.toAST a
+                                                             ]
 
             append $ S.bind nam "newTable" [S.mkList colSpecExprs, parsedBorderStyle]
 
-            let buildRow [] = error "BUG: validation should prevent empty table rows"
-                buildRow [w] = mkCell w
-                buildRow (w:ws) = S.opApp (mkCell w) (S.mkName "mappend") $ buildRow ws
+            let buildRow :: [(Hs.Name, Cell)] -> Hs.Exp
+                buildRow [] = error "BUG: validation should prevent empty table rows"
+                buildRow [(w,c)] = mkCell w c
+                buildRow ((w,c):rest) = S.opApp (mkCell w c) (S.mkName "mappend") $ buildRow rest
 
-                mkCell w = S.parens $ S.call "mkRow" [S.call "customCell" [S.expr w]]
+                mkCell w c = S.parens $ S.call "mkRow" [ex]
+                    where
+                      inner = S.opApp (S.call "customCell" [S.expr w])
+                              (S.mkName "pad")
+                              (S.parens $ paddingExprFromPadInfo $ padding c)
 
-            -- Since the types of the cells can vary, we have to use .|.
+                      ex = case alignment c of
+                             Nothing -> inner
+                             Just val -> S.opApp inner (S.mkName "align") (S.toAST val)
+
             forM_ (rows table) $ \row ->
                 do
                   cellWidgetNames <- forM (cells row) $ \cell -> do
                                        cellName <- newEntry "cell"
-                                       gen cell cellName
+                                       gen (content cell) cellName
                                        return cellName
-                  append $ S.act $ S.call "addRow" [S.expr nam, buildRow cellWidgetNames]
+                  append $ S.act $ S.call "addRow" [ S.expr nam
+                                                   , buildRow $ zip cellWidgetNames $ cells row
+                                                   ]
 
             return $ declareWidget nam (S.mkTyp "Table" [])

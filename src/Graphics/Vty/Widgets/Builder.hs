@@ -91,7 +91,7 @@ generateModule config doc moduleBody =
                                       else Nothing
                                     ]
 
-        theImports = [ S.mkImportDecl "Graphics.Vty" ["Button"]
+        theImports = [ S.mkImportDecl "Graphics.Vty" ["Button", "pad"]
                      , S.mkImportDecl "Graphics.Vty.Widgets.All" []
                      , S.mkImportDecl "Data.Monoid" []
                      ] ++ (map (\i -> S.mkImportDecl (A.importModuleName i) []) $ A.documentImports doc)
