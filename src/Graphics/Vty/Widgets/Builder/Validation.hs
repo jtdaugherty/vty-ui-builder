@@ -1,6 +1,6 @@
 module Graphics.Vty.Widgets.Builder.Validation
     (
-    doFullValidation
+    validateDocument
 
     -- Validation functions
     , required
@@ -30,10 +30,10 @@ import Graphics.Vty.Widgets.Builder.GenLib
     ( getAttribute
     )
 
-doFullValidation :: A.Doc
+validateDocument :: A.Doc
                  -> [WidgetElementHandler]
                  -> Either [Error] ()
-doFullValidation doc theHandlers =
+validateDocument doc theHandlers =
     case validateReferences doc of
       Left es -> Left es
       Right _ -> let msgs = concat $ getMsgs <$> A.documentInterfaces doc
